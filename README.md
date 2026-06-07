@@ -2,7 +2,8 @@
 
 <img src="docs/icon.png" alt="VectorScroll icon" width="128" height="128">
 
-A tiny native macOS menu-bar utility that recreates Windows/Firefox-style vector scrolling.
+A tiny native macOS menu-bar utility that recreates Windows/Firefox-style vector scrolling. Built directly on Swift and AppKit with no external dependencies or frameworks (no Electron, no bundled runtimes). The whole app ships as a ~400 KB download, runs as a single lightweight process, and uses
+negligible CPU and memory while idle.
 
 
 The app appears in the macOS menu bar.
