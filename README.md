@@ -16,7 +16,8 @@ The app appears in the macOS menu bar.
 - Use `Light Mode` or `Dark Mode` to choose the indicator style.
 - Use the `Size` menu to choose `28`, `32`, `40`, or `48` px.
 - Use `Launch at Startup` to control whether the app opens when you log in.
-- Indicator style and size are saved between launches.
+- Use `Hide Menu Bar Icon` to remove the status-item icon; reopen the app (e.g. `open -a VectorScroll`) to bring it back.
+- Indicator style, indicator size, and scroll mode are saved between launches.
 
 macOS may prompt for Accessibility/Input Monitoring permission. If it does not work immediately, enable the app in:
 

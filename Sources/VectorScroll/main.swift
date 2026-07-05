@@ -6,13 +6,15 @@
 private final class VectorScrollApp: NSObject, NSApplicationDelegate {
     private let markerSizes = [28, 32, 40, 48]
     private let defaults = UserDefaults.standard
-    private let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
+    private var statusItem: NSStatusItem!
+    private var menu: NSMenu!
     private var permissionItem: NSMenuItem!
     private var lightModeItem: NSMenuItem!
     private var darkModeItem: NSMenuItem!
     private var holdScrollItem: NSMenuItem!
     private var holdToLockItem: NSMenuItem!
     private var launchAtStartupItem: NSMenuItem!
+    private var hideIconItem: NSMenuItem!
     private var sizeItems: [NSMenuItem] = []
     private var eventTap: CFMachPort?
     private var runLoopSource: CFRunLoopSource?
@@ -57,11 +59,6 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
     }
 
     private func configureMenu() {
-        if let button = statusItem.button {
-            button.image = NSImage(systemSymbolName: "arrow.up.and.down.circle.fill", accessibilityDescription: "Vector Scroll")
-            button.image?.isTemplate = true
-        }
-
         let menu = NSMenu()
         permissionItem = NSMenuItem(title: "Request Permissions", action: #selector(requestPermissions), keyEquivalent: "")
         permissionItem.target = self
@@ -106,11 +103,59 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         menu.addItem(launchAtStartupItem)
         updateLaunchAtStartupItem()
 
+        hideIconItem = NSMenuItem(title: "Hide Menu Bar Icon", action: #selector(toggleMenuBarIcon), keyEquivalent: "")
+        hideIconItem.target = self
+        hideIconItem.state = menuBarIconHidden ? .on : .off
+        if #available(macOS 14.4, *) {
+            hideIconItem.subtitle = "Reopen app to show"
+        }
+        menu.addItem(hideIconItem)
+
         menu.addItem(.separator())
         menu.addItem(NSMenuItem(title: "Quit", action: #selector(NSApplication.terminate(_:)), keyEquivalent: ""))
 
-        statusItem.menu = menu
+        self.menu = menu
+        installStatusItem()
         updatePermissionMenuItem()
+    }
+
+    private func installStatusItem() {
+        guard statusItem == nil else { return }
+        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
+        statusItem.menu = menu
+        if let button = statusItem.button {
+            button.image = NSImage(systemSymbolName: "arrow.up.and.down.circle.fill", accessibilityDescription: "Vector Scroll")
+            button.image?.isTemplate = true
+        }
+    }
+
+    private func hideMenuBarIcon() {
+        guard let statusItem else { return }
+        NSStatusBar.system.removeStatusItem(statusItem)
+        self.statusItem = nil
+        menuBarIconHidden = true
+        hideIconItem.state = .on
+    }
+
+    private func showMenuBarIcon() {
+        guard statusItem == nil else { return }
+        installStatusItem()
+        menuBarIconHidden = false
+        hideIconItem.state = .off
+    }
+
+    @objc private func toggleMenuBarIcon() {
+        if menuBarIconHidden {
+            showMenuBarIcon()
+        } else {
+            hideMenuBarIcon()
+        }
+    }
+
+    func applicationDidBecomeActive(_ notification: Notification) {
+        if menuBarIconHidden {
+            showMenuBarIcon()
+        }
     }
 
     @objc private func selectLightMode() {
