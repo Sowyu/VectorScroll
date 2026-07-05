@@ -10,6 +10,8 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
     private var permissionItem: NSMenuItem!
     private var lightModeItem: NSMenuItem!
     private var darkModeItem: NSMenuItem!
+    private var holdScrollItem: NSMenuItem!
+    private var holdToLockItem: NSMenuItem!
     private var launchAtStartupItem: NSMenuItem!
     private var sizeItems: [NSMenuItem] = []
     private var eventTap: CFMachPort?
@@ -21,11 +23,17 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
     private var anchor: CGPoint?
     private var isActive = false
     private var eventTapInstalled = false
+    private var holdToLockMode = false
+    private var pressStart: Date?
+    private var pressLocation: CGPoint?
+    private var engageWorkItem: DispatchWorkItem?
+    private var menuBarIconHidden = false
     private let overlay = ScrollOverlayWindow()
 
     private let scrollScale: CGFloat = 0.42
     private let deadZone: CGFloat = 10
     private let maxDeltaPerTick: CGFloat = 120
+    private let holdToLockThreshold: TimeInterval = 0.2
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
@@ -68,6 +76,18 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         menu.addItem(darkModeItem)
         updateMarkerMenuItem()
 
+        holdScrollItem = NSMenuItem(title: "Hold to Scroll", action: #selector(selectHoldToScroll), keyEquivalent: "")
+        holdScrollItem.target = self
+        menu.addItem(holdScrollItem)
+
+        holdToLockItem = NSMenuItem(title: "Hold to Start", action: #selector(selectHoldToLock), keyEquivalent: "")
+        holdToLockItem.target = self
+        if #available(macOS 14.4, *) {
+            holdToLockItem.subtitle = "Hold 200ms to start scrolling"
+        }
+        menu.addItem(holdToLockItem)
+        updateScrollModeMenuItems()
+
         let sizeMenu = NSMenu()
         for size in markerSizes {
             let item = NSMenuItem(title: "\(size) px", action: #selector(selectMarkerSize(_:)), keyEquivalent: "")
@@ -103,6 +123,18 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         overlay.setDarkMode(true)
         defaults.set(true, forKey: "darkMode")
         updateMarkerMenuItem()
+    }
+
+    @objc private func selectHoldToScroll() {
+        holdToLockMode = false
+        defaults.set(false, forKey: "holdToLockMode")
+        updateScrollModeMenuItems()
+    }
+
+    @objc private func selectHoldToLock() {
+        holdToLockMode = true
+        defaults.set(true, forKey: "holdToLockMode")
+        updateScrollModeMenuItems()
     }
 
     @objc private func selectMarkerSize(_ sender: NSMenuItem) {
@@ -157,6 +189,11 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         darkModeItem.state = overlay.isDarkMode ? .on : .off
     }
 
+    private func updateScrollModeMenuItems() {
+        holdScrollItem.state = holdToLockMode ? .off : .on
+        holdToLockItem.state = holdToLockMode ? .on : .off
+    }
+
     private func updatePermissionMenuItem() {
         let canListen = CGPreflightListenEventAccess()
         permissionItem.isHidden = canListen
@@ -182,6 +219,9 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         if markerSizes.contains(savedSize) {
             overlay.setSize(CGFloat(savedSize))
         }
+        if let stored = defaults.object(forKey: "holdToLockMode") as? Bool {
+            holdToLockMode = stored
+        }
     }
 
     private func installEventTap() {
@@ -191,6 +231,8 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         }
 
         let events: [CGEventType] = [
+            .leftMouseDown,
+            .rightMouseDown,
             .otherMouseDown,
             .otherMouseUp,
             .tapDisabledByTimeout,
@@ -271,9 +313,12 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         }
 
         if isActive {
-            if type == .otherMouseUp {
-                let buttonNumber = event.getIntegerValueField(.mouseEventButtonNumber)
-                if buttonNumber == 2 {
+            if holdToLockMode {
+                if type == .leftMouseDown || type == .rightMouseDown || type == .otherMouseDown {
+                    stopScrolling()
+                }
+            } else if type == .otherMouseUp {
+                if event.getIntegerValueField(.mouseEventButtonNumber) == 2 {
                     stopScrolling()
                 }
             }
@@ -283,11 +328,44 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         if type == .otherMouseDown {
             let buttonNumber = event.getIntegerValueField(.mouseEventButtonNumber)
             if buttonNumber == 2 {
-                startScrolling(at: currentPointerLocation(), target: event.location)
+                if holdToLockMode {
+                    armHoldToLock(at: currentPointerLocation())
+                } else {
+                    startScrolling(at: currentPointerLocation(), target: event.location)
+                }
+            }
+            return Unmanaged.passUnretained(event)
+        }
+
+        if holdToLockMode, type == .otherMouseUp {
+            let buttonNumber = event.getIntegerValueField(.mouseEventButtonNumber)
+            if buttonNumber == 2, let start = pressStart, Date().timeIntervalSince(start) < holdToLockThreshold {
+                cancelArmedHoldToLock()
             }
         }
 
         return Unmanaged.passUnretained(event)
+    }
+
+    private func armHoldToLock(at point: CGPoint) {
+        cancelArmedHoldToLock()
+        pressStart = Date()
+        pressLocation = point
+        let work = DispatchWorkItem { [weak self] in
+            guard let self else { return }
+            self.pressStart = nil
+            self.engageWorkItem = nil
+            self.startScrolling(at: point, target: point)
+        }
+        engageWorkItem = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + holdToLockThreshold, execute: work)
+    }
+
+    private func cancelArmedHoldToLock() {
+        engageWorkItem?.cancel()
+        engageWorkItem = nil
+        pressStart = nil
+        pressLocation = nil
     }
 
     private func startScrolling(at point: CGPoint, target: CGPoint) {
@@ -319,6 +397,8 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         timer = nil
         anchor = nil
         isActive = false
+        pressStart = nil
+        pressLocation = nil
         overlay.hide()
     }
 
