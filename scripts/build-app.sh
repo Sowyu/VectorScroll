@@ -45,9 +45,9 @@ cat > "$CONTENTS/Info.plist" <<'PLIST'
     <key>LSUIElement</key>
     <true/>
     <key>NSAccessibilityUsageDescription</key>
-    <string>VectorScroll posts native scroll events while middle-click is held.</string>
+    <string>VectorScroll uses accessibility to bring the window under the cursor forward and post native scroll events on the user's behalf.</string>
     <key>NSInputMonitoringUsageDescription</key>
-    <string>VectorScroll listens for middle-clicks and stop input to provide hands-free scrolling.</string>
+    <string>VectorScroll listens for middle-click and other mouse buttons to start and stop vector scrolling.</string>
 </dict>
 </plist>
 PLIST
