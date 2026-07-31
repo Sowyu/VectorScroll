@@ -19,6 +19,20 @@ The app appears in the macOS menu bar.
 - Use `Hide Menu Bar Icon` to remove the status-item icon; reopen the app (e.g. `open -a VectorScroll`) to bring it back.
 - Indicator style, indicator size, and scroll mode are saved between launches.
 
+In `Hold to Start`, the click that stops scrolling is also delivered to whatever is under the
+pointer. VectorScroll observes input with a listen-only event tap and never swallows events, so
+stopping on a button or a link will also activate it. Stop over empty space to avoid this.
+
+## Build
+
+```
+swift build -c release      # binary only
+./scripts/build-app.sh      # bundles VectorScroll.app into dist/
+```
+
+`build-app.sh` invokes `scripts/make-icons.swift` to render the iconset, then `iconutil` to pack it
+into `VectorScroll.icns`, so the icon is generated at build time rather than checked in.
+
 macOS may prompt for Accessibility/Input Monitoring permission. If it does not work immediately, enable the app in:
 
 `System Settings -> Privacy & Security -> Accessibility`
