@@ -27,7 +27,6 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
     private var eventTapInstalled = false
     private var holdToLockMode = false
     private var pressStart: Date?
-    private var pressLocation: CGPoint?
     private var engageWorkItem: DispatchWorkItem?
     private var menuBarIconHidden = false
     private let overlay = ScrollOverlayWindow()
@@ -138,17 +137,22 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
     }
 
     private func showMenuBarIcon() {
-        guard statusItem == nil else { return }
         installStatusItem()
         menuBarIconHidden = false
         hideIconItem.state = .off
     }
 
     @objc private func toggleMenuBarIcon() {
-        if menuBarIconHidden {
-            showMenuBarIcon()
-        } else {
-            hideMenuBarIcon()
+        let shouldHide = !menuBarIconHidden
+        // The status item owns the menu that fired this action, so let the menu
+        // finish tracking before adding or removing it.
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            if shouldHide {
+                self.hideMenuBarIcon()
+            } else {
+                self.showMenuBarIcon()
+            }
         }
     }
 
@@ -156,6 +160,13 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         if menuBarIconHidden {
             showMenuBarIcon()
         }
+    }
+
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        if menuBarIconHidden {
+            showMenuBarIcon()
+        }
+        return true
     }
 
     @objc private func selectLightMode() {
@@ -374,7 +385,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
             let buttonNumber = event.getIntegerValueField(.mouseEventButtonNumber)
             if buttonNumber == 2 {
                 if holdToLockMode {
-                    armHoldToLock(at: currentPointerLocation())
+                    armHoldToLock(at: currentPointerLocation(), target: event.location)
                 } else {
                     startScrolling(at: currentPointerLocation(), target: event.location)
                 }
@@ -392,15 +403,14 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         return Unmanaged.passUnretained(event)
     }
 
-    private func armHoldToLock(at point: CGPoint) {
+    private func armHoldToLock(at point: CGPoint, target: CGPoint) {
         cancelArmedHoldToLock()
         pressStart = Date()
-        pressLocation = point
         let work = DispatchWorkItem { [weak self] in
             guard let self else { return }
             self.pressStart = nil
             self.engageWorkItem = nil
-            self.startScrolling(at: point, target: point)
+            self.startScrolling(at: point, target: target)
         }
         engageWorkItem = work
         DispatchQueue.main.asyncAfter(deadline: .now() + holdToLockThreshold, execute: work)
@@ -410,7 +420,6 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         engageWorkItem?.cancel()
         engageWorkItem = nil
         pressStart = nil
-        pressLocation = nil
     }
 
     private func startScrolling(at point: CGPoint, target: CGPoint) {
@@ -443,7 +452,6 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         anchor = nil
         isActive = false
         pressStart = nil
-        pressLocation = nil
         overlay.hide()
     }
 

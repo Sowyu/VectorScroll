@@ -11,7 +11,7 @@ The app appears in the macOS menu bar.
 ## Use
 
 - Middle-click to start scrolling; move the pointer away from the anchor to control direction and speed.
-- Pick a stop mode in the menu: `Hold to Scroll` (release middle-click to stop) or `Hold to Start` (hold briefly, release to start scrolling, click again to stop).
+- Pick a scroll mode in the menu: `Hold to Scroll` (scrolling starts on middle-click and stops when you release it) or `Hold to Start` (hold middle-click for 200ms to start scrolling, then click any mouse button to stop; a quick middle-click does nothing).
 - The on-screen indicator marks the anchor while scrolling is active.
 - Use `Light Mode` or `Dark Mode` to choose the indicator style.
 - Use the `Size` menu to choose `28`, `32`, `40`, or `48` px.
