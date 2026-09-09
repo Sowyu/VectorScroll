@@ -11,7 +11,8 @@ The app appears in the macOS menu bar.
 ## Use
 
 - Middle-click to start scrolling; move the pointer away from the anchor to control direction and speed.
-- Pick a scroll mode in the menu: `Hold to Scroll` (scrolling starts on middle-click and stops when you release it) or `Hold to Start` (hold middle-click for 200ms to start scrolling, then click any mouse button to stop; a quick middle-click does nothing).
+- Pick a scroll mode in the menu: `Hold to Scroll` (scrolling starts on middle-click and stops when you release it) or `Hold to Start` (hold middle-click for the configured delay to start scrolling, then click any mouse button to stop; a quick middle-click does nothing).
+- Open `Start Delay` to toggle the delay or adjust it from `50` to `1,000` ms in `50` ms steps. The default is `200` ms. Turning it off changes `Hold to Start` to `Click to Start`, which starts immediately and stops on the next click. This setting does not affect `Hold to Scroll`. Both delay settings are saved between launches.
 - The on-screen indicator marks the anchor while scrolling is active.
 - Use `Light Mode` or `Dark Mode` to choose the indicator style.
 - Use the `Size` menu to choose `28`, `32`, `40`, or `48` px.
