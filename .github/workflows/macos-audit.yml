@@ -1,0 +1,27 @@
+name: macOS audit
+
+on:
+  push:
+    branches: [main, 'audit/**']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: macos-15
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          clean: false
+          persist-credentials: false
+      - name: Swift version
+        run: swift --version
+      - name: Release build
+        run: swift build -c release
+      - name: Hold-to-start regression
+        if: always()
+        run: python3 scripts/check-hold.py
