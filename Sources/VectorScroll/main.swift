@@ -26,7 +26,6 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
     private var isActive = false
     private var eventTapInstalled = false
     private var holdToLockMode = false
-    private var pressStart: Date?
     private var engageWorkItem: DispatchWorkItem?
     private var menuBarIconHidden = false
     private let overlay = ScrollOverlayWindow()
@@ -34,7 +33,15 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
     private let scrollScale: CGFloat = 0.42
     private let deadZone: CGFloat = 10
     private let maxDeltaPerTick: CGFloat = 120
-    private let holdToLockThreshold: TimeInterval = 0.2
+    private var holdDelayEnabled = true
+    private var holdDelayMilliseconds = 200
+    private var holdToLockThreshold: TimeInterval {
+        holdDelayEnabled ? Double(holdDelayMilliseconds) / 1000 : 0
+    }
+    private var delayItem: NSMenuItem!
+    private var delayToggle: NSMenuItem!
+    private var delaySlider: NSSlider!
+    private var delayLabel: NSTextField!
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
@@ -78,10 +85,8 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
 
         holdToLockItem = NSMenuItem(title: "Hold to Start", action: #selector(selectHoldToLock), keyEquivalent: "")
         holdToLockItem.target = self
-        if #available(macOS 14.4, *) {
-            holdToLockItem.subtitle = "Hold 200ms to start scrolling"
-        }
         menu.addItem(holdToLockItem)
+        configureDelayMenu(in: menu)
         updateScrollModeMenuItems()
 
         let sizeMenu = NSMenu()
@@ -116,6 +121,59 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         self.menu = menu
         installStatusItem()
         updatePermissionMenuItem()
+    }
+
+    private func configureDelayMenu(in menu: NSMenu) {
+        let submenu = NSMenu()
+        delayToggle = NSMenuItem(title: "Use Delay", action: #selector(toggleHoldDelay), keyEquivalent: "")
+        delayToggle.target = self
+        submenu.addItem(delayToggle)
+
+        let view = NSView(frame: NSRect(x: 0, y: 0, width: 240, height: 76))
+        delayLabel = NSTextField(labelWithString: "")
+        delayLabel.frame = NSRect(x: 16, y: 48, width: 208, height: 20)
+        view.addSubview(delayLabel)
+        delaySlider = NSSlider(value: Double(holdDelayMilliseconds), minValue: 50, maxValue: 1000,
+                               target: self, action: #selector(changeHoldDelay(_:)))
+        delaySlider.frame = NSRect(x: 16, y: 18, width: 208, height: 24)
+        delaySlider.isContinuous = true
+        delaySlider.setAccessibilityLabel("Start delay in milliseconds")
+        view.addSubview(delaySlider)
+        let sliderItem = NSMenuItem()
+        sliderItem.view = view
+        submenu.addItem(sliderItem)
+        delayItem = NSMenuItem(title: "Start Delay", action: nil, keyEquivalent: "")
+        delayItem.submenu = submenu
+        menu.addItem(delayItem)
+        updateDelayMenu()
+    }
+
+    @objc private func toggleHoldDelay() {
+        stopScrolling()
+        holdDelayEnabled.toggle()
+        defaults.set(holdDelayEnabled, forKey: "holdDelayEnabled")
+        updateDelayMenu()
+    }
+
+    @objc private func changeHoldDelay(_ sender: NSSlider) {
+        stopScrolling()
+        holdDelayMilliseconds = min(1000, max(50, Int((sender.doubleValue / 50).rounded()) * 50))
+        defaults.set(holdDelayMilliseconds, forKey: "holdDelayMilliseconds")
+        updateDelayMenu()
+    }
+
+    private func updateDelayMenu() {
+        delayToggle.state = holdDelayEnabled ? .on : .off
+        delaySlider.isEnabled = holdDelayEnabled
+        delaySlider.doubleValue = Double(holdDelayMilliseconds)
+        delayLabel.stringValue = "Hold to Start: \(holdDelayMilliseconds) ms"
+        delayLabel.textColor = holdDelayEnabled ? .labelColor : .secondaryLabelColor
+        delayItem.title = holdDelayEnabled ? "Start Delay: \(holdDelayMilliseconds) ms" : "Start Delay: Off"
+        holdToLockItem.title = holdDelayEnabled ? "Hold to Start" : "Click to Start"
+        if #available(macOS 14.4, *) {
+            holdToLockItem.subtitle = holdDelayEnabled
+                ? "Hold \(holdDelayMilliseconds) ms to start scrolling" : "Click again to stop scrolling"
+        }
     }
 
     private func installStatusItem() {
@@ -182,12 +240,14 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
     }
 
     @objc private func selectHoldToScroll() {
+        stopScrolling()
         holdToLockMode = false
         defaults.set(false, forKey: "holdToLockMode")
         updateScrollModeMenuItems()
     }
 
     @objc private func selectHoldToLock() {
+        stopScrolling()
         holdToLockMode = true
         defaults.set(true, forKey: "holdToLockMode")
         updateScrollModeMenuItems()
@@ -270,6 +330,13 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
     }
 
     private func restoreSettings() {
+        if let stored = defaults.object(forKey: "holdDelayEnabled") as? Bool {
+            holdDelayEnabled = stored
+        }
+        let savedDelay = defaults.integer(forKey: "holdDelayMilliseconds")
+        if (50...1000).contains(savedDelay), savedDelay.isMultiple(of: 50) {
+            holdDelayMilliseconds = savedDelay
+        }
         overlay.setDarkMode(defaults.bool(forKey: "darkMode"))
         let savedSize = defaults.integer(forKey: "markerSize")
         if markerSizes.contains(savedSize) {
@@ -395,7 +462,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
 
         if holdToLockMode, type == .otherMouseUp {
             let buttonNumber = event.getIntegerValueField(.mouseEventButtonNumber)
-            if buttonNumber == 2, let start = pressStart, Date().timeIntervalSince(start) < holdToLockThreshold {
+            if buttonNumber == 2 {
                 cancelArmedHoldToLock()
             }
         }
@@ -405,11 +472,15 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
 
     private func armHoldToLock(at point: CGPoint, target: CGPoint) {
         cancelArmedHoldToLock()
-        pressStart = Date()
+        if !holdDelayEnabled {
+            startScrolling(at: point, target: target)
+            return
+        }
         let work = DispatchWorkItem { [weak self] in
             guard let self else { return }
-            self.pressStart = nil
             self.engageWorkItem = nil
+            // A delayed main queue must not turn a released click into a hold.
+            guard CGEventSource.buttonState(.combinedSessionState, button: .center) else { return }
             self.startScrolling(at: point, target: target)
         }
         engageWorkItem = work
@@ -419,7 +490,6 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
     private func cancelArmedHoldToLock() {
         engageWorkItem?.cancel()
         engageWorkItem = nil
-        pressStart = nil
     }
 
     private func startScrolling(at point: CGPoint, target: CGPoint) {
@@ -446,12 +516,12 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
     }
 
     private func stopScrolling() {
+        cancelArmedHoldToLock()
         guard isActive else { return }
         timer?.cancel()
         timer = nil
         anchor = nil
         isActive = false
-        pressStart = nil
         overlay.hide()
     }
 

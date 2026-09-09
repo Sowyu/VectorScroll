@@ -15,6 +15,39 @@ entry = "let app = NSApplication.shared\n"
 assert source.count(entry) == 1, "Application entry point changed; update the probe"
 harness = r'''
 extension VectorScrollApp {
+    static func checkDelaySettings() -> Bool {
+        let subject = VectorScrollApp()
+        subject.configureMenu()
+        assert(subject.holdToLockThreshold == 0.2)
+        subject.delaySlider.doubleValue = 743
+        subject.changeHoldDelay(subject.delaySlider)
+        assert(subject.holdDelayMilliseconds == 750)
+        assert(subject.holdToLockThreshold == 0.75)
+        assert(subject.delayItem.title == "Start Delay: 750 ms")
+        subject.holdToLockMode = true
+        subject.armHoldToLock(at: .zero, target: .zero)
+        assert(subject.engageWorkItem != nil)
+        subject.toggleHoldDelay()
+        assert(subject.engageWorkItem == nil)
+        assert(subject.holdToLockThreshold == 0)
+        assert(!subject.delaySlider.isEnabled)
+        assert(subject.holdToLockItem.title == "Click to Start")
+        subject.eventTapInstalled = true
+        subject.armHoldToLock(at: .zero, target: .zero)
+        assert(subject.isActive && subject.engageWorkItem == nil)
+        subject.stopScrolling() // Cancel before the main queue can post any input.
+        let restored = VectorScrollApp()
+        restored.restoreSettings()
+        assert(!restored.holdDelayEnabled && restored.holdDelayMilliseconds == 750)
+        subject.toggleHoldDelay()
+        assert(subject.delaySlider.isEnabled && subject.holdToLockThreshold == 0.75)
+        subject.armHoldToLock(at: .zero, target: .zero)
+        subject.selectHoldToScroll()
+        assert(subject.engageWorkItem == nil && !subject.isActive)
+        subject.hideMenuBarIcon()
+        print("PASS: delay toggle, slider rounding, immediate start, persistence, and mode cancellation")
+        return true
+    }
     static func checkRelease(delay: TimeInterval) -> Bool {
         let subject = VectorScrollApp()
         subject.holdToLockMode = true
@@ -39,7 +72,8 @@ extension VectorScrollApp {
 let app = NSApplication.shared
 let promptRelease = VectorScrollApp.checkRelease(delay: 0.1)
 let delayedRelease = VectorScrollApp.checkRelease(delay: 0.3)
-exit(promptRelease && delayedRelease ? 0 : 1)
+let settings = VectorScrollApp.checkDelaySettings()
+exit(promptRelease && delayedRelease && settings ? 0 : 1)
 '''
 
 # The proxy is unused by handleEvent. Remove that parameter only in the generated
