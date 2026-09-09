@@ -2,7 +2,7 @@
 
 Audited commit `0554953` on 2026-09-10. Reviewed the complete application source, package manifest, both build scripts, settings and lifecycle paths, and README behavior claims. Application code is unchanged.
 
-Eight findings below are based on source inspection and Apple API documentation. Native reproduction remains outstanding. This machine runs Linux and has no Swift compiler or macOS frameworks. P1 means high priority; P2 means normal priority.
+Eight findings below are based on source inspection and Apple API documentation. A follow-up macOS CI run compiled the application and reproduced the delayed-release cancellation failure with a deterministic native probe. Other native reproductions remain outstanding. The local machine runs Linux and has no Swift compiler or macOS frameworks. P1 means high priority; P2 means normal priority.
 
 ## P1: Icon generation can delete an unrelated directory
 
@@ -39,6 +39,8 @@ Fix: cancel pending engagement and stop scrolling on tap disablement or permissi
 Location: [main.swift:396](../Sources/VectorScroll/main.swift#L396), [main.swift:406](../Sources/VectorScroll/main.swift#L406).
 
 The 200 ms delay itself is intentional. Commit `1fdfe1b` explicitly says a brief middle-click does nothing, holding past the threshold engages scrolling, and release after engagement does not stop it. The finding concerns a physical click shorter than 200 ms whose release is processed late, not the designed hold delay.
+
+Follow-up result: [macOS CI run 34417153249](https://github.com/Sowyu/VectorScroll/actions/runs/34417153249) passed the release build. The native probe passed a 100 ms click handled after 100 ms and failed a 100 ms click handled after 300 ms: the engagement work remained armed. The probe invokes the actual arming and release handlers in a generated copy, with synthetic event timestamps and the main queue held between calls. It does not inject system input or reproduce an OS scheduling stall end to end.
 
 The hold duration uses the wall-clock time when callbacks run, rather than the physical event timestamps. Process the middle-down event, stall the main thread, and physically release within 200 ms. When the queued release is processed after 200 ms, the cancellation condition is false. If the delayed work runs first, it starts scrolling and the active Hold to Start branch ignores the release instead. Either ordering can turn a short click into locked scrolling.
 
@@ -90,4 +92,4 @@ Fix: handle each service status explicitly, offer Settings for required approval
 
 `sh -n scripts/build-app.sh` passed. Python's `plistlib` parsed the embedded Info.plist successfully; the executable name and minimum macOS version match the package. All callers of gesture start, stop, arming, cancellation, permission installation, and mode selection were traced. The repository contains no test target or test files.
 
-No build scripts, deletion paths, native app, signing, or login registration were executed. Native compilation, real mouse-event timing, TCC permission recovery, Retina rendering, full-screen and multiple-display behavior still require macOS verification. The audit does not establish that those untested paths are otherwise bug-free.
+The initial local audit executed no build scripts, deletion paths, native app, signing, or login registration. Follow-up GitHub CI on `audit/macos-ci` successfully ran `swift build -c release` and compiled and executed `scripts/check-hold.py` on macOS 15. The regression job deliberately remains failing to expose the unfixed cancellation defect. The app's normal entry point was not launched; permission prompts and event posting were not exercised. Real mouse-event timing, TCC permission recovery, Retina rendering, full-screen and multiple-display behavior still require macOS verification. The audit does not establish that those untested paths are otherwise bug-free.
