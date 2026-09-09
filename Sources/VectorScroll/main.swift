@@ -137,6 +137,8 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
                                target: self, action: #selector(changeHoldDelay(_:)))
         delaySlider.frame = NSRect(x: 16, y: 18, width: 208, height: 24)
         delaySlider.isContinuous = true
+        delaySlider.numberOfTickMarks = 20
+        delaySlider.allowsTickMarkValuesOnly = true
         delaySlider.setAccessibilityLabel("Start delay in milliseconds")
         view.addSubview(delaySlider)
         let sliderItem = NSMenuItem()

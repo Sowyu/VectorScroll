@@ -2,6 +2,8 @@
 
 Audited commit `0554953` on 2026-09-10. Reviewed the complete application source, package manifest, both build scripts, settings and lifecycle paths, and README behavior claims. Application code is unchanged.
 
+Implementation follow-up: `118803c` adds a saved delay toggle and slider, cancels pending engagement on release, checks the physical button before delayed engagement, and cancels gestures when changing modes or delay settings. The release build and native regression/settings checks passed in [run 34417711351](https://github.com/Sowyu/VectorScroll/actions/runs/34417711351). Findings below describe the original audited revision; the delayed-release and mode-change findings have since been addressed.
+
 Eight findings below are based on source inspection and Apple API documentation. A follow-up macOS CI run compiled the application and reproduced the delayed-release cancellation failure with a deterministic native probe. Other native reproductions remain outstanding. The local machine runs Linux and has no Swift compiler or macOS frameworks. P1 means high priority; P2 means normal priority.
 
 ## P1: Icon generation can delete an unrelated directory
