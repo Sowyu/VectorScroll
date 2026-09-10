@@ -23,6 +23,18 @@ extension VectorScrollApp {
         assert(titles.contains("Hold to Start"))
         assert(titles.contains("Hide Menu Bar Icon"))
         print("PASS: issue #2 menu items are present and visible")
+        assert(subject.updateItem.action == #selector(checkUpdatesFromMenu))
+        assert(subject.downloadItem.isHidden)
+        let downloadURL = URL(string: "https://github.com/Sowyu/VectorScroll/releases/download/9.0.0/VectorScroll.dmg")!
+        subject.applyUpdate(AppUpdate(version: "9.0.0", downloadURL: downloadURL))
+        assert(!subject.downloadItem.isHidden)
+        assert(subject.downloadItem.action == #selector(downloadUpdate))
+        var openedURL: URL?
+        subject.openUpdate { openedURL = $0; return true }
+        assert(openedURL == downloadURL)
+        subject.applyUpdate(nil)
+        assert(subject.downloadItem.isHidden)
+        print("PASS: check/update menu wiring, update visibility, and download URL opening")
         assert(subject.holdToLockThreshold == 0.2)
         subject.delaySlider.doubleValue = 743
         subject.changeHoldDelay(subject.delaySlider)
@@ -94,6 +106,6 @@ generated = output / "main.swift"
 generated.write_text(source.split(entry)[0] + harness)
 binary = output / "check-hold"
 subprocess.run(["swiftc", "-swift-version", "6", "-warnings-as-errors",
-                str(generated), "-o", str(binary), "-framework", "AppKit",
+                str(generated), str(root / "Sources/VectorScroll/Updates.swift"), "-o", str(binary), "-framework", "AppKit",
                 "-framework", "ApplicationServices", "-framework", "ServiceManagement"], check=True)
 subprocess.run([str(binary)], check=True)

@@ -24,6 +24,12 @@ In `Hold to Start`, the click that stops scrolling is also delivered to whatever
 pointer. VectorScroll observes input with a listen-only event tap and never swallows events, so
 stopping on a button or a link will also activate it. Stop over empty space to avoid this.
 
+## Updates
+
+VectorScroll checks GitHub for a stable release at launch and every 24 hours while running. Use `Check for Updates…` in the menu bar to check immediately. When a newer version exists, `Download Update` opens its DMG in your browser. Quit the app and replace it in Applications to install the update. The installed version appears in the menu.
+
+Background checks do not show dialogs. Failed checks leave the app running and can be retried from the menu. No GitHub account is required.
+
 ## Build
 
 ```

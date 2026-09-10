@@ -42,9 +42,9 @@ cat > "$CONTENTS/Info.plist" <<'PLIST'
     <key>LSApplicationCategoryType</key>
     <string>public.app-category.utilities</string>
     <key>CFBundleShortVersionString</key>
-    <string>1.1.0</string>
+    <string>1.2.0</string>
     <key>CFBundleVersion</key>
-    <string>2</string>
+    <string>3</string>
     <key>LSMinimumSystemVersion</key>
     <string>14.0</string>
     <key>LSUIElement</key>

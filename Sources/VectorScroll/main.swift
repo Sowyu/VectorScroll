@@ -6,6 +6,12 @@
 private final class VectorScrollApp: NSObject, NSApplicationDelegate {
     private let markerSizes = [28, 32, 40, 48]
     private let defaults = UserDefaults.standard
+    private var updateItem: NSMenuItem!
+    private var downloadItem: NSMenuItem!
+    private var availableUpdate: AppUpdate?
+    private var updateTask: Task<Void, Never>?
+    private var updateTimer: DispatchSourceTimer?
+    private var showUpdateResult = false
     private var statusItem: NSStatusItem!
     private var menu: NSMenu!
     private var permissionItem: NSMenuItem!
@@ -50,12 +56,20 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         requestPermissions()
         installEventTap()
         startPermissionStatusTimer()
+        checkForUpdates(manual: false)
+        let updateTimer = DispatchSource.makeTimerSource(queue: .main)
+        updateTimer.schedule(deadline: .now() + .seconds(86400), repeating: .seconds(86400), leeway: .seconds(60))
+        updateTimer.setEventHandler { [weak self] in self?.checkForUpdates(manual: false) }
+        self.updateTimer = updateTimer
+        updateTimer.resume()
     }
 
     func applicationWillTerminate(_ notification: Notification) {
         stopScrolling()
         permissionRetryTimer?.cancel()
         permissionStatusTimer?.cancel()
+        updateTask?.cancel()
+        updateTimer?.cancel()
         if let runLoopSource {
             CFRunLoopRemoveSource(CFRunLoopGetMain(), runLoopSource, .commonModes)
         }
@@ -116,11 +130,92 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         menu.addItem(hideIconItem)
 
         menu.addItem(.separator())
+        let versionItem = NSMenuItem(title: "VectorScroll \(AppUpdate.installedVersion)", action: nil, keyEquivalent: "")
+        menu.addItem(versionItem)
+        updateItem = NSMenuItem(title: "Check for Updates…", action: #selector(checkUpdatesFromMenu), keyEquivalent: "")
+        updateItem.target = self
+        menu.addItem(updateItem)
+        downloadItem = NSMenuItem(title: "Download Update…", action: #selector(downloadUpdate), keyEquivalent: "")
+        downloadItem.target = self
+        downloadItem.isHidden = true
+        menu.addItem(downloadItem)
+        menu.addItem(.separator())
         menu.addItem(NSMenuItem(title: "Quit", action: #selector(NSApplication.terminate(_:)), keyEquivalent: ""))
 
         self.menu = menu
         installStatusItem()
         updatePermissionMenuItem()
+    }
+
+    @objc private func checkUpdatesFromMenu() {
+        checkForUpdates(manual: true)
+    }
+
+    private func checkForUpdates(manual: Bool) {
+        showUpdateResult = showUpdateResult || manual
+        guard updateTask == nil else { return }
+        updateItem.title = "Checking for Updates…"
+        updateTask = Task { [weak self] in
+            do {
+                let update = try await AppUpdate.check()
+                guard let self, !Task.isCancelled else { return }
+                self.applyUpdate(update)
+                if self.showUpdateResult {
+                    self.stopScrolling()
+                    let alert = NSAlert()
+                    if let update {
+                        alert.messageText = "VectorScroll \(update.version) is available"
+                        alert.informativeText = "Download the DMG, quit VectorScroll, and replace the app in Applications."
+                        alert.addButton(withTitle: "Download Update")
+                        alert.addButton(withTitle: "Later")
+                    } else {
+                        alert.messageText = "You're up to date"
+                        alert.informativeText = "VectorScroll \(AppUpdate.installedVersion) is installed."
+                        alert.addButton(withTitle: "OK")
+                    }
+                    NSApp.activate()
+                    if alert.runModal() == .alertFirstButtonReturn, update != nil {
+                        self.downloadUpdate()
+                    }
+                }
+            } catch {
+                guard let self, !Task.isCancelled else { return }
+                if self.showUpdateResult {
+                    self.showUpdateError(error.localizedDescription)
+                }
+            }
+            self?.updateTask = nil
+            self?.showUpdateResult = false
+            self?.updateItem.title = "Check for Updates…"
+        }
+    }
+
+    private func applyUpdate(_ update: AppUpdate?) {
+        availableUpdate = update
+        downloadItem.isHidden = update == nil
+        downloadItem.title = update.map { "Download Update \($0.version)…" } ?? "Download Update…"
+    }
+
+    @objc private func downloadUpdate() {
+        openUpdate { NSWorkspace.shared.open($0) }
+    }
+
+    private func openUpdate(using open: (URL) -> Bool) {
+        guard let update = availableUpdate else { return }
+        stopScrolling()
+        if !open(update.downloadURL) {
+            showUpdateError("The browser could not open the download. Try again.")
+        }
+    }
+
+    private func showUpdateError(_ message: String) {
+        stopScrolling()
+        let alert = NSAlert()
+        alert.messageText = "Couldn't check or open the update"
+        alert.informativeText = message
+        alert.addButton(withTitle: "OK")
+        NSApp.activate()
+        alert.runModal()
     }
 
     private func configureDelayMenu(in menu: NSMenu) {
