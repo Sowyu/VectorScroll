@@ -113,6 +113,7 @@ extension VectorScrollApp {
         content.layoutSubtreeIfNeeded()
         scroll.contentView.scroll(to: NSPoint(x: 0, y: 0))
         scroll.reflectScrolledClipView(scroll.contentView)
+        func savePreview(_ name: String) {
         let bitmap = content.bitmapImageRepForCachingDisplay(in: content.bounds)!
         content.cacheDisplay(in: content.bounds, to: bitmap)
         // The window supplies its background outside the content view. Include
@@ -125,7 +126,12 @@ extension VectorScrollApp {
                     respectFlipped: true, hints: nil)
         preview.unlockFocus()
         let opaque = NSBitmapImageRep(data: preview.tiffRepresentation!)!
-        try! opaque.representation(using: .png, properties: [:])!.write(to: URL(fileURLWithPath: ".build/settings-preview.png"))
+        try! opaque.representation(using: .png, properties: [:])!.write(to: URL(fileURLWithPath: ".build/\(name).png"))
+        }
+        savePreview("settings-delay-preview")
+        subject.selectHoldToScroll()
+        content.layoutSubtreeIfNeeded()
+        savePreview("settings-preview")
         subject.settingsWindow.close()
         print("PASS: both access-toggle directions, persistence, invalid settings repair, window reopen, and layout fit")
         print("PASS: delay toggle, slider rounding, immediate start, persistence, and mode cancellation")
