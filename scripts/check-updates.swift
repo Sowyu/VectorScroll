@@ -6,7 +6,7 @@ struct CheckUpdates {
                         url: String? = nil, assets: Bool = true) throws -> Data {
         try JSONSerialization.data(withJSONObject: [
             "tag_name": tag, "draft": draft, "prerelease": prerelease,
-            "assets": assets ? [["name": "VectorScroll.dmg", "size": 123,
+            "assets": assets ? [["name": "VectorScroll.dmg", "size": 123, "digest": "sha256:" + String(repeating: "a", count: 64),
                                   "browser_download_url": url ?? "https://github.com/Sowyu/VectorScroll/releases/download/\(tag)/VectorScroll.dmg"]] : []
         ])
     }

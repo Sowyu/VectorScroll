@@ -3,7 +3,9 @@ import Foundation
 struct AppUpdate: Sendable {
     let version: String
     let downloadURL: URL
-    static let installedVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.3.0"
+    let sha256: String
+    let downloadSize: Int
+    static let installedVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.4.0"
     static let endpoint = URL(string: "https://api.github.com/repos/Sowyu/VectorScroll/releases/latest")!
 
     enum CheckError: LocalizedError {
@@ -26,6 +28,7 @@ struct AppUpdate: Sendable {
             let name: String
             let browser_download_url: URL
             let size: Int
+            let digest: String?
         }
     }
 
@@ -54,7 +57,12 @@ struct AppUpdate: Sendable {
         guard let asset = release.assets.first(where: {
             $0.name == "VectorScroll.dmg" && $0.size > 0 && $0.browser_download_url.absoluteString == expectedURL
         }) else { throw CheckError.invalidRelease }
-        return AppUpdate(version: release.tag_name, downloadURL: asset.browser_download_url)
+        guard asset.size <= 100 * 1024 * 1024,
+              let digest = asset.digest, digest.hasPrefix("sha256:") else { throw CheckError.invalidRelease }
+        let hash = String(digest.dropFirst(7))
+        guard hash.count == 64, hash.allSatisfy({ "0123456789abcdef".contains($0) }) else { throw CheckError.invalidRelease }
+        return AppUpdate(version: release.tag_name, downloadURL: asset.browser_download_url,
+                         sha256: hash, downloadSize: asset.size)
     }
 
     static func check(installedVersion: String = AppUpdate.installedVersion) async throws -> AppUpdate? {
