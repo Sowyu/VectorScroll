@@ -104,6 +104,21 @@ extension VectorScrollApp {
         assert(scroll.hasVerticalScroller, "All settings must remain reachable on smaller screens")
         assert(subject.holdScrollItem is SettingsButton)
         assert(subject.openSettingsButton is SettingsButton)
+        // Exercise actual hit regions. performClick bypasses mouse hit testing.
+        for button in [subject.hideIconItem!, subject.holdScrollItem!, subject.holdToLockItem!, subject.updateItem!] {
+            button.scrollToVisible(button.bounds)
+            content.layoutSubtreeIfNeeded()
+            for point in [NSPoint(x: 8, y: 8), NSPoint(x: button.bounds.midX, y: button.bounds.midY), NSPoint(x: button.bounds.maxX - 20, y: button.bounds.midY)] {
+                let location = button.convert(point, to: nil)
+                let event = NSEvent.mouseEvent(with: .leftMouseDown, location: location, modifierFlags: [], timestamp: ProcessInfo.processInfo.systemUptime, windowNumber: subject.settingsWindow.windowNumber, context: nil, eventNumber: 1, clickCount: 1, pressure: 1)!
+                let hit = button.cell!.hitTest(for: event, in: button.bounds, of: button)
+                let target = content.hitTest(content.convert(location, from: nil))
+                print("HIT: \(button.title), point \(point), cell \(hit.rawValue), view \(String(describing: target))")
+                fflush(stdout)
+                assert(target === button, "Visible button must receive pointer events")
+                assert(hit.contains(.trackableArea), "Entire drawn button must be clickable")
+            }
+        }
         subject.hideIconItem.performClick(nil)
         assert(subject.hideIconItem.state == .on && subject.statusItem != nil, "Styled toggle must use native click tracking")
         subject.holdScrollItem.performClick(nil)
