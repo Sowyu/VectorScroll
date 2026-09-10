@@ -103,12 +103,12 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
     }
 
     private func configureSettingsWindow() {
-        settingsWindow = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 520, height: 700),
+        settingsWindow = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 520, height: 580),
                                   styleMask: [.titled, .closable, .miniaturizable], backing: .buffered, defer: false)
         settingsWindow.title = "VectorScroll Settings"
         settingsWindow.isReleasedWhenClosed = false
+        if !settingsWindow.setFrameUsingName("VectorScrollSettings") { settingsWindow.center() }
         settingsWindow.setFrameAutosaveName("VectorScrollSettings")
-        settingsWindow.center()
 
         func label(_ text: String, secondary: Bool = false) -> NSTextField {
             let field = NSTextField(wrappingLabelWithString: text)

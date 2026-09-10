@@ -103,7 +103,16 @@ extension VectorScrollApp {
         assert(stack.fittingSize.height <= content.bounds.height - 40, "Settings content must fit")
         let bitmap = content.bitmapImageRepForCachingDisplay(in: content.bounds)!
         content.cacheDisplay(in: content.bounds, to: bitmap)
-        try! bitmap.representation(using: .png, properties: [:])!.write(to: URL(fileURLWithPath: ".build/settings-preview.png"))
+        // The window supplies its background outside the content view. Include
+        // that native background when exporting the view for visual review.
+        let preview = NSImage(size: content.bounds.size)
+        preview.lockFocus()
+        NSColor.windowBackgroundColor.setFill()
+        NSBezierPath(rect: content.bounds).fill()
+        bitmap.draw(in: content.bounds)
+        preview.unlockFocus()
+        let opaque = NSBitmapImageRep(data: preview.tiffRepresentation!)!
+        try! opaque.representation(using: .png, properties: [:])!.write(to: URL(fileURLWithPath: ".build/settings-preview.png"))
         subject.settingsWindow.close()
         print("PASS: both access-toggle directions, persistence, invalid settings repair, window reopen, and layout fit")
         print("PASS: delay toggle, slider rounding, immediate start, persistence, and mode cancellation")
