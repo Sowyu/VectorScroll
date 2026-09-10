@@ -151,6 +151,16 @@ extension VectorScrollApp {
         assert(subject.holdToLockMode && subject.holdToLockItem.state == .on)
         let probe = PointerActionProbe()
         let quit = content.subviews.last as! SettingsButton
+        let native = NSButton(title: "Native reference", target: probe, action: #selector(PointerActionProbe.clicked(_:)))
+        native.frame = NSRect(x: 32, y: 20, width: 160, height: 34)
+        content.addSubview(native)
+        print("REFERENCE: testing unmodified NSButton click and drag-out"); fflush(stdout)
+        mouseClick(native, at: NSPoint(x: 80, y: 17))
+        assert(probe.calls == 1, "Native reference click must work")
+        print("REFERENCE: native click passed, testing drag-out"); fflush(stdout)
+        mouseClick(native, at: NSPoint(x: 80, y: 17), releaseInside: false)
+        assert(probe.calls == 1, "Native reference must cancel drag-out")
+        native.removeFromSuperview()
         for button in [subject.updateItem!, quit] {
             let originalTarget = button.target
             let originalAction = button.action
