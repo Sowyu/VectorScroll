@@ -6,8 +6,8 @@ import struct
 root = Path(__file__).resolve().parent.parent
 contents = root / "dist/VectorScroll.app/Contents"
 info = plistlib.loads((contents / "Info.plist").read_bytes())
-assert info["CFBundleShortVersionString"] == "1.2.1"
-assert info["CFBundleVersion"] == "4"
+assert info["CFBundleShortVersionString"] == "1.3.0"
+assert info["CFBundleVersion"] == "5"
 assert info["LSMinimumSystemVersion"] == "14.0"
 assert (contents / "MacOS" / info["CFBundleExecutable"]).stat().st_size > 0
 # check-hold.py checks real menu items. Optimized Swift short strings need not
@@ -23,3 +23,5 @@ for icon in icons:
     assert png[:8] == b"\x89PNG\r\n\x1a\n"
     assert struct.unpack(">II", png[16:24]) == (expected, expected), icon.name
 print("PASS: version, executable, icon resource, and all ten PNG dimensions")
+
+print(f"Universal executable: {(contents / 'MacOS' / info['CFBundleExecutable']).stat().st_size:,} bytes")
