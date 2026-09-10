@@ -30,6 +30,7 @@ extension VectorScrollApp {
         assert(subject.holdScrollItem.action == #selector(selectHoldToScroll))
         assert(subject.holdToLockItem.action == #selector(selectHoldToLock))
         assert(subject.sizePicker.numberOfItems == 4)
+        assert(!subject.sizePicker.isBordered)
         print("PASS: minimal menu and native settings controls")
         assert(subject.updateItem.action == #selector(checkUpdatesFromMenu))
         assert(subject.downloadItem.isHidden)
