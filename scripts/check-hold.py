@@ -121,6 +121,9 @@ extension VectorScrollApp {
             // NSButton consumes mouse-up in its native tracking loop. Send the
             // down through NSWindow rather than bypassing tracking with performClick.
             NSApp.postEvent(event(.leftMouseUp, at: releaseInside ? location : NSPoint(x: -100, y: -100)), atStart: true)
+            if !releaseInside {
+                NSApp.postEvent(event(.leftMouseDragged, at: NSPoint(x: -100, y: -100)), atStart: true)
+            }
             subject.settingsWindow.sendEvent(event(.leftMouseDown, at: location))
             // A disabled control does not enter tracking and leaves mouse-up queued.
             _ = NSApp.nextEvent(matching: .leftMouseUp, until: .distantPast, inMode: .default, dequeue: true)
@@ -239,4 +242,4 @@ binary = output / "check-hold"
 subprocess.run(["swiftc", "-swift-version", "6", "-warnings-as-errors",
                 str(generated), str(root / "Sources/VectorScroll/SettingsStyle.swift"), str(root / "Sources/VectorScroll/Updates.swift"), str(root / "Sources/VectorScroll/UpdateInstaller.swift"), "-o", str(binary), "-framework", "AppKit",
                 "-framework", "ApplicationServices", "-framework", "ServiceManagement"], check=True)
-subprocess.run([str(binary)], check=True)
+subprocess.run([str(binary)], check=True, timeout=45)
