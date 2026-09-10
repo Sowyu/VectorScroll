@@ -102,7 +102,12 @@ struct CheckInstaller {
         assert(status == "success" && installed == "2.0.0" && backup == "1.0.0")
         print("PASS: production helper waits for exit, installs, relaunches, preserves backup, and handles spaces/apostrophes in paths")
 
-        guard let live = try await AppUpdate.check(installedVersion: "0.0.0") else { fatalError("Missing live release") }
+        let configuration = URLSessionConfiguration.ephemeral
+        if let token = ProcessInfo.processInfo.environment["GH_UPDATE_TEST_TOKEN"] {
+            configuration.httpAdditionalHeaders = ["Authorization": "Bearer \(token)"]
+        }
+        let session = URLSession(configuration: configuration)
+        guard let live = try await AppUpdate.check(installedVersion: "0.0.0", session: session) else { fatalError("Missing live release") }
         let downloaded = try await UpdateInstaller.download(live)
         let actualHash = SHA256.hash(data: downloaded).map { String(format: "%02x", $0) }.joined()
         assert(actualHash == live.sha256)

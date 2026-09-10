@@ -13,6 +13,8 @@ jobs:
   audit:
     runs-on: macos-15
     timeout-minutes: 10
+    env:
+      GH_UPDATE_TEST_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v4
         with:
