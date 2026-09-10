@@ -11,16 +11,15 @@ The app appears in the macOS menu bar.
 ## Use
 
 - Middle-click to start scrolling; move the pointer away from the anchor to control direction and speed.
-- Pick a scroll mode in the menu: `Hold to Scroll` (scrolling starts on middle-click and stops when you release it) or `Hold to Start` (hold middle-click for the configured delay to start scrolling, then click any mouse button to stop; a quick middle-click does nothing).
-- Open `Start Delay` to toggle the delay or adjust it from `50` to `1,000` ms in `50` ms steps. The default is `200` ms. Turning it off changes `Hold to Start` to `Click to Start`, which starts immediately and stops on the next click. This setting does not affect `Hold to Scroll`. Both delay settings are saved between launches.
-- The on-screen indicator marks the anchor while scrolling is active.
-- Use `Light Mode` or `Dark Mode` to choose the indicator style.
-- Use the `Size` menu to choose `28`, `32`, `40`, or `48` px.
+- Choose `Scroll While Holding` to scroll while the middle mouse button is down. Release it to stop.
+- Choose `Scroll Until Next Click` to keep scrolling after releasing the middle button. Click any mouse button to stop.
+- In `Scroll Until Next Click`, open `Hold Before Starting` to set how long to hold the middle button before scrolling begins. Toggle `Require a Hold to Start` off to start with a normal middle-click. The slider ranges from `50` to `1,000` ms, with a default of `200` ms. Settings are saved between launches.
+- Open `Indicator Appearance` to choose a light or dark indicator and change its size.
 - Use `Launch at Startup` to control whether the app opens when you log in.
 - Use `Hide Menu Bar Icon` to remove the status-item icon; reopen the app (e.g. `open -a VectorScroll`) to bring it back.
 - Indicator style, indicator size, and scroll mode are saved between launches.
 
-In `Hold to Start`, the click that stops scrolling is also delivered to whatever is under the
+In `Scroll Until Next Click`, the click that stops scrolling is also delivered to whatever is under the
 pointer. VectorScroll observes input with a listen-only event tap and never swallows events, so
 stopping on a button or a link will also activate it. Stop over empty space to avoid this.
 
