@@ -44,9 +44,15 @@ open -a VectorScroll
 
 ## Updates
 
-VectorScroll checks GitHub at launch and every 24 hours while running. Use **Check for Updates…** in Settings to check immediately. **Download Update** opens the new DMG in your browser.
+VectorScroll checks GitHub at launch and every 24 hours while running. Choose **Check for Updates…** in Settings, then **Install Update**.
 
-Quit VectorScroll, replace the app in Applications, and open it again to install an update. Installation is manual. Background checks do not show dialogs, and no GitHub account is required.
+The app downloads the DMG, verifies its SHA-256 checksum against GitHub, checks the app's identity, version, signature, and processor support, then installs and restarts automatically. Your settings remain saved.
+
+The previous app is kept in a hidden `.VectorScroll-update-…` folder beside the installed app, named `Previous.app`. A failed replacement or launch restores the previous copy when possible. Update files and backups are retained, never permanently deleted by the updater.
+
+Automatic installation requires the app to be in a writable folder, usually Applications. If you are running it from a DMG, move it into Applications first. Versions before 1.4.0 need one manual upgrade to gain automatic installation.
+
+Background checks do not show dialogs, and no GitHub account is required.
 
 ## Build and check
 
@@ -67,4 +73,4 @@ swiftc -swift-version 6 -warnings-as-errors -parse-as-library Sources/VectorScro
 .build/check-updates
 ```
 
-GitHub Actions also verifies the universal app, icon dimensions, signature, and DMG. The update check includes a live GitHub request.
+GitHub Actions also tests automatic installation and relaunch using a signed fixture app, replacement and launch rollback, checksum and signature failures, and a live GitHub download. It verifies the universal app, icon dimensions, signature, and DMG.

@@ -28,15 +28,13 @@ extension VectorScrollApp {
         assert(subject.updateItem.action == #selector(checkUpdatesFromMenu))
         assert(subject.downloadItem.isHidden)
         let downloadURL = URL(string: "https://github.com/Sowyu/VectorScroll/releases/download/9.0.0/VectorScroll.dmg")!
-        subject.applyUpdate(AppUpdate(version: "9.0.0", downloadURL: downloadURL))
+        subject.applyUpdate(AppUpdate(version: "9.0.0", downloadURL: downloadURL, sha256: String(repeating: "a", count: 64), downloadSize: 123))
         assert(!subject.downloadItem.isHidden)
-        assert(subject.downloadItem.action == #selector(downloadUpdate))
-        var openedURL: URL?
-        subject.openUpdate { openedURL = $0; return true }
-        assert(openedURL == downloadURL)
+        assert(subject.downloadItem.action == #selector(installUpdate))
+        assert(subject.downloadItem.title == "Install Update 9.0.0…")
         subject.applyUpdate(nil)
         assert(subject.downloadItem.isHidden)
-        print("PASS: check/update menu wiring, update visibility, and download URL opening")
+        print("PASS: check/update menu wiring, update visibility, and install action wiring")
         assert(subject.holdToLockThreshold == 0.2)
         subject.delaySlider.doubleValue = 743
         subject.changeHoldDelay(subject.delaySlider)
@@ -164,6 +162,6 @@ generated = output / "main.swift"
 generated.write_text(source.split(entry)[0] + harness)
 binary = output / "check-hold"
 subprocess.run(["swiftc", "-swift-version", "6", "-warnings-as-errors",
-                str(generated), str(root / "Sources/VectorScroll/Updates.swift"), "-o", str(binary), "-framework", "AppKit",
+                str(generated), str(root / "Sources/VectorScroll/Updates.swift"), str(root / "Sources/VectorScroll/UpdateInstaller.swift"), "-o", str(binary), "-framework", "AppKit",
                 "-framework", "ApplicationServices", "-framework", "ServiceManagement"], check=True)
 subprocess.run([str(binary)], check=True)

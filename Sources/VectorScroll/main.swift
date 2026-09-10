@@ -10,6 +10,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
     private var downloadItem: NSButton!
     private var availableUpdate: AppUpdate?
     private var updateTask: Task<Void, Never>?
+    private var installTask: Task<Void, Never>?
     private var updateTimer: DispatchSourceTimer?
     private var showUpdateResult = false
     private var statusItem: NSStatusItem!
@@ -57,6 +58,11 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         restoreSettings()
         configureMenu()
         if openSettingsOnLaunch { showSettings() }
+        if let error = defaults.string(forKey: "updateInstallError"), !error.isEmpty {
+            defaults.set("", forKey: "updateInstallError")
+            showSettings()
+            showUpdateError(error)
+        }
         requestPermissions()
         installEventTap()
         startPermissionStatusTimer()
@@ -73,6 +79,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         permissionRetryTimer?.cancel()
         permissionStatusTimer?.cancel()
         updateTask?.cancel()
+        installTask?.cancel()
         updateTimer?.cancel()
         if let runLoopSource {
             CFRunLoopRemoveSource(CFRunLoopGetMain(), runLoopSource, .commonModes)
@@ -193,10 +200,10 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         section("Updates")
         stack.addArrangedSubview(label("VectorScroll \(AppUpdate.installedVersion) · Checks GitHub at launch and daily.", secondary: true))
         updateItem = button("Check for Updates…", #selector(checkUpdatesFromMenu))
-        downloadItem = button("Download Update…", #selector(downloadUpdate))
+        downloadItem = button("Install Update…", #selector(installUpdate))
         downloadItem.isHidden = true
         stack.addArrangedSubview(row(updateItem, downloadItem))
-        stack.addArrangedSubview(label("Downloads open in your browser. Quit the app and replace it in Applications.", secondary: true))
+        stack.addArrangedSubview(label("Updates install automatically and restart the app. The previous copy is kept.", secondary: true))
         let quit = NSButton(title: "Quit VectorScroll", target: NSApp, action: #selector(NSApplication.terminate(_:)))
         stack.addArrangedSubview(quit)
 
@@ -222,6 +229,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
     }
 
     private func checkForUpdates(manual: Bool) {
+        guard installTask == nil else { return }
         showUpdateResult = showUpdateResult || manual
         guard updateTask == nil else { return }
         updateItem.title = "Checking for Updates…"
@@ -235,8 +243,8 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
                     let alert = NSAlert()
                     if let update {
                         alert.messageText = "VectorScroll \(update.version) is available"
-                        alert.informativeText = "Download the DMG, quit VectorScroll, and replace the app in Applications."
-                        alert.addButton(withTitle: "Download Update")
+                        alert.informativeText = "VectorScroll will download and verify the update, install it, and restart."
+                        alert.addButton(withTitle: "Install Update")
                         alert.addButton(withTitle: "Later")
                     } else {
                         alert.messageText = "You're up to date"
@@ -245,7 +253,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
                     }
                     NSApp.activate()
                     if alert.runModal() == .alertFirstButtonReturn, update != nil {
-                        self.downloadUpdate()
+                        self.installUpdate()
                     }
                 }
             } catch {
@@ -261,27 +269,52 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
     }
 
     private func applyUpdate(_ update: AppUpdate?) {
+        guard installTask == nil else { return }
         availableUpdate = update
         downloadItem.isHidden = update == nil
-        downloadItem.title = update.map { "Download Update \($0.version)…" } ?? "Download Update…"
+        downloadItem.title = update.map { "Install Update \($0.version)…" } ?? "Install Update…"
     }
 
-    @objc private func downloadUpdate() {
-        openUpdate { NSWorkspace.shared.open($0) }
-    }
-
-    private func openUpdate(using open: (URL) -> Bool) {
-        guard let update = availableUpdate else { return }
-        stopScrolling()
-        if !open(update.downloadURL) {
-            showUpdateError("The browser could not open the download. Try again.")
+    @objc private func installUpdate() {
+        guard let update = availableUpdate, installTask == nil else { return }
+        let destination = Bundle.main.bundleURL.resolvingSymlinksInPath()
+        guard let helper = Bundle.main.executableURL else { return }
+        do { _ = try UpdateInstaller.validateDestination(destination) }
+        catch { showUpdateError(error.localizedDescription); return }
+        showSettings()
+        updateItem.isEnabled = false
+        downloadItem.isEnabled = false
+        downloadItem.title = "Downloading…"
+        installTask = Task { [weak self] in
+            do {
+                let data = try await UpdateInstaller.download(update)
+                guard let self, !Task.isCancelled else { return }
+                self.downloadItem.title = "Verifying…"
+                let pid = ProcessInfo.processInfo.processIdentifier
+                let plan = try await Task.detached {
+                    try UpdateInstaller.prepare(update, image: data, destination: destination,
+                                                helperSource: helper, parentPID: pid)
+                }.value
+                guard !Task.isCancelled else { return }
+                self.downloadItem.title = "Restarting…"
+                try await Task.detached { try UpdateInstaller.launchHelper(plan) }.value
+                self.installTask = nil
+                NSApp.terminate(nil)
+            } catch {
+                guard let self, !Task.isCancelled else { return }
+                self.installTask = nil
+                self.updateItem.isEnabled = true
+                self.downloadItem.isEnabled = true
+                self.applyUpdate(self.availableUpdate)
+                self.showUpdateError(error.localizedDescription)
+            }
         }
     }
 
     private func showUpdateError(_ message: String) {
         stopScrolling()
         let alert = NSAlert()
-        alert.messageText = "Couldn't check or open the update"
+        alert.messageText = "Update could not be completed"
         alert.informativeText = message
         alert.addButton(withTitle: "OK")
         NSApp.activate()
@@ -876,6 +909,10 @@ private final class ScrollOverlayView: NSView {
         head.lineCapStyle = .round
         head.stroke()
     }
+}
+
+if CommandLine.arguments.count == 3, CommandLine.arguments[1] == "--install-update" {
+    exit(UpdateInstaller.runHelper(URL(fileURLWithPath: CommandLine.arguments[2])))
 }
 
 let app = NSApplication.shared
