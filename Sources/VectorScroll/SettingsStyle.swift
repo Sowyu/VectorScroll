@@ -98,7 +98,7 @@ final class SettingsButton: NSButton {
         let box = NSBezierPath(roundedRect: bounds.insetBy(dx: 0.5, dy: 0.5), xRadius: 9, yRadius: 9)
         if kind != .toggle || hovered || pressed {
             let fill: NSColor = kind == .destructive ? SettingsStyle.coral :
-                NSColor(calibratedWhite: pressed ? 0.28 : hovered ? 0.25 : selected ? 0.21 : kind == .choice ? 0.14 : 0.21, alpha: 1)
+                NSColor(calibratedWhite: pressed ? 0.28 : selected ? (hovered ? 0.38 : 0.34) : hovered ? 0.25 : kind == .choice ? 0.14 : 0.21, alpha: 1)
             fill.withAlphaComponent(alpha).setFill()
             box.fill()
         }
