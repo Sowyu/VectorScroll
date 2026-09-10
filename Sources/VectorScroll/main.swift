@@ -111,7 +111,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
     }
 
     private func configureSettingsWindow() {
-        settingsWindow = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 620, height: 740),
+        settingsWindow = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 620, height: 760),
                                   styleMask: [.titled, .closable, .miniaturizable, .fullSizeContentView], backing: .buffered, defer: false)
         settingsWindow.title = "VectorScroll Settings"
         settingsWindow.titleVisibility = .hidden
@@ -166,16 +166,31 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
             heading.font = .systemFont(ofSize: 14, weight: .semibold)
             stack.addArrangedSubview(row(icon, heading))
         }
-        let appIcon = NSImageView(image: SettingsStyle.symbol("arrow.up.and.down.circle.fill", color: SettingsStyle.text)!)
-        appIcon.widthAnchor.constraint(equalToConstant: 42).isActive = true
-        appIcon.heightAnchor.constraint(equalToConstant: 42).isActive = true
+        let appIcon = NSImageView(image: SettingsStyle.symbol("arrow.up.and.down.circle", color: SettingsStyle.text)!)
+        appIcon.imageScaling = .scaleProportionallyUpOrDown
+        appIcon.translatesAutoresizingMaskIntoConstraints = false
+        let iconTile = NSView()
+        iconTile.wantsLayer = true
+        iconTile.layer?.backgroundColor = NSColor(calibratedWhite: 0.16, alpha: 1).cgColor
+        iconTile.layer?.cornerRadius = 12
+        iconTile.layer?.borderWidth = 1
+        iconTile.layer?.borderColor = SettingsStyle.border.cgColor
+        iconTile.addSubview(appIcon)
+        NSLayoutConstraint.activate([
+            iconTile.widthAnchor.constraint(equalToConstant: 48),
+            iconTile.heightAnchor.constraint(equalToConstant: 48),
+            appIcon.widthAnchor.constraint(equalToConstant: 32),
+            appIcon.heightAnchor.constraint(equalToConstant: 32),
+            appIcon.centerXAnchor.constraint(equalTo: iconTile.centerXAnchor),
+            appIcon.centerYAnchor.constraint(equalTo: iconTile.centerYAnchor)
+        ])
         let title = label("VectorScroll")
         title.font = .systemFont(ofSize: 25, weight: .semibold)
         let titleStack = NSStackView(views: [title, label("Settings", secondary: true)])
         titleStack.orientation = .vertical
         titleStack.alignment = .leading
         titleStack.spacing = 3
-        let header = row(appIcon, titleStack)
+        let header = row(iconTile, titleStack)
         stack.addArrangedSubview(header)
         stack.setCustomSpacing(16, after: header)
 
@@ -185,7 +200,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         hold.detail = "Release the middle button to stop"
         holdScrollItem = hold
         let click = SettingsButton("Keep scrolling until the next click", symbol: "cursorarrow.click", kind: .choice, target: self, action: #selector(selectHoldToLock))
-        click.displayTitle = "Click to scroll"
+        click.displayTitle = "Toggle scrolling"
         click.detail = "Click again to stop"
         holdToLockItem = click
         let modes = row(hold, click)
@@ -247,6 +262,11 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         fullWidth(label("Installs and restarts automatically. Your previous copy is kept.", secondary: true))
 
         let content = settingsWindow.contentView!
+        content.wantsLayer = true
+        content.layer?.backgroundColor = SettingsStyle.background.cgColor
+        content.layer?.cornerRadius = 12
+        content.layer?.borderWidth = 1
+        content.layer?.borderColor = SettingsStyle.border.cgColor
         let scroll = NSScrollView()
         scroll.drawsBackground = false
         scroll.hasVerticalScroller = true
@@ -403,6 +423,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         delayLabel.stringValue = "\(holdDelayMilliseconds) ms"
         delayLabel.textColor = holdDelayEnabled ? .labelColor : .secondaryLabelColor
         delayItem.isHidden = !holdToLockMode
+        (holdToLockItem as? SettingsButton)?.detail = holdDelayEnabled ? "Hold to start, click to stop" : "Click to start, click to stop"
 
     }
 

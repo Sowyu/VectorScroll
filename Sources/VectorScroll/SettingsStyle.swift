@@ -27,7 +27,7 @@ final class SettingsButton: NSButton {
     let kind: Kind
     let symbolName: String
     var displayTitle: String?
-    var detail: String?
+    var detail: String? { didSet { needsDisplay = true } }
     private var hovered = false
     private var hoverArea: NSTrackingArea?
 
@@ -70,7 +70,7 @@ final class SettingsButton: NSButton {
         let selected = state == .on
         let pressed = cell?.isHighlighted == true
         let alpha: CGFloat = isEnabled ? 1 : 0.45
-        let foreground = SettingsStyle.text.withAlphaComponent(alpha)
+        let foreground = (kind == .destructive ? NSColor(calibratedWhite: 0.1, alpha: 1) : SettingsStyle.text).withAlphaComponent(alpha)
         let box = NSBezierPath(roundedRect: bounds.insetBy(dx: 0.5, dy: 0.5), xRadius: 9, yRadius: 9)
         if kind != .toggle || hovered || pressed {
             let fill: NSColor = kind == .destructive ? SettingsStyle.coral :
