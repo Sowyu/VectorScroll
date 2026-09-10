@@ -97,6 +97,7 @@ extension VectorScrollApp {
         assert(persisted.menuBarIconHidden && persisted.openSettingsOnLaunch)
         subject.showSettings()
         subject.selectHoldToLock()
+        RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.1))
         subject.settingsWindow.contentView!.layoutSubtreeIfNeeded()
         let content = subject.settingsWindow.contentView!
         let stack = content.subviews.first as! NSStackView
@@ -107,9 +108,10 @@ extension VectorScrollApp {
         // that native background when exporting the view for visual review.
         let preview = NSImage(size: content.bounds.size)
         preview.lockFocus()
-        NSColor.windowBackgroundColor.setFill()
+        NSColor(calibratedWhite: 0.93, alpha: 1).setFill()
         NSBezierPath(rect: content.bounds).fill()
-        bitmap.draw(in: content.bounds)
+        bitmap.draw(in: content.bounds, from: .zero, operation: .sourceOver, fraction: 1,
+                    respectFlipped: true, hints: nil)
         preview.unlockFocus()
         let opaque = NSBitmapImageRep(data: preview.tiffRepresentation!)!
         try! opaque.representation(using: .png, properties: [:])!.write(to: URL(fileURLWithPath: ".build/settings-preview.png"))
@@ -140,6 +142,9 @@ extension VectorScrollApp {
 }
 
 let app = NSApplication.shared
+app.setActivationPolicy(.accessory)
+app.appearance = NSAppearance(named: .aqua)
+app.finishLaunching()
 let promptRelease = VectorScrollApp.checkRelease(delay: 0.1)
 let delayedRelease = VectorScrollApp.checkRelease(delay: 0.3)
 let settings = VectorScrollApp.checkDelaySettings()
