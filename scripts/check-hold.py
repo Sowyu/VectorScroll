@@ -14,6 +14,12 @@ source = (root / "Sources/VectorScroll/main.swift").read_text()
 entry = "let app = NSApplication.shared\n"
 assert source.count(entry) == 1, "Application entry point changed; update the probe"
 harness = r'''
+@MainActor
+final class PointerActionProbe: NSObject {
+    var calls = 0
+    @objc func clicked(_ sender: NSButton) { calls += 1 }
+}
+
 extension VectorScrollApp {
     static func checkDelaySettings() -> Bool {
         let subject = VectorScrollApp()
@@ -104,6 +110,21 @@ extension VectorScrollApp {
         assert(scroll.hasVerticalScroller, "All settings must remain reachable on smaller screens")
         assert(subject.holdScrollItem is SettingsButton)
         assert(subject.openSettingsButton is SettingsButton)
+        func mouseClick(_ button: NSButton, at point: NSPoint, releaseInside: Bool = true) {
+            button.scrollToVisible(button.bounds)
+            content.layoutSubtreeIfNeeded()
+            let location = button.convert(point, to: nil)
+            func event(_ type: NSEvent.EventType, at location: NSPoint) -> NSEvent {
+                NSEvent.mouseEvent(with: type, location: location, modifierFlags: [], timestamp: ProcessInfo.processInfo.systemUptime,
+                                   windowNumber: subject.settingsWindow.windowNumber, context: nil, eventNumber: 1, clickCount: 1, pressure: type == .leftMouseDown ? 1 : 0)!
+            }
+            // NSButton consumes mouse-up in its native tracking loop. Send the
+            // down through NSWindow rather than bypassing tracking with performClick.
+            NSApp.postEvent(event(.leftMouseUp, at: releaseInside ? location : NSPoint(x: -100, y: -100)), atStart: true)
+            subject.settingsWindow.sendEvent(event(.leftMouseDown, at: location))
+            // A disabled control does not enter tracking and leaves mouse-up queued.
+            _ = NSApp.nextEvent(matching: .leftMouseUp, until: .distantPast, inMode: .default, dequeue: true)
+        }
         // Exercise actual hit regions. performClick bypasses mouse hit testing.
         for button in [subject.hideIconItem!, subject.holdScrollItem!, subject.holdToLockItem!, subject.updateItem!] {
             button.scrollToVisible(button.bounds)
@@ -119,12 +140,32 @@ extension VectorScrollApp {
                 assert(hit.contains(.trackableArea), "Entire drawn button must be clickable")
             }
         }
-        subject.hideIconItem.performClick(nil)
+        mouseClick(subject.hideIconItem, at: NSPoint(x: subject.hideIconItem.bounds.maxX - 25, y: 17))
         assert(subject.hideIconItem.state == .on && subject.statusItem != nil, "Styled toggle must use native click tracking")
-        subject.holdScrollItem.performClick(nil)
+        mouseClick(subject.holdScrollItem, at: NSPoint(x: 8, y: 8))
         assert(!subject.holdToLockMode && subject.holdScrollItem.state == .on)
-        subject.holdToLockItem.performClick(nil)
+        mouseClick(subject.holdToLockItem, at: NSPoint(x: 80, y: 48))
         assert(subject.holdToLockMode && subject.holdToLockItem.state == .on)
+        let probe = PointerActionProbe()
+        let quit = content.subviews.last as! SettingsButton
+        for button in [subject.updateItem!, quit] {
+            let originalTarget = button.target
+            let originalAction = button.action
+            button.target = probe
+            button.action = #selector(PointerActionProbe.clicked(_:))
+            let before = probe.calls
+            mouseClick(button, at: NSPoint(x: 8, y: 8))
+            assert(probe.calls == before + 1, "Mouse click must fire action exactly once")
+            mouseClick(button, at: NSPoint(x: 8, y: 8), releaseInside: false)
+            assert(probe.calls == before + 1, "Releasing outside must cancel the click")
+            button.isEnabled = false
+            mouseClick(button, at: NSPoint(x: 8, y: 8))
+            assert(probe.calls == before + 1, "Disabled buttons must ignore clicks")
+            button.isEnabled = true
+            button.target = originalTarget
+            button.action = originalAction
+        }
+        print("PASS: pointer clicks on switch, icon, subtitle, and action areas; disabled and canceled clicks")
         content.layoutSubtreeIfNeeded()
         scroll.contentView.scroll(to: NSPoint(x: 0, y: 0))
         scroll.reflectScrolledClipView(scroll.contentView)
