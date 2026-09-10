@@ -98,15 +98,28 @@ extension VectorScrollApp {
         RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.1))
         subject.settingsWindow.contentView!.layoutSubtreeIfNeeded()
         let content = subject.settingsWindow.contentView!
-        let stack = content.subviews.first as! NSStackView
-        assert(stack.fittingSize.height <= content.bounds.height - 40, "Settings content must fit")
+        let scroll = content.subviews.first as! NSScrollView
+        let stack = scroll.documentView!.subviews.first as! NSStackView
+        assert(stack.bounds.width <= scroll.contentView.bounds.width, "Settings must fit horizontally")
+        assert(scroll.hasVerticalScroller, "All settings must remain reachable on smaller screens")
+        assert(subject.holdScrollItem is SettingsButton)
+        assert(subject.openSettingsButton is SettingsButton)
+        subject.hideIconItem.performClick(nil)
+        assert(subject.hideIconItem.state == .on && subject.statusItem != nil, "Styled toggle must use native click tracking")
+        subject.holdScrollItem.performClick(nil)
+        assert(!subject.holdToLockMode && subject.holdScrollItem.state == .on)
+        subject.holdToLockItem.performClick(nil)
+        assert(subject.holdToLockMode && subject.holdToLockItem.state == .on)
+        content.layoutSubtreeIfNeeded()
+        scroll.contentView.scroll(to: NSPoint(x: 0, y: 0))
+        scroll.reflectScrolledClipView(scroll.contentView)
         let bitmap = content.bitmapImageRepForCachingDisplay(in: content.bounds)!
         content.cacheDisplay(in: content.bounds, to: bitmap)
         // The window supplies its background outside the content view. Include
         // that native background when exporting the view for visual review.
         let preview = NSImage(size: content.bounds.size)
         preview.lockFocus()
-        NSColor(calibratedWhite: 0.93, alpha: 1).setFill()
+        SettingsStyle.background.setFill()
         NSBezierPath(rect: content.bounds).fill()
         bitmap.draw(in: content.bounds, from: .zero, operation: .sourceOver, fraction: 1,
                     respectFlipped: true, hints: nil)
@@ -162,6 +175,6 @@ generated = output / "main.swift"
 generated.write_text(source.split(entry)[0] + harness)
 binary = output / "check-hold"
 subprocess.run(["swiftc", "-swift-version", "6", "-warnings-as-errors",
-                str(generated), str(root / "Sources/VectorScroll/Updates.swift"), str(root / "Sources/VectorScroll/UpdateInstaller.swift"), "-o", str(binary), "-framework", "AppKit",
+                str(generated), str(root / "Sources/VectorScroll/SettingsStyle.swift"), str(root / "Sources/VectorScroll/Updates.swift"), str(root / "Sources/VectorScroll/UpdateInstaller.swift"), "-o", str(binary), "-framework", "AppKit",
                 "-framework", "ApplicationServices", "-framework", "ServiceManagement"], check=True)
 subprocess.run([str(binary)], check=True)

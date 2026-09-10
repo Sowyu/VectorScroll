@@ -2,7 +2,7 @@
 
 <img src="docs/icon.png" alt="VectorScroll icon" width="96" height="96">
 
-Middle-button autoscrolling for macOS, with a native AppKit settings window. Move your pointer away from the starting point to control scrolling direction and speed.
+Middle-button autoscrolling for macOS, with a compact, dark settings window built in AppKit. Move your pointer away from the starting point to control scrolling direction and speed.
 
 Built with Swift and system frameworks. No Electron, web views, or third-party dependencies. One universal app supports Intel and Apple Silicon Macs running macOS 14 or later.
 
@@ -26,6 +26,8 @@ The second mode has an optional hold requirement to prevent accidental activatio
 The click that stops scrolling also reaches the app under your pointer. Clicking a link or button will activate it. Stop over empty space to avoid that.
 
 ## Settings
+
+A charcoal panel with SF Symbols, clear mode buttons, and switches. The interface uses AppKit and system fonts, with no web views, bundled fonts, or UI dependencies.
 
 Change the indicator's light/dark appearance and size, set launch at login, or check for updates. Changes save immediately.
 

@@ -51,7 +51,7 @@ jobs:
           .build/check-installer
       - uses: actions/upload-artifact@v4
         with:
-          name: VectorScroll-1.4.0
+          name: VectorScroll-1.5.0
           path: dist/VectorScroll.dmg
           if-no-files-found: error
       - uses: actions/upload-artifact@v4

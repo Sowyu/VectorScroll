@@ -5,7 +5,7 @@ struct AppUpdate: Sendable {
     let downloadURL: URL
     let sha256: String
     let downloadSize: Int
-    static let installedVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.4.0"
+    static let installedVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.5.0"
     static let endpoint = URL(string: "https://api.github.com/repos/Sowyu/VectorScroll/releases/latest")!
 
     enum CheckError: LocalizedError {
