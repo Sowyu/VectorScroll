@@ -146,7 +146,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         stack.identifier = NSUserInterfaceItemIdentifier("settingsContent")
         stack.orientation = .vertical
         stack.alignment = .leading
-        stack.spacing = 10
+        stack.spacing = 8
         func fullWidth(_ view: NSView) {
             stack.addArrangedSubview(view)
             view.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
@@ -155,10 +155,10 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
             let divider = NSBox()
             divider.boxType = .custom
             divider.fillColor = SettingsStyle.border
-            divider.borderType = .noBorder
+            divider.borderWidth = 0
             divider.heightAnchor.constraint(equalToConstant: 1).isActive = true
             fullWidth(divider)
-            stack.setCustomSpacing(16, after: divider)
+            stack.setCustomSpacing(12, after: divider)
             let icon = NSImageView(image: SettingsStyle.symbol(symbol)!)
             icon.widthAnchor.constraint(equalToConstant: 17).isActive = true
             icon.heightAnchor.constraint(equalToConstant: 17).isActive = true
@@ -177,7 +177,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         titleStack.spacing = 3
         let header = row(appIcon, titleStack)
         stack.addArrangedSubview(header)
-        stack.setCustomSpacing(20, after: header)
+        stack.setCustomSpacing(16, after: header)
 
         section("Scrolling", "computermouse")
         let hold = SettingsButton("Scroll while holding the middle button", symbol: "hand.point.up.left", kind: .choice, target: self, action: #selector(selectHoldToScroll))
@@ -230,7 +230,9 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         hideIconItem = checkbox("Show menu bar icon", "menubar.rectangle", #selector(toggleMenuBarIcon))
         launchAtStartupItem = checkbox("Launch at login", "power", #selector(toggleLaunchAtStartup))
         fullWidth(openSettingsButton)
+        stack.setCustomSpacing(0, after: openSettingsButton)
         fullWidth(hideIconItem)
+        stack.setCustomSpacing(0, after: hideIconItem)
         fullWidth(label("One stays on so settings are always within reach.", secondary: true))
         fullWidth(launchAtStartupItem)
         permissionItem = button("Request Permissions", "hand.raised", #selector(requestPermissions))

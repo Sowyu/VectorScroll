@@ -33,7 +33,7 @@ Change the indicator's light/dark appearance and size, set launch at login, or c
 
 Two toggles control how you access the app:
 
-- **Open settings whenever VectorScroll opens** shows the window on launch and when you reopen the running app.
+- **Open settings on launch** shows the window on launch and when you reopen the running app.
 - **Show menu bar icon** keeps Settings and Quit available from the menu bar.
 
 Both start enabled. They cannot both be off. Hiding the icon enables opening settings; disabling automatic settings opening restores the icon if needed. Closing the window keeps scrolling available.
