@@ -4,7 +4,7 @@ import CryptoKit
 @main
 struct CheckInstaller {
     static func rejects(_ action: () throws -> Void) {
-        do { try action; fatalError("Expected installation to be rejected") } catch { }
+        do { try action(); fatalError("Expected installation to be rejected") } catch { }
     }
 
     static func main() async throws {
@@ -95,7 +95,7 @@ struct CheckInstaller {
         while Date() < deadline && (!files.fileExists(atPath: marker.path) || !files.fileExists(atPath: result.path)) {
             try await Task.sleep(for: .milliseconds(100))
         }
-        assert(files.fileExists(atPath: marker.path), "New app must relaunch")
+        assert(files.fileExists(atPath: marker.path), "New app must relaunch: \(UserDefaults(suiteName: "local.vectorscroll.app")!.string(forKey: "updateInstallError") ?? "no helper error")")
         let status = try String(contentsOf: result, encoding: .utf8)
         let installed = try UpdateInstaller.appVersion(destination)
         let backup = try UpdateInstaller.appVersion(helperPlan.deletingLastPathComponent().appendingPathComponent("Previous.app"))
