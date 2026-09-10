@@ -19,6 +19,16 @@ final class SettingsDocument: NSView {
     override var isFlipped: Bool { true }
 }
 
+// Native switch/radio cells only hit-test their original glyph and title.
+// Our drawing fills the control, so its entire bounds must track the mouse.
+@MainActor
+private final class SettingsButtonCell: NSButtonCell {
+    override func hitTest(for event: NSEvent, in cellFrame: NSRect, of controlView: NSView) -> NSCell.HitResult {
+        guard isEnabled, cellFrame.contains(controlView.convert(event.locationInWindow, from: nil)) else { return [] }
+        return [.contentArea, .trackableArea]
+    }
+}
+
 // Keep NSButton's tracking, keyboard activation, and accessibility semantics.
 // Only the drawing changes; settings still use the same targets and state.
 @MainActor
@@ -35,6 +45,7 @@ final class SettingsButton: NSButton {
         self.kind = kind
         symbolName = symbol
         super.init(frame: .zero)
+        cell = SettingsButtonCell(textCell: "")
         self.title = title
         self.target = target
         self.action = action
@@ -46,6 +57,7 @@ final class SettingsButton: NSButton {
 
     required init?(coder: NSCoder) { fatalError("init(coder:) is unsupported") }
     override var isFlipped: Bool { true }
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { isEnabled }
     override var intrinsicContentSize: NSSize {
         let width = (title as NSString).size(withAttributes: [.font: font!]).width + 56
         return NSSize(width: width, height: kind == .choice ? 64 : 34)
