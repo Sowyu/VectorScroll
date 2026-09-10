@@ -18,6 +18,11 @@ extension VectorScrollApp {
     static func checkDelaySettings() -> Bool {
         let subject = VectorScrollApp()
         subject.configureMenu()
+        let titles = subject.menu.items.filter { !$0.isHidden }.map(\.title)
+        assert(titles.contains("Hold to Scroll"))
+        assert(titles.contains("Hold to Start"))
+        assert(titles.contains("Hide Menu Bar Icon"))
+        print("PASS: issue #2 menu items are present and visible")
         assert(subject.holdToLockThreshold == 0.2)
         subject.delaySlider.doubleValue = 743
         subject.changeHoldDelay(subject.delaySlider)
