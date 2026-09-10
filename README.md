@@ -18,8 +18,8 @@ Settings opens by default. You can also choose **Settings…** from the menu bar
 
 Choose a mode in Settings:
 
-- **Scroll while holding the middle button:** release the button to stop.
-- **Keep scrolling until the next click:** scrolling continues after release. Click any mouse button to stop.
+- **Hold to scroll:** hold the middle button, then release it to stop.
+- **Toggle scrolling:** scrolling continues after release. Click any mouse button to stop.
 
 The second mode has an optional hold requirement to prevent accidental activation. Adjust it from 50 to 1,000 ms in 50 ms steps. The default is 200 ms. Turn it off to start with a normal middle-click.
 
