@@ -15,6 +15,18 @@ enum SettingsStyle {
 }
 
 @MainActor
+final class SettingsWindow: NSWindow {
+    override func performKeyEquivalent(with event: NSEvent) -> Bool {
+        let modifiers = event.modifierFlags.intersection([.command, .control, .option, .shift])
+        if modifiers == .command, event.charactersIgnoringModifiers?.lowercased() == "w" {
+            performClose(nil)
+            return true
+        }
+        return super.performKeyEquivalent(with: event)
+    }
+}
+
+@MainActor
 final class SettingsDocument: NSView {
     override var isFlipped: Bool { true }
 }
@@ -30,7 +42,7 @@ private final class SettingsButtonCell: NSButtonCell {
 }
 
 // Keep NSButton's tracking, keyboard activation, and accessibility semantics.
-// Only the drawing changes; settings still use the same targets and state.
+// Drawing and hit regions match; settings retain their native targets and state.
 @MainActor
 final class SettingsButton: NSButton {
     enum Kind { case action, toggle, choice, destructive }
@@ -89,10 +101,6 @@ final class SettingsButton: NSButton {
                 NSColor(calibratedWhite: pressed ? 0.28 : hovered ? 0.25 : selected ? 0.21 : kind == .choice ? 0.14 : 0.21, alpha: 1)
             fill.withAlphaComponent(alpha).setFill()
             box.fill()
-            if kind == .choice || selected {
-                NSColor(calibratedWhite: selected ? 0.48 : 0.24, alpha: alpha).setStroke()
-                box.stroke()
-            }
         }
         if window?.firstResponder === self {
             foreground.setStroke()

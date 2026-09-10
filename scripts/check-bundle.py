@@ -6,8 +6,8 @@ import struct
 root = Path(__file__).resolve().parent.parent
 contents = root / "dist/VectorScroll.app/Contents"
 info = plistlib.loads((contents / "Info.plist").read_bytes())
-assert info["CFBundleShortVersionString"] == "1.5.1"
-assert info["CFBundleVersion"] == "8"
+assert info["CFBundleShortVersionString"] == "1.5.2"
+assert info["CFBundleVersion"] == "9"
 assert info["LSMinimumSystemVersion"] == "14.0"
 assert (contents / "MacOS" / info["CFBundleExecutable"]).stat().st_size > 0
 # check-hold.py checks real menu items. Optimized Swift short strings need not
