@@ -43,7 +43,12 @@ struct CheckUpdates {
         print("PASS: version ordering, equal/older releases, invalid versions, HTTP errors, malformed releases, and download URL validation")
 
         // Use the same anonymous URLSession request as the app against real GitHub.
-        guard let live = try await AppUpdate.check(installedVersion: "0.0.0") else {
+        let configuration = URLSessionConfiguration.ephemeral
+        if let token = ProcessInfo.processInfo.environment["GH_UPDATE_TEST_TOKEN"] {
+            configuration.httpAdditionalHeaders = ["Authorization": "Bearer \(token)"]
+        }
+        let session = URLSession(configuration: configuration)
+        guard let live = try await AppUpdate.check(installedVersion: "0.0.0", session: session) else {
             fatalError("Expected a published release newer than 0.0.0")
         }
         var request = URLRequest(url: live.downloadURL, timeoutInterval: 30)

@@ -9,10 +9,11 @@ struct AppUpdate: Sendable {
     static let endpoint = URL(string: "https://api.github.com/repos/Sowyu/VectorScroll/releases/latest")!
 
     enum CheckError: LocalizedError {
-        case unavailable, invalidRelease, unknownVersion
+        case unavailable(Int)
+        case invalidRelease, unknownVersion
         var errorDescription: String? {
             switch self {
-            case .unavailable: "GitHub could not provide the latest release. Try again later."
+            case .unavailable(let status): "GitHub returned HTTP \(status). Try again later."
             case .invalidRelease: "The latest release has no supported installer. Try again later."
             case .unknownVersion: "The app version could not be compared with the latest release."
             }
@@ -47,7 +48,7 @@ struct AppUpdate: Sendable {
     }
 
     static func parse(_ data: Data, statusCode: Int, installedVersion: String) throws -> AppUpdate? {
-        guard statusCode == 200 else { throw CheckError.unavailable }
+        guard statusCode == 200 else { throw CheckError.unavailable(statusCode) }
         let release = try JSONDecoder().decode(Release.self, from: data)
         guard !release.draft, !release.prerelease else { throw CheckError.invalidRelease }
         guard let installed = versionNumbers(installedVersion),
@@ -65,12 +66,12 @@ struct AppUpdate: Sendable {
                          sha256: hash, downloadSize: asset.size)
     }
 
-    static func check(installedVersion: String = AppUpdate.installedVersion) async throws -> AppUpdate? {
+    static func check(installedVersion: String = AppUpdate.installedVersion, session: URLSession = .shared) async throws -> AppUpdate? {
         var request = URLRequest(url: endpoint, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 20)
         request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
         request.setValue("2022-11-28", forHTTPHeaderField: "X-GitHub-Api-Version")
         request.setValue("VectorScroll/\(installedVersion)", forHTTPHeaderField: "User-Agent")
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await session.data(for: request)
         return try parse(data, statusCode: (response as? HTTPURLResponse)?.statusCode ?? 0,
                          installedVersion: installedVersion)
     }

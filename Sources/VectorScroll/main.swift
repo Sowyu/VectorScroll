@@ -282,6 +282,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         do { _ = try UpdateInstaller.validateDestination(destination) }
         catch { showUpdateError(error.localizedDescription); return }
         showSettings()
+        defaults.set("", forKey: "updateInstallError")
         updateItem.isEnabled = false
         downloadItem.isEnabled = false
         downloadItem.title = "Downloading…"
