@@ -36,7 +36,7 @@ struct CheckUpdates {
         rejects(Data("not JSON".utf8))
         var malformed = try JSONSerialization.jsonObject(with: newer) as! [String: Any]
         var assets = malformed["assets"] as! [[String: Any]]
-        for digest: Any in [NSNull(), "sha256:123", "sha256:" + String(repeating: "g", count: 64)] {
+        for digest in [NSNull(), "sha256:123", "sha256:" + String(repeating: "g", count: 64)] as [Any] {
             assets[0]["digest"] = digest
             malformed["assets"] = assets
             rejects(try JSONSerialization.data(withJSONObject: malformed))
