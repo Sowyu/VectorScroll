@@ -93,6 +93,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         let menu = NSMenu()
         let settings = NSMenuItem(title: "Settings…", action: #selector(showSettings), keyEquivalent: ",")
         settings.target = self
+        settings.image = NSImage(systemSymbolName: "gearshape", accessibilityDescription: nil)
         menu.addItem(settings)
         menu.addItem(.separator())
         menu.addItem(NSMenuItem(title: "Quit VectorScroll", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
@@ -110,18 +111,22 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
     }
 
     private func configureSettingsWindow() {
-        settingsWindow = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 520, height: 580),
-                                  styleMask: [.titled, .closable, .miniaturizable], backing: .buffered, defer: false)
+        settingsWindow = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 620, height: 740),
+                                  styleMask: [.titled, .closable, .miniaturizable, .fullSizeContentView], backing: .buffered, defer: false)
         settingsWindow.title = "VectorScroll Settings"
+        settingsWindow.titleVisibility = .hidden
+        settingsWindow.titlebarAppearsTransparent = true
+        settingsWindow.backgroundColor = SettingsStyle.background
+        settingsWindow.appearance = NSAppearance(named: .darkAqua)
         settingsWindow.isReleasedWhenClosed = false
-        if !settingsWindow.setFrameUsingName("VectorScrollSettings") { settingsWindow.center() }
-        settingsWindow.setFrameAutosaveName("VectorScrollSettings")
+        if !settingsWindow.setFrameUsingName("VectorScrollSettingsV2") { settingsWindow.center() }
+        settingsWindow.setFrameAutosaveName("VectorScrollSettingsV2")
 
         func label(_ text: String, secondary: Bool = false) -> NSTextField {
             let field = NSTextField(wrappingLabelWithString: text)
-            field.font = .systemFont(ofSize: secondary ? 11 : 13)
-            field.preferredMaxLayoutWidth = 472
-            field.textColor = secondary ? .secondaryLabelColor : .labelColor
+            field.font = .systemFont(ofSize: secondary ? 12 : 14)
+            field.preferredMaxLayoutWidth = 556
+            field.textColor = secondary ? SettingsStyle.secondary : SettingsStyle.text
             return field
         }
         func row(_ views: NSView...) -> NSStackView {
@@ -131,51 +136,85 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
             stack.spacing = 12
             return stack
         }
-        func button(_ title: String, _ action: Selector) -> NSButton {
-            NSButton(title: title, target: self, action: action)
+        func button(_ title: String, _ symbol: String, _ action: Selector) -> SettingsButton {
+            SettingsButton(title, symbol: symbol, target: self, action: action)
         }
-        func checkbox(_ title: String, _ action: Selector) -> NSButton {
-            NSButton(checkboxWithTitle: title, target: self, action: action)
+        func checkbox(_ title: String, _ symbol: String, _ action: Selector) -> SettingsButton {
+            SettingsButton(title, symbol: symbol, kind: .toggle, target: self, action: action)
         }
         let stack = NSStackView()
+        stack.identifier = NSUserInterfaceItemIdentifier("settingsContent")
         stack.orientation = .vertical
         stack.alignment = .leading
-        stack.spacing = 9
-        func section(_ title: String) {
-            if !stack.arrangedSubviews.isEmpty {
-                let divider = NSBox()
-                divider.boxType = .separator
-                stack.addArrangedSubview(divider)
-                divider.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
-            }
-            let heading = label(title)
-            heading.font = .boldSystemFont(ofSize: 13)
-            stack.addArrangedSubview(heading)
+        stack.spacing = 10
+        func fullWidth(_ view: NSView) {
+            stack.addArrangedSubview(view)
+            view.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
         }
-        section("Scrolling")
-        holdScrollItem = NSButton(radioButtonWithTitle: "Scroll while holding the middle button", target: self, action: #selector(selectHoldToScroll))
-        holdToLockItem = NSButton(radioButtonWithTitle: "Keep scrolling until the next click", target: self, action: #selector(selectHoldToLock))
-        stack.addArrangedSubview(holdScrollItem)
-        stack.addArrangedSubview(holdToLockItem)
-        stack.addArrangedSubview(label("Move the pointer away from the starting point to control direction and speed.", secondary: true))
-        delayToggle = checkbox("Require a hold before starting", #selector(toggleHoldDelay))
+        func section(_ title: String, _ symbol: String) {
+            let divider = NSBox()
+            divider.boxType = .custom
+            divider.fillColor = SettingsStyle.border
+            divider.borderType = .noBorder
+            divider.heightAnchor.constraint(equalToConstant: 1).isActive = true
+            fullWidth(divider)
+            stack.setCustomSpacing(16, after: divider)
+            let icon = NSImageView(image: SettingsStyle.symbol(symbol)!)
+            icon.widthAnchor.constraint(equalToConstant: 17).isActive = true
+            icon.heightAnchor.constraint(equalToConstant: 17).isActive = true
+            let heading = label(title)
+            heading.font = .systemFont(ofSize: 14, weight: .semibold)
+            stack.addArrangedSubview(row(icon, heading))
+        }
+        let appIcon = NSImageView(image: SettingsStyle.symbol("arrow.up.and.down.circle.fill", color: SettingsStyle.text)!)
+        appIcon.widthAnchor.constraint(equalToConstant: 42).isActive = true
+        appIcon.heightAnchor.constraint(equalToConstant: 42).isActive = true
+        let title = label("VectorScroll")
+        title.font = .systemFont(ofSize: 25, weight: .semibold)
+        let titleStack = NSStackView(views: [title, label("Settings", secondary: true)])
+        titleStack.orientation = .vertical
+        titleStack.alignment = .leading
+        titleStack.spacing = 3
+        let header = row(appIcon, titleStack)
+        stack.addArrangedSubview(header)
+        stack.setCustomSpacing(20, after: header)
+
+        section("Scrolling", "computermouse")
+        let hold = SettingsButton("Scroll while holding the middle button", symbol: "hand.point.up.left", kind: .choice, target: self, action: #selector(selectHoldToScroll))
+        hold.displayTitle = "Hold to scroll"
+        hold.detail = "Release the middle button to stop"
+        holdScrollItem = hold
+        let click = SettingsButton("Keep scrolling until the next click", symbol: "cursorarrow.click", kind: .choice, target: self, action: #selector(selectHoldToLock))
+        click.displayTitle = "Click to scroll"
+        click.detail = "Click again to stop"
+        holdToLockItem = click
+        let modes = row(hold, click)
+        modes.distribution = .fillEqually
+        fullWidth(modes)
+        fullWidth(label("Move the pointer to control direction and speed.", secondary: true))
+        delayToggle = checkbox("Delay before scrolling starts", "timer", #selector(toggleHoldDelay))
         delaySlider = NSSlider(value: Double(holdDelayMilliseconds), minValue: 50, maxValue: 1000,
                                target: self, action: #selector(changeHoldDelay(_:)))
         delaySlider.numberOfTickMarks = 20
+        delaySlider.tickMarkPosition = .below
         delaySlider.allowsTickMarkValuesOnly = true
         delaySlider.isContinuous = true
         delaySlider.setAccessibilityLabel("Hold duration in milliseconds")
-        delaySlider.widthAnchor.constraint(equalToConstant: 210).isActive = true
+        delaySlider.widthAnchor.constraint(equalToConstant: 240).isActive = true
         delayLabel = label("")
+        delayLabel.font = .monospacedDigitSystemFont(ofSize: 12, weight: .medium)
         delayItem = NSStackView(views: [delayToggle, row(delaySlider, delayLabel)])
         delayItem.orientation = .vertical
         delayItem.alignment = .leading
-        delayItem.spacing = 6
-        stack.addArrangedSubview(delayItem)
+        delayItem.spacing = 4
+        fullWidth(delayItem)
+        delayToggle.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
 
-        section("Indicator")
-        lightModeItem = NSButton(radioButtonWithTitle: "Light", target: self, action: #selector(selectLightMode))
-        darkModeItem = NSButton(radioButtonWithTitle: "Dark", target: self, action: #selector(selectDarkMode))
+        section("Indicator", "scope")
+        lightModeItem = button("Light", "sun.max", #selector(selectLightMode))
+        lightModeItem.setButtonType(.pushOnPushOff)
+        darkModeItem = button("Dark", "moon", #selector(selectDarkMode))
+        darkModeItem.setButtonType(.pushOnPushOff)
         sizePicker = NSPopUpButton(frame: .zero, pullsDown: false)
         for size in markerSizes {
             sizePicker.addItem(withTitle: "\(size) pt")
@@ -184,37 +223,56 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         sizePicker.target = self
         sizePicker.action = #selector(selectMarkerSize(_:))
         sizePicker.setAccessibilityLabel("Indicator size")
-        stack.addArrangedSubview(row(lightModeItem, darkModeItem, label("Size"), sizePicker))
+        stack.addArrangedSubview(row(lightModeItem, darkModeItem, label("Size", secondary: true), sizePicker))
 
-        section("App")
-        openSettingsButton = checkbox("Open settings whenever VectorScroll opens", #selector(toggleOpenSettings))
-        hideIconItem = checkbox("Show menu bar icon", #selector(toggleMenuBarIcon))
-        launchAtStartupItem = checkbox("Launch at login", #selector(toggleLaunchAtStartup))
-        stack.addArrangedSubview(openSettingsButton)
-        stack.addArrangedSubview(hideIconItem)
-        stack.addArrangedSubview(label("At least one of these stays on. With the icon hidden, reopen VectorScroll to access settings.", secondary: true))
-        stack.addArrangedSubview(launchAtStartupItem)
-        permissionItem = button("Request Permissions", #selector(requestPermissions))
+        section("App", "slider.horizontal.3")
+        openSettingsButton = checkbox("Open settings on launch", "macwindow", #selector(toggleOpenSettings))
+        hideIconItem = checkbox("Show menu bar icon", "menubar.rectangle", #selector(toggleMenuBarIcon))
+        launchAtStartupItem = checkbox("Launch at login", "power", #selector(toggleLaunchAtStartup))
+        fullWidth(openSettingsButton)
+        fullWidth(hideIconItem)
+        fullWidth(label("One stays on so settings are always within reach.", secondary: true))
+        fullWidth(launchAtStartupItem)
+        permissionItem = button("Request Permissions", "hand.raised", #selector(requestPermissions))
         stack.addArrangedSubview(permissionItem)
 
-        section("Updates")
-        stack.addArrangedSubview(label("VectorScroll \(AppUpdate.installedVersion) · Checks GitHub at launch and daily.", secondary: true))
-        updateItem = button("Check for Updates…", #selector(checkUpdatesFromMenu))
-        downloadItem = button("Install Update…", #selector(installUpdate))
+        section("Updates", "arrow.down.circle")
+        fullWidth(label("Version \(AppUpdate.installedVersion) · Checks automatically each day", secondary: true))
+        updateItem = button("Check for Updates…", "arrow.clockwise", #selector(checkUpdatesFromMenu))
+        downloadItem = button("Install Update…", "arrow.down", #selector(installUpdate))
         downloadItem.isHidden = true
         stack.addArrangedSubview(row(updateItem, downloadItem))
-        stack.addArrangedSubview(label("Updates install automatically and restart the app. The previous copy is kept.", secondary: true))
-        let quit = NSButton(title: "Quit VectorScroll", target: NSApp, action: #selector(NSApplication.terminate(_:)))
-        stack.addArrangedSubview(quit)
+        fullWidth(label("Installs and restarts automatically. Your previous copy is kept.", secondary: true))
 
         let content = settingsWindow.contentView!
+        let scroll = NSScrollView()
+        scroll.drawsBackground = false
+        scroll.hasVerticalScroller = true
+        scroll.autohidesScrollers = true
+        scroll.translatesAutoresizingMaskIntoConstraints = false
+        let document = SettingsDocument()
+        document.translatesAutoresizingMaskIntoConstraints = false
+        scroll.documentView = document
         stack.translatesAutoresizingMaskIntoConstraints = false
-        content.addSubview(stack)
+        document.addSubview(stack)
+        content.addSubview(scroll)
+        let quit = SettingsButton("Quit VectorScroll", symbol: "rectangle.portrait.and.arrow.right", kind: .destructive, target: NSApp, action: #selector(NSApplication.terminate(_:)))
+        quit.keyEquivalent = "q"
+        quit.keyEquivalentModifierMask = .command
+        quit.translatesAutoresizingMaskIntoConstraints = false
+        content.addSubview(quit)
         NSLayoutConstraint.activate([
-            stack.leadingAnchor.constraint(equalTo: content.leadingAnchor, constant: 24),
-            stack.trailingAnchor.constraint(equalTo: content.trailingAnchor, constant: -24),
-            stack.topAnchor.constraint(equalTo: content.topAnchor, constant: 20),
-            stack.bottomAnchor.constraint(lessThanOrEqualTo: content.bottomAnchor, constant: -20)
+            scroll.leadingAnchor.constraint(equalTo: content.leadingAnchor),
+            scroll.trailingAnchor.constraint(equalTo: content.trailingAnchor),
+            scroll.topAnchor.constraint(equalTo: content.topAnchor, constant: 38),
+            scroll.bottomAnchor.constraint(equalTo: quit.topAnchor, constant: -16),
+            document.widthAnchor.constraint(equalTo: scroll.contentView.widthAnchor),
+            stack.leadingAnchor.constraint(equalTo: document.leadingAnchor, constant: 32),
+            stack.trailingAnchor.constraint(equalTo: document.trailingAnchor, constant: -32),
+            stack.topAnchor.constraint(equalTo: document.topAnchor, constant: 8),
+            stack.bottomAnchor.constraint(equalTo: document.bottomAnchor, constant: -8),
+            quit.trailingAnchor.constraint(equalTo: content.trailingAnchor, constant: -32),
+            quit.bottomAnchor.constraint(equalTo: content.bottomAnchor, constant: -20)
         ])
         updateMarkerMenuItem()
         updateSizeMenuItems()
