@@ -232,6 +232,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         darkModeItem = button("Dark", "moon", #selector(selectDarkMode))
         darkModeItem.setButtonType(.pushOnPushOff)
         sizePicker = NSPopUpButton(frame: .zero, pullsDown: false)
+        sizePicker.isBordered = false
         for size in markerSizes {
             sizePicker.addItem(withTitle: "\(size) pt")
             sizePicker.lastItem?.tag = size
