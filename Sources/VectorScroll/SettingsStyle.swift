@@ -103,9 +103,9 @@ final class SettingsButton: NSButton {
             box.fill()
         }
         if window?.firstResponder === self {
-            foreground.setStroke()
-            box.lineWidth = 2
-            box.stroke()
+            // Show keyboard focus without bringing back a box border.
+            foreground.setFill()
+            NSBezierPath(rect: NSRect(x: 38, y: bounds.height - 4, width: min(80, bounds.width - 50), height: 2)).fill()
         }
         let iconY: CGFloat = kind == .choice ? 13 : (bounds.height - 16) / 2
         SettingsStyle.symbol(symbolName, color: kind == .destructive ? foreground : SettingsStyle.secondary.withAlphaComponent(alpha))?
