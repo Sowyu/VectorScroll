@@ -1,50 +1,70 @@
 # VectorScroll
 
-<img src="docs/icon.png" alt="VectorScroll icon" width="128" height="128">
+<img src="docs/icon.png" alt="VectorScroll icon" width="96" height="96">
 
-A tiny native macOS menu-bar utility that recreates Windows/Firefox-style vector scrolling. Built directly on Swift and AppKit with no external dependencies or frameworks (no Electron, no bundled runtimes). The whole app ships as a ~400 KB download, runs as a single lightweight process, and uses
-negligible CPU and memory while idle.
+Middle-button autoscrolling for macOS, with a native AppKit settings window. Move your pointer away from the starting point to control scrolling direction and speed.
 
+Built with Swift and system frameworks. No Electron, web views, or third-party dependencies. One universal app supports Intel and Apple Silicon Macs running macOS 14 or later.
 
-The app appears in the macOS menu bar.
+## Install
 
-## Use
+1. Download `VectorScroll.dmg` from the [latest release](https://github.com/Sowyu/VectorScroll/releases/latest).
+2. Open the DMG and drag VectorScroll into Applications.
+3. Open VectorScroll. Enable Accessibility and Input Monitoring in System Settings when prompted.
 
-- Middle-click to start scrolling; move the pointer away from the anchor to control direction and speed.
-- Choose `Scroll While Holding` to scroll while the middle mouse button is down. Release it to stop.
-- Choose `Scroll Until Next Click` to keep scrolling after releasing the middle button. Click any mouse button to stop.
-- In `Scroll Until Next Click`, open `Hold Before Starting` to set how long to hold the middle button before scrolling begins. Toggle `Require a Hold to Start` off to start with a normal middle-click. The slider ranges from `50` to `1,000` ms, with a default of `200` ms. Settings are saved between launches.
-- Open `Indicator Appearance` to choose a light or dark indicator and change its size.
-- Use `Launch at Startup` to control whether the app opens when you log in.
-- Use `Hide Menu Bar Icon` to remove the status-item icon; reopen the app (e.g. `open -a VectorScroll`) to bring it back.
-- Indicator style, indicator size, and scroll mode are saved between launches.
+Settings opens by default. You can also choose **Settings…** from the menu bar icon.
 
-In `Scroll Until Next Click`, the click that stops scrolling is also delivered to whatever is under the
-pointer. VectorScroll observes input with a listen-only event tap and never swallows events, so
-stopping on a button or a link will also activate it. Stop over empty space to avoid this.
+## Scrolling
+
+Choose a mode in Settings:
+
+- **Scroll while holding the middle button:** release the button to stop.
+- **Keep scrolling until the next click:** scrolling continues after release. Click any mouse button to stop.
+
+The second mode has an optional hold requirement to prevent accidental activation. Adjust it from 50 to 1,000 ms in 50 ms steps. The default is 200 ms. Turn it off to start with a normal middle-click.
+
+The click that stops scrolling also reaches the app under your pointer. Clicking a link or button will activate it. Stop over empty space to avoid that.
+
+## Settings
+
+Change the indicator's light/dark appearance and size, set launch at login, or check for updates. Changes save immediately.
+
+Two toggles control how you access the app:
+
+- **Open settings whenever VectorScroll opens** shows the window on launch and when you reopen the running app.
+- **Show menu bar icon** keeps Settings and Quit available from the menu bar.
+
+Both start enabled. They cannot both be off. Hiding the icon enables opening settings; disabling automatic settings opening restores the icon if needed. Closing the window keeps scrolling available.
+
+If the icon is hidden, reopen VectorScroll from Applications or run:
+
+```sh
+open -a VectorScroll
+```
 
 ## Updates
 
-VectorScroll checks GitHub for a stable release at launch and every 24 hours while running. Use `Check for Updates…` in the menu bar to check immediately. When a newer version exists, `Download Update` opens its DMG in your browser. Quit the app and replace it in Applications to install the update. The installed version appears in the menu.
+VectorScroll checks GitHub at launch and every 24 hours while running. Use **Check for Updates…** in Settings to check immediately. **Download Update** opens the new DMG in your browser.
 
-Background checks do not show dialogs. Failed checks leave the app running and can be retried from the menu. No GitHub account is required.
+Quit VectorScroll, replace the app in Applications, and open it again to install an update. Installation is manual. Background checks do not show dialogs, and no GitHub account is required.
 
-## Build
+## Build and check
 
+Requires macOS and a Swift 6 toolchain. Run from the repository root:
+
+```sh
+swift build -c release
+./scripts/build-app.sh
 ```
-swift build -c release      # binary only
-./scripts/build-app.sh      # bundles VectorScroll.app into dist/
+
+The bundle script builds both architectures, generates icons at fixed pixel sizes, and creates an ad-hoc-signed `dist/VectorScroll.app`. It refuses to replace an existing app. Move the previous build to Trash before rebuilding.
+
+Run the native settings, access-toggle, scrolling, and update checks:
+
+```sh
+python3 scripts/check-hold.py
+swiftc -swift-version 6 -warnings-as-errors -parse-as-library Sources/VectorScroll/Updates.swift scripts/check-updates.swift -o .build/check-updates
+.build/check-updates
 ```
 
-`build-app.sh` invokes `scripts/make-icons.swift` to render the iconset, then `iconutil` to pack it
-into `VectorScroll.icns`, so the icon is generated at build time rather than checked in.
-
-macOS may prompt for Accessibility/Input Monitoring permission. If it does not work immediately, enable the app in:
-
-`System Settings -> Privacy & Security -> Accessibility`
-
-and, if needed:
-
-`System Settings -> Privacy & Security -> Input Monitoring`
-
-The menu-bar icon uses Apple's native SF Symbols.
+GitHub Actions also verifies the universal app, icon dimensions, signature, and DMG. The update check includes a live GitHub request.

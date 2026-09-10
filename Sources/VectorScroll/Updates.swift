@@ -3,7 +3,7 @@ import Foundation
 struct AppUpdate: Sendable {
     let version: String
     let downloadURL: URL
-    static let installedVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.2.1"
+    static let installedVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.3.0"
     static let endpoint = URL(string: "https://api.github.com/repos/Sowyu/VectorScroll/releases/latest")!
 
     enum CheckError: LocalizedError {

@@ -6,22 +6,25 @@
 private final class VectorScrollApp: NSObject, NSApplicationDelegate {
     private let markerSizes = [28, 32, 40, 48]
     private let defaults = UserDefaults.standard
-    private var updateItem: NSMenuItem!
-    private var downloadItem: NSMenuItem!
+    private var updateItem: NSButton!
+    private var downloadItem: NSButton!
     private var availableUpdate: AppUpdate?
     private var updateTask: Task<Void, Never>?
     private var updateTimer: DispatchSourceTimer?
     private var showUpdateResult = false
     private var statusItem: NSStatusItem!
     private var menu: NSMenu!
-    private var permissionItem: NSMenuItem!
-    private var lightModeItem: NSMenuItem!
-    private var darkModeItem: NSMenuItem!
-    private var holdScrollItem: NSMenuItem!
-    private var holdToLockItem: NSMenuItem!
-    private var launchAtStartupItem: NSMenuItem!
-    private var hideIconItem: NSMenuItem!
-    private var sizeItems: [NSMenuItem] = []
+    private var permissionItem: NSButton!
+    private var lightModeItem: NSButton!
+    private var darkModeItem: NSButton!
+    private var holdScrollItem: NSButton!
+    private var holdToLockItem: NSButton!
+    private var launchAtStartupItem: NSButton!
+    private var hideIconItem: NSButton!
+    private var sizePicker: NSPopUpButton!
+    private var settingsWindow: NSWindow!
+    private var openSettingsButton: NSButton!
+    private var openSettingsOnLaunch = true
     private var eventTap: CFMachPort?
     private var runLoopSource: CFRunLoopSource?
     private var timer: DispatchSourceTimer?
@@ -44,8 +47,8 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
     private var holdToLockThreshold: TimeInterval {
         holdDelayEnabled ? Double(holdDelayMilliseconds) / 1000 : 0
     }
-    private var delayItem: NSMenuItem!
-    private var delayToggle: NSMenuItem!
+    private var delayItem: NSStackView!
+    private var delayToggle: NSButton!
     private var delaySlider: NSSlider!
     private var delayLabel: NSTextField!
 
@@ -53,6 +56,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         NSApp.setActivationPolicy(.accessory)
         restoreSettings()
         configureMenu()
+        if openSettingsOnLaunch { showSettings() }
         requestPermissions()
         installEventTap()
         startPermissionStatusTimer()
@@ -80,81 +84,137 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
 
     private func configureMenu() {
         let menu = NSMenu()
-        permissionItem = NSMenuItem(title: "Request Permissions", action: #selector(requestPermissions), keyEquivalent: "")
-        permissionItem.target = self
-        menu.addItem(permissionItem)
-
-        holdScrollItem = NSMenuItem(title: "Scroll While Holding", action: #selector(selectHoldToScroll), keyEquivalent: "")
-        holdScrollItem.target = self
-        if #available(macOS 14.4, *) {
-            holdScrollItem.subtitle = "Hold middle button; release to stop"
-        }
-        menu.addItem(holdScrollItem)
-
-        holdToLockItem = NSMenuItem(title: "Scroll Until Next Click", action: #selector(selectHoldToLock), keyEquivalent: "")
-        holdToLockItem.target = self
-        menu.addItem(holdToLockItem)
-        configureDelayMenu(in: menu)
-        updateScrollModeMenuItems()
-
+        let settings = NSMenuItem(title: "Settings…", action: #selector(showSettings), keyEquivalent: ",")
+        settings.target = self
+        menu.addItem(settings)
         menu.addItem(.separator())
-        let appearanceMenu = NSMenu()
-        lightModeItem = NSMenuItem(title: "Light Indicator", action: #selector(selectLightMode), keyEquivalent: "")
-        lightModeItem.target = self
-        appearanceMenu.addItem(lightModeItem)
-
-        darkModeItem = NSMenuItem(title: "Dark Indicator", action: #selector(selectDarkMode), keyEquivalent: "")
-        darkModeItem.target = self
-        appearanceMenu.addItem(darkModeItem)
-        updateMarkerMenuItem()
-
-        let sizeMenu = NSMenu()
-        for size in markerSizes {
-            let item = NSMenuItem(title: "\(size) px", action: #selector(selectMarkerSize(_:)), keyEquivalent: "")
-            item.target = self
-            item.representedObject = size
-            sizeMenu.addItem(item)
-            sizeItems.append(item)
-        }
-        let sizeItem = NSMenuItem(title: "Indicator Size", action: nil, keyEquivalent: "")
-        sizeItem.submenu = sizeMenu
-        appearanceMenu.addItem(.separator())
-        appearanceMenu.addItem(sizeItem)
-        let appearanceItem = NSMenuItem(title: "Indicator Appearance", action: nil, keyEquivalent: "")
-        appearanceItem.submenu = appearanceMenu
-        menu.addItem(appearanceItem)
-        updateSizeMenuItems()
-        menu.addItem(.separator())
-
-        launchAtStartupItem = NSMenuItem(title: "Launch at Startup", action: #selector(toggleLaunchAtStartup), keyEquivalent: "")
-        launchAtStartupItem.target = self
-        menu.addItem(launchAtStartupItem)
-        updateLaunchAtStartupItem()
-
-        hideIconItem = NSMenuItem(title: "Hide Menu Bar Icon", action: #selector(toggleMenuBarIcon), keyEquivalent: "")
-        hideIconItem.target = self
-        hideIconItem.state = menuBarIconHidden ? .on : .off
-        if #available(macOS 14.4, *) {
-            hideIconItem.subtitle = "Reopen app to show"
-        }
-        menu.addItem(hideIconItem)
-
-        menu.addItem(.separator())
-        let versionItem = NSMenuItem(title: "VectorScroll \(AppUpdate.installedVersion)", action: nil, keyEquivalent: "")
-        menu.addItem(versionItem)
-        updateItem = NSMenuItem(title: "Check for Updates…", action: #selector(checkUpdatesFromMenu), keyEquivalent: "")
-        updateItem.target = self
-        menu.addItem(updateItem)
-        downloadItem = NSMenuItem(title: "Download Update…", action: #selector(downloadUpdate), keyEquivalent: "")
-        downloadItem.target = self
-        downloadItem.isHidden = true
-        menu.addItem(downloadItem)
-        menu.addItem(.separator())
-        menu.addItem(NSMenuItem(title: "Quit", action: #selector(NSApplication.terminate(_:)), keyEquivalent: ""))
-
+        menu.addItem(NSMenuItem(title: "Quit VectorScroll", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
         self.menu = menu
-        installStatusItem()
+        configureSettingsWindow()
+        if !menuBarIconHidden { installStatusItem() }
+    }
+
+    @objc private func showSettings() {
+        stopScrolling()
+        updateLaunchAtStartupItem()
         updatePermissionMenuItem()
+        settingsWindow.makeKeyAndOrderFront(nil)
+        NSApp.activate()
+    }
+
+    private func configureSettingsWindow() {
+        settingsWindow = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 520, height: 700),
+                                  styleMask: [.titled, .closable, .miniaturizable], backing: .buffered, defer: false)
+        settingsWindow.title = "VectorScroll Settings"
+        settingsWindow.isReleasedWhenClosed = false
+        settingsWindow.setFrameAutosaveName("VectorScrollSettings")
+        settingsWindow.center()
+
+        func label(_ text: String, secondary: Bool = false) -> NSTextField {
+            let field = NSTextField(wrappingLabelWithString: text)
+            field.font = .systemFont(ofSize: secondary ? 11 : 13)
+            field.preferredMaxLayoutWidth = 472
+            field.textColor = secondary ? .secondaryLabelColor : .labelColor
+            return field
+        }
+        func row(_ views: NSView...) -> NSStackView {
+            let stack = NSStackView(views: views)
+            stack.orientation = .horizontal
+            stack.alignment = .centerY
+            stack.spacing = 12
+            return stack
+        }
+        func button(_ title: String, _ action: Selector) -> NSButton {
+            NSButton(title: title, target: self, action: action)
+        }
+        func checkbox(_ title: String, _ action: Selector) -> NSButton {
+            NSButton(checkboxWithTitle: title, target: self, action: action)
+        }
+        let stack = NSStackView()
+        stack.orientation = .vertical
+        stack.alignment = .leading
+        stack.spacing = 9
+        func section(_ title: String) {
+            if !stack.arrangedSubviews.isEmpty {
+                let divider = NSBox()
+                divider.boxType = .separator
+                stack.addArrangedSubview(divider)
+                divider.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
+            }
+            let heading = label(title)
+            heading.font = .boldSystemFont(ofSize: 13)
+            stack.addArrangedSubview(heading)
+        }
+        section("Scrolling")
+        holdScrollItem = NSButton(radioButtonWithTitle: "Scroll while holding the middle button", target: self, action: #selector(selectHoldToScroll))
+        holdToLockItem = NSButton(radioButtonWithTitle: "Keep scrolling until the next click", target: self, action: #selector(selectHoldToLock))
+        stack.addArrangedSubview(holdScrollItem)
+        stack.addArrangedSubview(holdToLockItem)
+        stack.addArrangedSubview(label("Move the pointer away from the starting point to control direction and speed.", secondary: true))
+        delayToggle = checkbox("Require a hold before starting", #selector(toggleHoldDelay))
+        delaySlider = NSSlider(value: Double(holdDelayMilliseconds), minValue: 50, maxValue: 1000,
+                               target: self, action: #selector(changeHoldDelay(_:)))
+        delaySlider.numberOfTickMarks = 20
+        delaySlider.allowsTickMarkValuesOnly = true
+        delaySlider.isContinuous = true
+        delaySlider.setAccessibilityLabel("Hold duration in milliseconds")
+        delaySlider.widthAnchor.constraint(equalToConstant: 210).isActive = true
+        delayLabel = label("")
+        delayItem = NSStackView(views: [delayToggle, row(delaySlider, delayLabel)])
+        delayItem.orientation = .vertical
+        delayItem.alignment = .leading
+        delayItem.spacing = 6
+        stack.addArrangedSubview(delayItem)
+
+        section("Indicator")
+        lightModeItem = NSButton(radioButtonWithTitle: "Light", target: self, action: #selector(selectLightMode))
+        darkModeItem = NSButton(radioButtonWithTitle: "Dark", target: self, action: #selector(selectDarkMode))
+        sizePicker = NSPopUpButton(frame: .zero, pullsDown: false)
+        for size in markerSizes {
+            sizePicker.addItem(withTitle: "\(size) pt")
+            sizePicker.lastItem?.tag = size
+        }
+        sizePicker.target = self
+        sizePicker.action = #selector(selectMarkerSize(_:))
+        sizePicker.setAccessibilityLabel("Indicator size")
+        stack.addArrangedSubview(row(lightModeItem, darkModeItem, label("Size"), sizePicker))
+
+        section("App")
+        openSettingsButton = checkbox("Open settings whenever VectorScroll opens", #selector(toggleOpenSettings))
+        hideIconItem = checkbox("Show menu bar icon", #selector(toggleMenuBarIcon))
+        launchAtStartupItem = checkbox("Launch at login", #selector(toggleLaunchAtStartup))
+        stack.addArrangedSubview(openSettingsButton)
+        stack.addArrangedSubview(hideIconItem)
+        stack.addArrangedSubview(label("At least one of these stays on. With the icon hidden, reopen VectorScroll to access settings.", secondary: true))
+        stack.addArrangedSubview(launchAtStartupItem)
+        permissionItem = button("Request Permissions", #selector(requestPermissions))
+        stack.addArrangedSubview(permissionItem)
+
+        section("Updates")
+        stack.addArrangedSubview(label("VectorScroll \(AppUpdate.installedVersion) · Checks GitHub at launch and daily.", secondary: true))
+        updateItem = button("Check for Updates…", #selector(checkUpdatesFromMenu))
+        downloadItem = button("Download Update…", #selector(downloadUpdate))
+        downloadItem.isHidden = true
+        stack.addArrangedSubview(row(updateItem, downloadItem))
+        stack.addArrangedSubview(label("Downloads open in your browser. Quit the app and replace it in Applications.", secondary: true))
+        let quit = NSButton(title: "Quit VectorScroll", target: NSApp, action: #selector(NSApplication.terminate(_:)))
+        stack.addArrangedSubview(quit)
+
+        let content = settingsWindow.contentView!
+        stack.translatesAutoresizingMaskIntoConstraints = false
+        content.addSubview(stack)
+        NSLayoutConstraint.activate([
+            stack.leadingAnchor.constraint(equalTo: content.leadingAnchor, constant: 24),
+            stack.trailingAnchor.constraint(equalTo: content.trailingAnchor, constant: -24),
+            stack.topAnchor.constraint(equalTo: content.topAnchor, constant: 20),
+            stack.bottomAnchor.constraint(lessThanOrEqualTo: content.bottomAnchor, constant: -20)
+        ])
+        updateMarkerMenuItem()
+        updateSizeMenuItems()
+        updateScrollModeMenuItems()
+        updateLaunchAtStartupItem()
+        updatePermissionMenuItem()
+        refreshAccessControls()
     }
 
     @objc private func checkUpdatesFromMenu() {
@@ -228,33 +288,6 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         alert.runModal()
     }
 
-    private func configureDelayMenu(in menu: NSMenu) {
-        let submenu = NSMenu()
-        delayToggle = NSMenuItem(title: "Require a Hold to Start", action: #selector(toggleHoldDelay), keyEquivalent: "")
-        delayToggle.target = self
-        submenu.addItem(delayToggle)
-
-        let view = NSView(frame: NSRect(x: 0, y: 0, width: 240, height: 76))
-        delayLabel = NSTextField(labelWithString: "")
-        delayLabel.frame = NSRect(x: 16, y: 48, width: 208, height: 20)
-        view.addSubview(delayLabel)
-        delaySlider = NSSlider(value: Double(holdDelayMilliseconds), minValue: 50, maxValue: 1000,
-                               target: self, action: #selector(changeHoldDelay(_:)))
-        delaySlider.frame = NSRect(x: 16, y: 18, width: 208, height: 24)
-        delaySlider.isContinuous = true
-        delaySlider.numberOfTickMarks = 20
-        delaySlider.allowsTickMarkValuesOnly = true
-        delaySlider.setAccessibilityLabel("Start delay in milliseconds")
-        view.addSubview(delaySlider)
-        let sliderItem = NSMenuItem()
-        sliderItem.view = view
-        submenu.addItem(sliderItem)
-        delayItem = NSMenuItem(title: "Start Delay", action: nil, keyEquivalent: "")
-        delayItem.submenu = submenu
-        menu.addItem(delayItem)
-        updateDelayMenu()
-    }
-
     @objc private func toggleHoldDelay() {
         stopScrolling()
         holdDelayEnabled.toggle()
@@ -273,15 +306,10 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         delayToggle.state = holdDelayEnabled ? .on : .off
         delaySlider.isEnabled = holdDelayEnabled
         delaySlider.doubleValue = Double(holdDelayMilliseconds)
-        delayLabel.stringValue = "Hold duration: \(holdDelayMilliseconds) ms"
+        delayLabel.stringValue = "\(holdDelayMilliseconds) ms"
         delayLabel.textColor = holdDelayEnabled ? .labelColor : .secondaryLabelColor
         delayItem.isHidden = !holdToLockMode
-        delayItem.indentationLevel = 1
-        delayItem.title = holdDelayEnabled ? "Hold Before Starting: \(holdDelayMilliseconds) ms" : "Hold Before Starting: Off"
-        if #available(macOS 14.4, *) {
-            holdToLockItem.subtitle = holdDelayEnabled
-                ? "Hold middle button \(holdDelayMilliseconds) ms to start" : "Middle-click to start; any click to stop"
-        }
+
     }
 
     private func installStatusItem() {
@@ -295,43 +323,45 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
     }
 
     private func hideMenuBarIcon() {
-        guard let statusItem else { return }
-        NSStatusBar.system.removeStatusItem(statusItem)
-        self.statusItem = nil
+        if let statusItem {
+            NSStatusBar.system.removeStatusItem(statusItem)
+            self.statusItem = nil
+        }
         menuBarIconHidden = true
-        hideIconItem.state = .on
     }
 
-    private func showMenuBarIcon() {
-        installStatusItem()
-        menuBarIconHidden = false
-        hideIconItem.state = .off
+    private func refreshAccessControls() {
+        hideIconItem.state = menuBarIconHidden ? .off : .on
+        openSettingsButton.state = openSettingsOnLaunch ? .on : .off
+    }
+
+    private func setAccessPreferences(showMenuBar: Bool, openSettings: Bool) {
+        // Repair invalid persisted or requested combinations before hiding access.
+        let showMenuBar = showMenuBar || !openSettings
+        openSettingsOnLaunch = openSettings
+        defaults.set(openSettings, forKey: "openSettingsOnLaunch")
+        defaults.set(showMenuBar, forKey: "showMenuBarIcon")
+        if showMenuBar {
+            menuBarIconHidden = false
+            installStatusItem()
+        } else {
+            hideMenuBarIcon()
+        }
+        refreshAccessControls()
     }
 
     @objc private func toggleMenuBarIcon() {
-        let shouldHide = !menuBarIconHidden
-        // The status item owns the menu that fired this action, so let the menu
-        // finish tracking before adding or removing it.
-        DispatchQueue.main.async { [weak self] in
-            guard let self else { return }
-            if shouldHide {
-                self.hideMenuBarIcon()
-            } else {
-                self.showMenuBarIcon()
-            }
-        }
+        let show = hideIconItem.state == .on
+        setAccessPreferences(showMenuBar: show, openSettings: openSettingsOnLaunch || !show)
     }
 
-    func applicationDidBecomeActive(_ notification: Notification) {
-        if menuBarIconHidden {
-            showMenuBarIcon()
-        }
+    @objc private func toggleOpenSettings() {
+        let open = openSettingsButton.state == .on
+        setAccessPreferences(showMenuBar: !menuBarIconHidden || !open, openSettings: open)
     }
 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
-        if menuBarIconHidden {
-            showMenuBarIcon()
-        }
+        if openSettingsOnLaunch { showSettings() }
         return true
     }
 
@@ -361,8 +391,8 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         updateScrollModeMenuItems()
     }
 
-    @objc private func selectMarkerSize(_ sender: NSMenuItem) {
-        guard let size = sender.representedObject as? Int else { return }
+    @objc private func selectMarkerSize(_ sender: NSPopUpButton) {
+        guard let size = sender.selectedItem?.tag, markerSizes.contains(size) else { return }
         overlay.setSize(CGFloat(size))
         defaults.set(size, forKey: "markerSize")
         updateSizeMenuItems()
@@ -382,6 +412,10 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
     }
 
     @objc private func requestPermissions() {
+        if CGPreflightListenEventAccess(), !AXIsProcessTrusted(), accessibilityPromptedThisRun {
+            NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!)
+            return
+        }
         if !CGPreflightListenEventAccess() {
             _ = CGRequestListenEventAccess()
             DispatchQueue.main.asyncAfter(deadline: .now() + .seconds(2)) { [weak self] in
@@ -421,17 +455,16 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
 
     private func updatePermissionMenuItem() {
         let canListen = CGPreflightListenEventAccess()
-        permissionItem.isHidden = canListen
+        permissionItem.isHidden = canListen && AXIsProcessTrusted()
         if !canListen {
             permissionItem.title = "Request Input Monitoring"
+        } else {
+            permissionItem.title = "Accessibility Settings…"
         }
     }
 
     private func updateSizeMenuItems() {
-        for item in sizeItems {
-            let size = item.representedObject as? Int
-            item.state = size == Int(overlay.size) ? .on : .off
-        }
+        sizePicker.selectItem(withTag: Int(overlay.size))
     }
 
     private func updateLaunchAtStartupItem() {
@@ -439,6 +472,12 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
     }
 
     private func restoreSettings() {
+        openSettingsOnLaunch = defaults.object(forKey: "openSettingsOnLaunch") as? Bool ?? true
+        let show = defaults.object(forKey: "showMenuBarIcon") as? Bool ?? true
+        menuBarIconHidden = !show && openSettingsOnLaunch
+        if !show && !openSettingsOnLaunch {
+            defaults.set(true, forKey: "showMenuBarIcon")
+        }
         if let stored = defaults.object(forKey: "holdDelayEnabled") as? Bool {
             holdDelayEnabled = stored
         }
