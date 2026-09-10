@@ -34,6 +34,13 @@ struct CheckUpdates {
         rejects(newer, status: 429)
         rejects(newer, status: 500)
         rejects(Data("not JSON".utf8))
+        var malformed = try JSONSerialization.jsonObject(with: newer) as! [String: Any]
+        var assets = malformed["assets"] as! [[String: Any]]
+        for digest: Any in [NSNull(), "sha256:123", "sha256:" + String(repeating: "g", count: 64)] {
+            assets[0]["digest"] = digest
+            malformed["assets"] = assets
+            rejects(try JSONSerialization.data(withJSONObject: malformed))
+        }
         rejects(try payload(draft: true))
         rejects(try payload(prerelease: true))
         rejects(try payload(assets: false))
@@ -42,7 +49,7 @@ struct CheckUpdates {
         rejects(try payload(url: "https://github.com/other/repo/releases/download/v1.10.0/VectorScroll.dmg"))
         print("PASS: version ordering, equal/older releases, invalid versions, HTTP errors, malformed releases, and download URL validation")
 
-        // Use the same anonymous URLSession request as the app against real GitHub.
+        // Use the app request against real GitHub. CI authenticates to avoid shared-IP rate limits.
         let configuration = URLSessionConfiguration.ephemeral
         if let token = ProcessInfo.processInfo.environment["GH_UPDATE_TEST_TOKEN"] {
             configuration.httpAdditionalHeaders = ["Authorization": "Bearer \(token)"]
