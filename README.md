@@ -29,14 +29,14 @@ The click that stops scrolling also reaches the app under your pointer. Clicking
 
 A charcoal panel with SF Symbols, clear mode buttons, and switches. The interface uses AppKit and system fonts, with no web views, bundled fonts, or UI dependencies.
 
-Change the indicator's light/dark appearance and size, set launch at login, or check for updates. Changes save immediately.
+Change the indicator's light/dark appearance and size, set launch at login, or check for updates. Changes save immediately. Input Monitoring and Accessibility status refresh automatically every second and when you return from System Settings. Missing permissions have a button to open the relevant macOS pane.
 
 Two toggles control how you access the app:
 
 - **Open settings on launch** shows the window on launch and when you reopen the running app.
 - **Show menu bar icon** keeps Settings and Quit available from the menu bar.
 
-Both start enabled. They cannot both be off. Hiding the icon enables opening settings; disabling automatic settings opening restores the icon if needed. Closing the window keeps scrolling available.
+Both start enabled. They cannot both be off. Hiding the icon enables opening settings; disabling automatic settings opening restores the icon if needed. Close settings with Command-W or the Close settings button. Scrolling stays available.
 
 If the icon is hidden, reopen VectorScroll from Applications or run:
 

@@ -108,6 +108,27 @@ extension VectorScrollApp {
         let stack = scroll.documentView!.subviews.first as! NSStackView
         assert(stack.bounds.width <= scroll.contentView.bounds.width, "Settings must fit horizontally")
         assert(scroll.hasVerticalScroller, "All settings must remain reachable on smaller screens")
+        for control in [NSWindow.ButtonType.closeButton, .miniaturizeButton, .zoomButton] {
+            assert(subject.settingsWindow.standardWindowButton(control)?.isHidden == true)
+        }
+        let closeEvent = NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: .command,
+                                         timestamp: ProcessInfo.processInfo.systemUptime, windowNumber: subject.settingsWindow.windowNumber,
+                                         context: nil, characters: "w", charactersIgnoringModifiers: "w", isARepeat: false, keyCode: 13)!
+        assert(subject.settingsWindow.performKeyEquivalent(with: closeEvent))
+        assert(!subject.settingsWindow.isVisible, "Command-W must close settings")
+        assert(subject.openSettingsOnLaunch, "Closing must preserve app access preferences")
+        subject.showSettings()
+        for canListen in [false, true] {
+            for canAccess in [false, true] {
+                subject.applyPermissionStatus(canListen: canListen, canAccess: canAccess)
+                assert(subject.permissionItem.isHidden == (canListen && canAccess))
+                assert(subject.permissionStatusLabel.stringValue.contains("Input Monitoring: \(canListen ? "Allowed" : "Needed")"))
+                assert(subject.permissionStatusLabel.stringValue.contains("Accessibility: \(canAccess ? "Allowed" : "Needed")"))
+                assert(subject.permissionItem.title == (canListen ? "Accessibility Settings…" : "Input Monitoring Settings…"))
+            }
+        }
+        subject.updatePermissionMenuItem()
+        print("PASS: hidden traffic lights, Command-W close/reopen, and permission status transitions")
         assert(subject.holdScrollItem is SettingsButton)
         assert(subject.openSettingsButton is SettingsButton)
         func mouseClick(_ button: NSButton, at point: NSPoint) {
@@ -186,7 +207,9 @@ extension VectorScrollApp {
         subject.selectHoldToScroll()
         content.layoutSubtreeIfNeeded()
         savePreview("settings-preview")
-        subject.settingsWindow.close()
+        let closeButton = content.subviews.compactMap { $0 as? SettingsButton }.first { $0.title == "Close settings" }!
+        mouseClick(closeButton, at: NSPoint(x: 12, y: 17))
+        assert(!subject.settingsWindow.isVisible, "Close settings button must close only the window")
         print("PASS: both access-toggle directions, persistence, invalid settings repair, window reopen, and layout fit")
         print("PASS: delay toggle, slider rounding, immediate start, persistence, and mode cancellation")
         return true

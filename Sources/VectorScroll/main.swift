@@ -16,6 +16,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem!
     private var menu: NSMenu!
     private var permissionItem: NSButton!
+    private var permissionStatusLabel: NSTextField!
     private var lightModeItem: NSButton!
     private var darkModeItem: NSButton!
     private var holdScrollItem: NSButton!
@@ -29,7 +30,6 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
     private var eventTap: CFMachPort?
     private var runLoopSource: CFRunLoopSource?
     private var timer: DispatchSourceTimer?
-    private var permissionRetryTimer: DispatchSourceTimer?
     private var permissionStatusTimer: DispatchSourceTimer?
     private var accessibilityPromptedThisRun = false
     private var anchor: CGPoint?
@@ -76,7 +76,6 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
 
     func applicationWillTerminate(_ notification: Notification) {
         stopScrolling()
-        permissionRetryTimer?.cancel()
         permissionStatusTimer?.cancel()
         updateTask?.cancel()
         installTask?.cancel()
@@ -111,11 +110,15 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
     }
 
     private func configureSettingsWindow() {
-        settingsWindow = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 620, height: 760),
+        settingsWindow = SettingsWindow(contentRect: NSRect(x: 0, y: 0, width: 620, height: 760),
                                   styleMask: [.titled, .closable, .miniaturizable, .fullSizeContentView], backing: .buffered, defer: false)
         settingsWindow.title = "VectorScroll Settings"
         settingsWindow.titleVisibility = .hidden
         settingsWindow.titlebarAppearsTransparent = true
+        for control in [NSWindow.ButtonType.closeButton, .miniaturizeButton, .zoomButton] {
+            settingsWindow.standardWindowButton(control)?.isHidden = true
+        }
+        settingsWindow.isMovableByWindowBackground = true
         settingsWindow.backgroundColor = SettingsStyle.background
         settingsWindow.appearance = NSAppearance(named: .darkAqua)
         settingsWindow.isReleasedWhenClosed = false
@@ -173,8 +176,6 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         iconTile.wantsLayer = true
         iconTile.layer?.backgroundColor = NSColor(calibratedWhite: 0.16, alpha: 1).cgColor
         iconTile.layer?.cornerRadius = 12
-        iconTile.layer?.borderWidth = 1
-        iconTile.layer?.borderColor = SettingsStyle.border.cgColor
         iconTile.addSubview(appIcon)
         NSLayoutConstraint.activate([
             iconTile.widthAnchor.constraint(equalToConstant: 48),
@@ -250,6 +251,8 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         stack.setCustomSpacing(0, after: hideIconItem)
         fullWidth(label("One stays on so settings are always within reach.", secondary: true))
         fullWidth(launchAtStartupItem)
+        permissionStatusLabel = label("", secondary: true)
+        fullWidth(permissionStatusLabel)
         permissionItem = button("Request Permissions", "hand.raised", #selector(requestPermissions))
         stack.addArrangedSubview(permissionItem)
 
@@ -265,8 +268,6 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         content.wantsLayer = true
         content.layer?.backgroundColor = SettingsStyle.background.cgColor
         content.layer?.cornerRadius = 12
-        content.layer?.borderWidth = 1
-        content.layer?.borderColor = SettingsStyle.border.cgColor
         let scroll = NSScrollView()
         scroll.drawsBackground = false
         scroll.hasVerticalScroller = true
@@ -278,6 +279,10 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         stack.translatesAutoresizingMaskIntoConstraints = false
         document.addSubview(stack)
         content.addSubview(scroll)
+        let close = SettingsButton("Close settings", symbol: "xmark", target: settingsWindow, action: #selector(NSWindow.performClose(_:)))
+        close.toolTip = "Close settings · ⌘W"
+        close.translatesAutoresizingMaskIntoConstraints = false
+        content.addSubview(close)
         let quit = SettingsButton("Quit VectorScroll", symbol: "rectangle.portrait.and.arrow.right", kind: .destructive, target: NSApp, action: #selector(NSApplication.terminate(_:)))
         quit.keyEquivalent = "q"
         quit.keyEquivalentModifierMask = .command
@@ -293,6 +298,8 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
             stack.trailingAnchor.constraint(equalTo: document.trailingAnchor, constant: -32),
             stack.topAnchor.constraint(equalTo: document.topAnchor, constant: 8),
             stack.bottomAnchor.constraint(equalTo: document.bottomAnchor, constant: -8),
+            close.leadingAnchor.constraint(equalTo: content.leadingAnchor, constant: 32),
+            close.centerYAnchor.constraint(equalTo: quit.centerYAnchor),
             quit.trailingAnchor.constraint(equalTo: content.trailingAnchor, constant: -32),
             quit.bottomAnchor.constraint(equalTo: content.bottomAnchor, constant: -20)
         ])
@@ -532,7 +539,9 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
             return
         }
         if !CGPreflightListenEventAccess() {
-            _ = CGRequestListenEventAccess()
+            if !CGRequestListenEventAccess() {
+                NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent")!)
+            }
             DispatchQueue.main.asyncAfter(deadline: .now() + .seconds(2)) { [weak self] in
                 guard CGPreflightListenEventAccess() else {
                     self?.updatePermissionMenuItem()
@@ -569,13 +578,19 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
     }
 
     private func updatePermissionMenuItem() {
-        let canListen = CGPreflightListenEventAccess()
-        permissionItem.isHidden = canListen && AXIsProcessTrusted()
-        if !canListen {
-            permissionItem.title = "Request Input Monitoring"
-        } else {
-            permissionItem.title = "Accessibility Settings…"
-        }
+        applyPermissionStatus(canListen: CGPreflightListenEventAccess(), canAccess: AXIsProcessTrusted())
+    }
+
+    private func applyPermissionStatus(canListen: Bool, canAccess: Bool) {
+        permissionStatusLabel.stringValue = "Input Monitoring: \(canListen ? "Allowed" : "Needed") · Accessibility: \(canAccess ? "Allowed" : "Needed")"
+        permissionItem.isHidden = canListen && canAccess
+        permissionItem.title = canListen ? "Accessibility Settings…" : "Input Monitoring Settings…"
+    }
+
+    func applicationDidBecomeActive(_ notification: Notification) {
+        guard settingsWindow != nil else { return }
+        installEventTap()
+        updateLaunchAtStartupItem()
     }
 
     private func updateSizeMenuItems() {
@@ -611,10 +626,23 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
     }
 
     private func installEventTap() {
-        if eventTapInstalled && CGPreflightListenEventAccess() {
-            updatePermissionMenuItem()
+        updatePermissionMenuItem()
+        guard CGPreflightListenEventAccess() else {
+            // Permission can be revoked while running. Retire the old tap before
+            // retrying, instead of overwriting a still-registered run-loop source.
+            stopScrolling()
+            if let runLoopSource {
+                CFRunLoopRemoveSource(CFRunLoopGetMain(), runLoopSource, .commonModes)
+                self.runLoopSource = nil
+            }
+            if let eventTap {
+                CFMachPortInvalidate(eventTap)
+                self.eventTap = nil
+            }
+            eventTapInstalled = false
             return
         }
+        if eventTapInstalled { return }
 
         let events: [CGEventType] = [
             .leftMouseDown,
@@ -649,13 +677,10 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         guard let eventTap else {
             eventTapInstalled = false
             updatePermissionMenuItem()
-            schedulePermissionRetry()
             return
         }
 
         eventTapInstalled = true
-        permissionRetryTimer?.cancel()
-        permissionRetryTimer = nil
         runLoopSource = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, eventTap, 0)
         if let runLoopSource {
             CFRunLoopAddSource(CFRunLoopGetMain(), runLoopSource, .commonModes)
@@ -664,19 +689,8 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         updatePermissionMenuItem()
     }
 
-    private func schedulePermissionRetry() {
-        guard permissionRetryTimer == nil else { return }
-
-        let timer = DispatchSource.makeTimerSource(queue: .main)
-        timer.schedule(deadline: .now() + .seconds(2), repeating: .seconds(2), leeway: .milliseconds(250))
-        timer.setEventHandler { [weak self] in
-            self?.installEventTap()
-        }
-        permissionRetryTimer = timer
-        timer.resume()
-    }
-
     private func startPermissionStatusTimer() {
+        permissionStatusTimer?.cancel()
         let timer = DispatchSource.makeTimerSource(queue: .main)
         timer.schedule(deadline: .now() + .seconds(1), repeating: .seconds(1), leeway: .milliseconds(300))
         timer.setEventHandler { [weak self] in
