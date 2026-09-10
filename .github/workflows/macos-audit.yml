@@ -58,5 +58,7 @@ jobs:
         if: always()
         with:
           name: settings-preview
-          path: .build/settings*preview.png
+          path: |
+            .build/settings-preview.png
+            .build/settings-delay-preview.png
           if-no-files-found: error
