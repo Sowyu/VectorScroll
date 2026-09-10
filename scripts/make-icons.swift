@@ -2,7 +2,9 @@ import AppKit
 
 let output = CommandLine.arguments.dropFirst().first ?? "dist/VectorScroll.iconset"
 let outputURL = URL(fileURLWithPath: output)
-try? FileManager.default.removeItem(at: outputURL)
+guard !FileManager.default.fileExists(atPath: outputURL.path) else {
+    fatalError("Output already exists: \(outputURL.path). Choose a new directory.")
+}
 try FileManager.default.createDirectory(at: outputURL, withIntermediateDirectories: true)
 
 let specs: [(String, CGFloat)] = [
@@ -21,18 +23,23 @@ let specs: [(String, CGFloat)] = [
 for spec in specs {
     let image = drawIcon(size: spec.1)
     guard
-        let tiff = image.tiffRepresentation,
-        let rep = NSBitmapImageRep(data: tiff),
-        let png = rep.representation(using: .png, properties: [:])
+        let png = image.representation(using: .png, properties: [:])
     else {
         fatalError("Could not render \(spec.0)")
     }
     try png.write(to: outputURL.appendingPathComponent(spec.0))
 }
 
-private func drawIcon(size: CGFloat) -> NSImage {
-    let image = NSImage(size: NSSize(width: size, height: size))
-    image.lockFocus()
+private func drawIcon(size: CGFloat) -> NSBitmapImageRep {
+    guard let image = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: Int(size),
+                                      pixelsHigh: Int(size), bitsPerSample: 8,
+                                      samplesPerPixel: 4, hasAlpha: true, isPlanar: false,
+                                      colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0),
+          let context = NSGraphicsContext(bitmapImageRep: image) else {
+        fatalError("Could not create icon bitmap")
+    }
+    NSGraphicsContext.saveGraphicsState()
+    NSGraphicsContext.current = context
 
     let rect = NSRect(x: 0, y: 0, width: size, height: size)
     let tile = NSBezierPath(
@@ -57,7 +64,7 @@ private func drawIcon(size: CGFloat) -> NSImage {
         height: size * 0.1
     )).fill()
 
-    image.unlockFocus()
+    NSGraphicsContext.restoreGraphicsState()
     return image
 }
 

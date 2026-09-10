@@ -25,3 +25,22 @@ jobs:
       - name: Hold-to-start regression
         if: always()
         run: python3 scripts/check-hold.py
+      - name: Build universal app bundle
+        run: ./scripts/build-app.sh
+      - name: Verify release bundle
+        run: |
+          lipo -verify_arch arm64 x86_64 dist/VectorScroll.app/Contents/MacOS/VectorScroll
+          codesign --verify --deep --strict dist/VectorScroll.app
+          python3 scripts/check-bundle.py
+      - name: Package installer
+        run: |
+          mkdir -p dist/installer
+          cp -R dist/VectorScroll.app dist/installer/
+          ln -s /Applications dist/installer/Applications
+          hdiutil create -volname VectorScroll -srcfolder dist/installer -format UDZO dist/VectorScroll.dmg
+          hdiutil verify dist/VectorScroll.dmg
+      - uses: actions/upload-artifact@v4
+        with:
+          name: VectorScroll-1.1.0
+          path: dist/VectorScroll.dmg
+          if-no-files-found: error

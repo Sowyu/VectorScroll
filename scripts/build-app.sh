@@ -1,18 +1,23 @@
 #!/bin/sh
 set -eu
 
-swift build -c release
-
-APP_DIR="dist/VectorScroll.app"
+cd "$(dirname "$0")/.."
+APP_DIR="$PWD/dist/VectorScroll.app"
+if [ -e "$APP_DIR" ]; then
+    echo "Output already exists: $APP_DIR. Move it to Trash before rebuilding." >&2
+    exit 1
+fi
+swift build -c release --arch arm64 --arch x86_64
+BIN_DIR=$(swift build -c release --arch arm64 --arch x86_64 --show-bin-path)
 CONTENTS="$APP_DIR/Contents"
 MACOS="$CONTENTS/MacOS"
 RESOURCES="$CONTENTS/Resources"
-ICONSET="dist/VectorScroll.iconset"
-
-rm -rf "$APP_DIR"
+mkdir -p "$PWD/dist"
+ICONSET=$(mktemp -d "$PWD/dist/VectorScroll-icons.XXXXXX")
+ICONSET="$ICONSET/VectorScroll.iconset"
 mkdir -p "$MACOS" "$RESOURCES"
 
-cp ".build/release/VectorScroll" "$MACOS/VectorScroll"
+cp "$BIN_DIR/VectorScroll" "$MACOS/VectorScroll"
 swift scripts/make-icons.swift "$ICONSET"
 iconutil -c icns "$ICONSET" -o "$RESOURCES/VectorScroll.icns"
 
@@ -37,9 +42,9 @@ cat > "$CONTENTS/Info.plist" <<'PLIST'
     <key>LSApplicationCategoryType</key>
     <string>public.app-category.utilities</string>
     <key>CFBundleShortVersionString</key>
-    <string>1.0</string>
+    <string>1.1.0</string>
     <key>CFBundleVersion</key>
-    <string>1</string>
+    <string>2</string>
     <key>LSMinimumSystemVersion</key>
     <string>14.0</string>
     <key>LSUIElement</key>
