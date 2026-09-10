@@ -84,24 +84,29 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         permissionItem.target = self
         menu.addItem(permissionItem)
 
-        lightModeItem = NSMenuItem(title: "Light Mode", action: #selector(selectLightMode), keyEquivalent: "")
-        lightModeItem.target = self
-        menu.addItem(lightModeItem)
-
-        darkModeItem = NSMenuItem(title: "Dark Mode", action: #selector(selectDarkMode), keyEquivalent: "")
-        darkModeItem.target = self
-        menu.addItem(darkModeItem)
-        updateMarkerMenuItem()
-
-        holdScrollItem = NSMenuItem(title: "Hold to Scroll", action: #selector(selectHoldToScroll), keyEquivalent: "")
+        holdScrollItem = NSMenuItem(title: "Scroll While Holding", action: #selector(selectHoldToScroll), keyEquivalent: "")
         holdScrollItem.target = self
+        if #available(macOS 14.4, *) {
+            holdScrollItem.subtitle = "Hold middle button; release to stop"
+        }
         menu.addItem(holdScrollItem)
 
-        holdToLockItem = NSMenuItem(title: "Hold to Start", action: #selector(selectHoldToLock), keyEquivalent: "")
+        holdToLockItem = NSMenuItem(title: "Scroll Until Next Click", action: #selector(selectHoldToLock), keyEquivalent: "")
         holdToLockItem.target = self
         menu.addItem(holdToLockItem)
         configureDelayMenu(in: menu)
         updateScrollModeMenuItems()
+
+        menu.addItem(.separator())
+        let appearanceMenu = NSMenu()
+        lightModeItem = NSMenuItem(title: "Light Indicator", action: #selector(selectLightMode), keyEquivalent: "")
+        lightModeItem.target = self
+        appearanceMenu.addItem(lightModeItem)
+
+        darkModeItem = NSMenuItem(title: "Dark Indicator", action: #selector(selectDarkMode), keyEquivalent: "")
+        darkModeItem.target = self
+        appearanceMenu.addItem(darkModeItem)
+        updateMarkerMenuItem()
 
         let sizeMenu = NSMenu()
         for size in markerSizes {
@@ -111,10 +116,15 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
             sizeMenu.addItem(item)
             sizeItems.append(item)
         }
-        let sizeItem = NSMenuItem(title: "Size", action: nil, keyEquivalent: "")
+        let sizeItem = NSMenuItem(title: "Indicator Size", action: nil, keyEquivalent: "")
         sizeItem.submenu = sizeMenu
-        menu.addItem(sizeItem)
+        appearanceMenu.addItem(.separator())
+        appearanceMenu.addItem(sizeItem)
+        let appearanceItem = NSMenuItem(title: "Indicator Appearance", action: nil, keyEquivalent: "")
+        appearanceItem.submenu = appearanceMenu
+        menu.addItem(appearanceItem)
         updateSizeMenuItems()
+        menu.addItem(.separator())
 
         launchAtStartupItem = NSMenuItem(title: "Launch at Startup", action: #selector(toggleLaunchAtStartup), keyEquivalent: "")
         launchAtStartupItem.target = self
@@ -220,7 +230,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
 
     private func configureDelayMenu(in menu: NSMenu) {
         let submenu = NSMenu()
-        delayToggle = NSMenuItem(title: "Use Delay", action: #selector(toggleHoldDelay), keyEquivalent: "")
+        delayToggle = NSMenuItem(title: "Require a Hold to Start", action: #selector(toggleHoldDelay), keyEquivalent: "")
         delayToggle.target = self
         submenu.addItem(delayToggle)
 
@@ -263,13 +273,14 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         delayToggle.state = holdDelayEnabled ? .on : .off
         delaySlider.isEnabled = holdDelayEnabled
         delaySlider.doubleValue = Double(holdDelayMilliseconds)
-        delayLabel.stringValue = "Hold to Start: \(holdDelayMilliseconds) ms"
+        delayLabel.stringValue = "Hold duration: \(holdDelayMilliseconds) ms"
         delayLabel.textColor = holdDelayEnabled ? .labelColor : .secondaryLabelColor
-        delayItem.title = holdDelayEnabled ? "Start Delay: \(holdDelayMilliseconds) ms" : "Start Delay: Off"
-        holdToLockItem.title = holdDelayEnabled ? "Hold to Start" : "Click to Start"
+        delayItem.isHidden = !holdToLockMode
+        delayItem.indentationLevel = 1
+        delayItem.title = holdDelayEnabled ? "Hold Before Starting: \(holdDelayMilliseconds) ms" : "Hold Before Starting: Off"
         if #available(macOS 14.4, *) {
             holdToLockItem.subtitle = holdDelayEnabled
-                ? "Hold \(holdDelayMilliseconds) ms to start scrolling" : "Click again to stop scrolling"
+                ? "Hold middle button \(holdDelayMilliseconds) ms to start" : "Middle-click to start; any click to stop"
         }
     }
 
@@ -405,6 +416,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
     private func updateScrollModeMenuItems() {
         holdScrollItem.state = holdToLockMode ? .off : .on
         holdToLockItem.state = holdToLockMode ? .on : .off
+        updateDelayMenu()
     }
 
     private func updatePermissionMenuItem() {
