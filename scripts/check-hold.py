@@ -64,6 +64,20 @@ extension VectorScrollApp {
         subject.stopScrolling()
         subject.eventTapInstalled = false
         print("PASS: speed slider rounding and scale, reverse direction persistence, deferred hold-mode engagement")
+        subject.defaults.removeObject(forKey: "onboardingCompleted")
+        subject.showOnboarding()
+        let guide = subject.onboarding!
+        assert(guide.window.isVisible && guide.step == .welcome)
+        guide.primary.performClick(nil)
+        assert(guide.step == .inputMonitoring || guide.step == .accessibility || guide.step == .done)
+        guide.refresh(canListen: false, canAccess: false)
+        subject.applyPermissionStatus(canListen: true, canAccess: false)
+        assert(guide.step == .accessibility, "Granting Input Monitoring must advance the guide")
+        guide.secondary.performClick(nil)
+        assert(guide.step == .done, "Skip must reach the final step")
+        guide.primary.performClick(nil)
+        assert(!guide.window.isVisible && subject.onboarding == nil && subject.defaults.bool(forKey: "onboardingCompleted"))
+        print("PASS: setup guide advances on permission grant, skip, and finish")
         assert(subject.delayItem.isHidden)
         subject.selectHoldToLock()
         assert(!subject.delayItem.isHidden)
@@ -208,7 +222,7 @@ extension VectorScrollApp {
         content.layoutSubtreeIfNeeded()
         scroll.contentView.scroll(to: NSPoint(x: 0, y: 0))
         scroll.reflectScrolledClipView(scroll.contentView)
-        func savePreview(_ name: String) {
+        func savePreview(_ content: NSView, _ name: String) {
             // Scrolling to the top flashes the overlay scroller, so hide it for the capture.
             scroll.hasVerticalScroller = false
             content.layoutSubtreeIfNeeded()
@@ -228,10 +242,16 @@ extension VectorScrollApp {
             let png = NSBitmapImageRep(data: preview.tiffRepresentation!)!
             try! png.representation(using: .png, properties: [:])!.write(to: URL(fileURLWithPath: ".build/\(name).png"))
         }
-        savePreview("settings-delay-preview")
+        savePreview(content, "settings-delay-preview")
         subject.selectHoldToScroll()
         content.layoutSubtreeIfNeeded()
-        savePreview("settings-preview")
+        savePreview(content, "settings-preview")
+        subject.defaults.removeObject(forKey: "onboardingCompleted")
+        subject.showOnboarding()
+        subject.onboarding!.primary.performClick(nil)
+        subject.onboarding!.refresh(canListen: false, canAccess: false)
+        savePreview(subject.onboarding!.window.contentView!, "onboarding-preview")
+        subject.onboarding!.secondary.performClick(nil)
         let closeButton = content.subviews.compactMap { $0 as? SettingsButton }.first { $0.title == "Close settings" }!
         mouseClick(closeButton, at: NSPoint(x: 12, y: 17))
         assert(!subject.settingsWindow.isVisible, "Close settings button must close only the window")
@@ -277,6 +297,6 @@ generated = output / "main.swift"
 generated.write_text(source.split(entry)[0] + harness)
 binary = output / "check-hold"
 subprocess.run(["swiftc", "-swift-version", "6", "-warnings-as-errors",
-                str(generated), str(root / "Sources/VectorScroll/SettingsStyle.swift"), str(root / "Sources/VectorScroll/Updates.swift"), str(root / "Sources/VectorScroll/UpdateInstaller.swift"), "-o", str(binary), "-framework", "AppKit",
+                str(generated), str(root / "Sources/VectorScroll/SettingsStyle.swift"), str(root / "Sources/VectorScroll/Onboarding.swift"), str(root / "Sources/VectorScroll/Updates.swift"), str(root / "Sources/VectorScroll/UpdateInstaller.swift"), "-o", str(binary), "-framework", "AppKit",
                 "-framework", "ApplicationServices", "-framework", "ServiceManagement"], check=True)
 subprocess.run([str(binary)], check=True, timeout=45)

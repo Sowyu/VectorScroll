@@ -72,7 +72,7 @@ jobs:
           .build/check-installer
       - uses: actions/upload-artifact@v4
         with:
-          name: VectorScroll-1.6.0
+          name: VectorScroll-1.7.0
           path: dist/VectorScroll.dmg
           if-no-files-found: error
       - uses: actions/upload-artifact@v4
@@ -82,4 +82,5 @@ jobs:
           path: |
             .build/settings-preview.png
             .build/settings-delay-preview.png
+            .build/onboarding-preview.png
           if-no-files-found: error

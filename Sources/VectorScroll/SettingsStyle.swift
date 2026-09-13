@@ -47,7 +47,7 @@ private final class SettingsButtonCell: NSButtonCell {
 final class SettingsButton: NSButton {
     enum Kind { case action, toggle, choice, destructive }
     let kind: Kind
-    let symbolName: String
+    var symbolName: String { didSet { needsDisplay = true } }
     var displayTitle: String?
     var detail: String? { didSet { needsDisplay = true } }
     private var hovered = false
