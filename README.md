@@ -6,10 +6,16 @@ Middle-button autoscrolling for macOS. Press the middle button, move the pointer
 
 Swift and AppKit only. No Electron, web views, or third-party dependencies. One universal binary runs on Intel and Apple Silicon Macs with macOS 14 or later. The app is about 830 KB.
 
-<p>
-  <img src="docs/settings-hold.png" alt="Settings window in hold-to-scroll mode" width="420">
-  <img src="docs/settings-toggle.png" alt="Settings window in toggle mode with the delay slider" width="420">
-</p>
+<table>
+  <tr>
+    <td><img src="docs/settings-hold.png" alt="Settings window in hold-to-scroll mode" width="400"></td>
+    <td><img src="docs/settings-toggle.png" alt="Settings window in toggle mode with the delay slider" width="400"></td>
+  </tr>
+  <tr>
+    <td align="center">Hold to scroll</td>
+    <td align="center">Toggle scrolling with the start delay</td>
+  </tr>
+</table>
 
 ## Install
 
