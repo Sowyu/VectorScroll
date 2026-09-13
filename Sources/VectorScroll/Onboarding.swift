@@ -23,7 +23,7 @@ final class Onboarding {
     let secondary: SettingsButton
 
     init() {
-        window = SettingsWindow(contentRect: NSRect(x: 0, y: 0, width: 480, height: 340),
+        window = SettingsWindow(contentRect: NSRect(x: 0, y: 0, width: 480, height: 292),
                                 styleMask: [.titled, .closable, .fullSizeContentView], backing: .buffered, defer: false)
         window.title = "VectorScroll Setup"
         window.titleVisibility = .hidden
@@ -49,7 +49,7 @@ final class Onboarding {
         body = label(14)
         status = label(12, weight: .medium, color: SettingsStyle.secondary)
         primary = SettingsButton("", symbol: "arrow.right", target: nil, action: nil)
-        secondary = SettingsButton("", symbol: "arrow.uturn.forward", target: nil, action: nil)
+        secondary = SettingsButton("", symbol: "xmark", target: nil, action: nil)
 
         let stack = NSStackView(views: [stepLabel, title, body, status])
         stack.orientation = .vertical
