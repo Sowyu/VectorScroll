@@ -95,7 +95,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
     }
 
     private func configureSettingsWindow() {
-        settingsWindow = SettingsWindow(contentRect: NSRect(x: 0, y: 0, width: 620, height: 760),
+        settingsWindow = SettingsWindow(contentRect: NSRect(x: 0, y: 0, width: 620, height: 800),
                                   styleMask: [.titled, .closable, .miniaturizable, .fullSizeContentView], backing: .buffered, defer: false)
         settingsWindow.title = "VectorScroll Settings"
         settingsWindow.titleVisibility = .hidden
@@ -107,8 +107,8 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         settingsWindow.backgroundColor = SettingsStyle.background
         settingsWindow.appearance = NSAppearance(named: .darkAqua)
         settingsWindow.isReleasedWhenClosed = false
-        if !settingsWindow.setFrameUsingName("VectorScrollSettingsV2") { settingsWindow.center() }
-        settingsWindow.setFrameAutosaveName("VectorScrollSettingsV2")
+        if !settingsWindow.setFrameUsingName("VectorScrollSettingsV3") { settingsWindow.center() }
+        settingsWindow.setFrameAutosaveName("VectorScrollSettingsV3")
 
         func label(_ text: String, secondary: Bool = false) -> NSTextField {
             let field = NSTextField(wrappingLabelWithString: text)
@@ -192,7 +192,8 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         let modes = row(hold, click)
         modes.distribution = .fillEqually
         fullWidth(modes)
-        fullWidth(label("Move the pointer to control direction and speed.", secondary: true))
+        let scrollHint = label("Move the pointer to control direction and speed.", secondary: true)
+        fullWidth(scrollHint)
         delayToggle = checkbox("Delay before scrolling starts", "timer", #selector(toggleHoldDelay))
         delaySlider = NSSlider(value: Double(holdDelayMilliseconds), minValue: 50, maxValue: 1000,
                                target: self, action: #selector(changeHoldDelay(_:)))
@@ -209,6 +210,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         delayItem.alignment = .leading
         delayItem.spacing = 4
         fullWidth(delayItem)
+        stack.setCustomSpacing(24, after: scrollHint) // delayItem hides in hold mode
         delayToggle.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
 
         section("Indicator", "scope")
