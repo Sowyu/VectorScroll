@@ -48,6 +48,22 @@ extension VectorScrollApp {
         assert(subject.holdDelayMilliseconds == 750)
         assert(subject.holdToLockThreshold == 0.75)
         assert(subject.delayLabel.stringValue == "750 ms")
+        assert(subject.scrollScale == 0.42 && !subject.reverseDirection)
+        subject.speedSlider.doubleValue = 83
+        subject.changeScrollSpeed(subject.speedSlider)
+        assert(subject.scrollSpeedPercent == 80 && subject.speedLabel.stringValue == "80%")
+        assert(abs(subject.scrollScale - 0.336) < 0.0001)
+        subject.reverseItem.state = .on
+        subject.toggleReverseDirection()
+        let speedRestored = VectorScrollApp()
+        speedRestored.restoreSettings()
+        assert(speedRestored.scrollSpeedPercent == 80 && speedRestored.reverseDirection)
+        subject.eventTapInstalled = true
+        subject.startScrolling(at: .zero, target: .zero) // Hold mode: no indicator until the pointer leaves the dead zone.
+        assert(subject.isActive && !subject.engaged)
+        subject.stopScrolling()
+        subject.eventTapInstalled = false
+        print("PASS: speed slider rounding and scale, reverse direction persistence, deferred hold-mode engagement")
         assert(subject.delayItem.isHidden)
         subject.selectHoldToLock()
         assert(!subject.delayItem.isHidden)

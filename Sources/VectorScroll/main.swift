@@ -40,7 +40,12 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
     private var menuBarIconHidden = false
     private let overlay = ScrollOverlayWindow()
 
-    private let scrollScale: CGFloat = 0.42
+    private let baseScrollScale: CGFloat = 0.42
+    private var scrollSpeedPercent = 100
+    private var scrollScale: CGFloat { baseScrollScale * CGFloat(scrollSpeedPercent) / 100 }
+    private var reverseDirection = false
+    private var engaged = false
+    private var pendingTarget: CGPoint?
     private let deadZone: CGFloat = 10
     private let maxDeltaPerTick: CGFloat = 120
     private var holdDelayEnabled = true
@@ -49,6 +54,9 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         holdDelayEnabled ? Double(holdDelayMilliseconds) / 1000 : 0
     }
     private var delayItem: NSStackView!
+    private var reverseItem: NSButton!
+    private var speedSlider: NSSlider!
+    private var speedLabel: NSTextField!
     private var delayToggle: NSButton!
     private var delaySlider: NSSlider!
     private var delayLabel: NSTextField!
@@ -95,7 +103,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
     }
 
     private func configureSettingsWindow() {
-        settingsWindow = SettingsWindow(contentRect: NSRect(x: 0, y: 0, width: 620, height: 760),
+        settingsWindow = SettingsWindow(contentRect: NSRect(x: 0, y: 0, width: 620, height: 820),
                                   styleMask: [.titled, .closable, .miniaturizable, .fullSizeContentView], backing: .buffered, defer: false)
         settingsWindow.title = "VectorScroll Settings"
         settingsWindow.titleVisibility = .hidden
@@ -107,8 +115,8 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         settingsWindow.backgroundColor = SettingsStyle.background
         settingsWindow.appearance = NSAppearance(named: .darkAqua)
         settingsWindow.isReleasedWhenClosed = false
-        if !settingsWindow.setFrameUsingName("VectorScrollSettingsV2") { settingsWindow.center() }
-        settingsWindow.setFrameAutosaveName("VectorScrollSettingsV2")
+        if !settingsWindow.setFrameUsingName("VectorScrollSettingsV3") { settingsWindow.center() }
+        settingsWindow.setFrameAutosaveName("VectorScrollSettingsV3")
 
         func label(_ text: String, secondary: Bool = false) -> NSTextField {
             let field = NSTextField(wrappingLabelWithString: text)
@@ -192,8 +200,20 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         let modes = row(hold, click)
         modes.distribution = .fillEqually
         fullWidth(modes)
-        let scrollHint = label("Move the pointer to control direction and speed.", secondary: true)
-        fullWidth(scrollHint)
+        reverseItem = checkbox("Reverse direction", "arrow.up.arrow.down", #selector(toggleReverseDirection))
+        fullWidth(reverseItem)
+        speedSlider = NSSlider(value: Double(scrollSpeedPercent), minValue: 50, maxValue: 200,
+                               target: self, action: #selector(changeScrollSpeed(_:)))
+        speedSlider.numberOfTickMarks = 16
+        speedSlider.tickMarkPosition = .below
+        speedSlider.allowsTickMarkValuesOnly = true
+        speedSlider.isContinuous = true
+        speedSlider.setAccessibilityLabel("Scroll speed in percent")
+        speedSlider.widthAnchor.constraint(equalToConstant: 240).isActive = true
+        speedLabel = label("")
+        speedLabel.font = .monospacedDigitSystemFont(ofSize: 12, weight: .medium)
+        let speedRow = row(label("Speed", secondary: true), speedSlider, speedLabel)
+        stack.addArrangedSubview(speedRow)
         delayToggle = checkbox("Delay before scrolling starts", "timer", #selector(toggleHoldDelay))
         delaySlider = NSSlider(value: Double(holdDelayMilliseconds), minValue: 50, maxValue: 1000,
                                target: self, action: #selector(changeHoldDelay(_:)))
@@ -210,7 +230,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         delayItem.alignment = .leading
         delayItem.spacing = 4
         fullWidth(delayItem)
-        stack.setCustomSpacing(24, after: scrollHint) // delayItem hides in hold mode
+        stack.setCustomSpacing(24, after: speedRow) // delayItem hides in hold mode
         delayToggle.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
 
         section("Indicator", "scope")
@@ -293,9 +313,27 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         updateMarkerMenuItem()
         updateSizeMenuItems()
         updateScrollModeMenuItems()
+        updateSpeedControls()
         updateLaunchAtStartupItem()
         updatePermissionMenuItem()
         refreshAccessControls()
+    }
+
+    @objc private func toggleReverseDirection() {
+        reverseDirection = reverseItem.state == .on
+        defaults.set(reverseDirection, forKey: "reverseDirection")
+    }
+
+    @objc private func changeScrollSpeed(_ sender: NSSlider) {
+        scrollSpeedPercent = min(200, max(50, Int((sender.doubleValue / 10).rounded()) * 10))
+        defaults.set(scrollSpeedPercent, forKey: "scrollSpeedPercent")
+        updateSpeedControls()
+    }
+
+    private func updateSpeedControls() {
+        reverseItem.state = reverseDirection ? .on : .off
+        speedSlider.doubleValue = Double(scrollSpeedPercent)
+        speedLabel.stringValue = "\(scrollSpeedPercent)%"
     }
 
     @objc private func checkUpdatesFromMenu() {
@@ -596,6 +634,11 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         if let stored = defaults.object(forKey: "holdToLockMode") as? Bool {
             holdToLockMode = stored
         }
+        reverseDirection = defaults.bool(forKey: "reverseDirection")
+        let savedSpeed = defaults.integer(forKey: "scrollSpeedPercent")
+        if (50...200).contains(savedSpeed), savedSpeed.isMultiple(of: 10) {
+            scrollSpeedPercent = savedSpeed
+        }
     }
 
     private func installEventTap() {
@@ -741,13 +784,14 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
 
     private func startScrolling(at point: CGPoint, target: CGPoint) {
         guard eventTapInstalled else { return }
-        if AXIsProcessTrusted(), let element = element(at: target) {
-            focusTarget(element)
-        }
-
         anchor = point
         isActive = true
-        overlay.show(at: point)
+        // Hold mode engages once the pointer leaves the dead zone, so a plain
+        // middle-click never raises a window or flashes the indicator.
+        // Toggle mode already filtered clicks with the delay, so show feedback now.
+        engaged = false
+        pendingTarget = target
+        if holdToLockMode { engage() }
 
         timer?.cancel()
         let timer = DispatchSource.makeTimerSource(queue: .main)
@@ -766,7 +810,18 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         timer = nil
         anchor = nil
         isActive = false
+        engaged = false
+        pendingTarget = nil
         overlay.hide()
+    }
+
+    private func engage() {
+        guard !engaged, let anchor else { return }
+        engaged = true
+        if let target = pendingTarget, AXIsProcessTrusted(), let element = element(at: target) {
+            focusTarget(element)
+        }
+        overlay.show(at: anchor)
     }
 
     private func emitScrollTick() {
@@ -780,9 +835,11 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         )
 
         guard adjusted.x != 0 || adjusted.y != 0 else { return }
+        engage()
 
-        let vertical = clamp(adjusted.y * scrollScale)
-        let horizontal = clamp(-adjusted.x * scrollScale)
+        let direction: CGFloat = reverseDirection ? -1 : 1
+        let vertical = clamp(adjusted.y * scrollScale * direction)
+        let horizontal = clamp(-adjusted.x * scrollScale * direction)
 
         guard let scrollEvent = CGEvent(
             scrollWheelEvent2Source: nil,

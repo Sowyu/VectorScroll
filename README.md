@@ -31,6 +31,9 @@ That is the only manual install. Every later version installs itself from inside
 
 - **Hold to scroll.** Hold the middle button, move the pointer, release to stop.
 - **Toggle scrolling.** Click the middle button once and scrolling continues. Any mouse button stops it.
+- **Speed slider.** 50% to 200% of the default in 10% steps. Applies to both axes.
+- **Reverse direction.** Flip the scroll direction for people who expect natural scrolling from autoscroll.
+- **A plain middle-click stays a middle-click.** In hold mode nothing happens until the pointer leaves the 10 pt dead zone. No indicator flash, no window raise, so opening a link in a new tab works as before.
 - **Start delay for toggle mode.** Require a hold of 50 to 1,000 ms before scrolling engages, so an ordinary middle-click still opens links in a new tab. Default 200 ms. Turn it off to start on a plain click.
 - **Direction and speed from pointer distance.** A 10 pt dead zone around the start point, then speed scales with distance up to 120 px per tick, both axes at once.
 - **Scrolls the window under the pointer.** VectorScroll raises that window first, so the scroll goes where you are looking, not to the frontmost app.
