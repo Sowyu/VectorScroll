@@ -193,19 +193,24 @@ extension VectorScrollApp {
         scroll.contentView.scroll(to: NSPoint(x: 0, y: 0))
         scroll.reflectScrolledClipView(scroll.contentView)
         func savePreview(_ name: String) {
-        let bitmap = content.bitmapImageRepForCachingDisplay(in: content.bounds)!
-        content.cacheDisplay(in: content.bounds, to: bitmap)
-        // The window supplies its background outside the content view. Include
-        // that native background when exporting the view for visual review.
-        let preview = NSImage(size: content.bounds.size)
-        preview.lockFocus()
-        SettingsStyle.background.setFill()
-        NSBezierPath(rect: content.bounds).fill()
-        bitmap.draw(in: content.bounds, from: .zero, operation: .sourceOver, fraction: 1,
-                    respectFlipped: true, hints: nil)
-        preview.unlockFocus()
-        let opaque = NSBitmapImageRep(data: preview.tiffRepresentation!)!
-        try! opaque.representation(using: .png, properties: [:])!.write(to: URL(fileURLWithPath: ".build/\(name).png"))
+            // Scrolling to the top flashes the overlay scroller, so hide it for the capture.
+            scroll.hasVerticalScroller = false
+            content.layoutSubtreeIfNeeded()
+            let bitmap = content.bitmapImageRepForCachingDisplay(in: content.bounds)!
+            content.cacheDisplay(in: content.bounds, to: bitmap)
+            scroll.hasVerticalScroller = true
+            // The window supplies its background and rounded corners outside the
+            // content view. Reproduce both so the export matches the real window.
+            let preview = NSImage(size: content.bounds.size)
+            preview.lockFocus()
+            NSBezierPath(roundedRect: content.bounds, xRadius: 12, yRadius: 12).addClip()
+            SettingsStyle.background.setFill()
+            NSBezierPath(rect: content.bounds).fill()
+            bitmap.draw(in: content.bounds, from: .zero, operation: .sourceOver, fraction: 1,
+                        respectFlipped: true, hints: nil)
+            preview.unlockFocus()
+            let png = NSBitmapImageRep(data: preview.tiffRepresentation!)!
+            try! png.representation(using: .png, properties: [:])!.write(to: URL(fileURLWithPath: ".build/\(name).png"))
         }
         savePreview("settings-delay-preview")
         subject.selectHoldToScroll()
