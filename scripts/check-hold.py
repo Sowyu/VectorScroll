@@ -178,6 +178,7 @@ extension VectorScrollApp {
             button.action = #selector(PointerActionProbe.clicked(_:))
             let before = probe.calls
             mouseClick(button, at: NSPoint(x: 8, y: 8))
+            print("probe \(button.title): calls \(probe.calls - before), frame \(button.convert(button.bounds, to: nil)), visible \(scroll.documentVisibleRect), window \(subject.settingsWindow.frame)")
             assert(probe.calls == before + 1, "Mouse click must fire action exactly once")
             button.isEnabled = false
             mouseClick(button, at: NSPoint(x: 8, y: 8))
@@ -237,6 +238,7 @@ extension VectorScrollApp {
     }
 }
 
+setvbuf(stdout, nil, _IONBF, 0)
 let app = NSApplication.shared
 app.setActivationPolicy(.accessory)
 app.appearance = NSAppearance(named: .aqua)
