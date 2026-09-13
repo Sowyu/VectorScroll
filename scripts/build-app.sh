@@ -42,9 +42,9 @@ cat > "$CONTENTS/Info.plist" <<'PLIST'
     <key>LSApplicationCategoryType</key>
     <string>public.app-category.utilities</string>
     <key>CFBundleShortVersionString</key>
-    <string>1.5.3</string>
+    <string>1.5.4</string>
     <key>CFBundleVersion</key>
-    <string>10</string>
+    <string>11</string>
     <key>LSMinimumSystemVersion</key>
     <string>14.0</string>
     <key>LSUIElement</key>
@@ -57,7 +57,9 @@ cat > "$CONTENTS/Info.plist" <<'PLIST'
 </plist>
 PLIST
 
-codesign --force --deep --sign - "$APP_DIR" >/dev/null
+# A stable identity keeps TCC grants across updates. Ad-hoc signatures change
+# every build, so macOS forgets Input Monitoring after each one.
+codesign --force --deep --sign "${CODESIGN_IDENTITY:--}" "$APP_DIR" >/dev/null
 touch "$APP_DIR"
 
 echo "Built $APP_DIR"

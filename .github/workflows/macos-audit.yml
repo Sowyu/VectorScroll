@@ -31,12 +31,32 @@ jobs:
         run: |
           swiftc -swift-version 6 -warnings-as-errors -parse-as-library Sources/VectorScroll/Updates.swift scripts/check-updates.swift -o .build/check-updates
           .build/check-updates
+      - name: Import signing certificate
+        if: ${{ secrets.CODESIGN_P12 != '' }}
+        env:
+          CODESIGN_P12: ${{ secrets.CODESIGN_P12 }}
+          CODESIGN_P12_PASSWORD: ${{ secrets.CODESIGN_P12_PASSWORD }}
+        run: |
+          KEYCHAIN="$RUNNER_TEMP/signing.keychain-db"
+          security create-keychain -p "" "$KEYCHAIN"
+          security set-keychain-settings "$KEYCHAIN"
+          security unlock-keychain -p "" "$KEYCHAIN"
+          echo "$CODESIGN_P12" | base64 --decode > "$RUNNER_TEMP/codesign.p12"
+          security import "$RUNNER_TEMP/codesign.p12" -k "$KEYCHAIN" -P "$CODESIGN_P12_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -s -k "" "$KEYCHAIN" >/dev/null
+          security list-keychains -d user -s "$KEYCHAIN" $(security list-keychains -d user | tr -d '"')
+          echo "CODESIGN_IDENTITY=VectorScroll" >> "$GITHUB_ENV"
+          echo "SIGNING_KEYCHAIN=$KEYCHAIN" >> "$GITHUB_ENV"
       - name: Build universal app bundle
         run: ./scripts/build-app.sh
       - name: Verify release bundle
         run: |
+          # Delete the keychain first so verification matches a user's Mac,
+          # which never has this certificate installed.
+          if [ -n "${SIGNING_KEYCHAIN:-}" ]; then security delete-keychain "$SIGNING_KEYCHAIN"; fi
           lipo dist/VectorScroll.app/Contents/MacOS/VectorScroll -verify_arch arm64 x86_64
           codesign --verify --deep --strict dist/VectorScroll.app
+          codesign -d -r- dist/VectorScroll.app 2>&1 | grep designated
           python3 scripts/check-bundle.py
       - name: Package installer
         run: |
@@ -51,7 +71,7 @@ jobs:
           .build/check-installer
       - uses: actions/upload-artifact@v4
         with:
-          name: VectorScroll-1.5.3
+          name: VectorScroll-1.5.4
           path: dist/VectorScroll.dmg
           if-no-files-found: error
       - uses: actions/upload-artifact@v4
