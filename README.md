@@ -29,7 +29,7 @@ The click that stops scrolling also reaches the app under your pointer. Clicking
 
 A charcoal panel with SF Symbols, clear mode buttons, and switches. The interface uses AppKit and system fonts, with no web views, bundled fonts, or UI dependencies.
 
-Change the indicator's light/dark appearance and size, set launch at login, or check for updates. Changes save immediately. Input Monitoring and Accessibility status refresh automatically every second and when you return from System Settings. Missing permissions have a button to open the relevant macOS pane.
+Change the indicator's light/dark appearance and size, set launch at login, or check for updates. Changes save immediately. Launch shows the macOS permission prompts only. Input Monitoring and Accessibility status refresh every second, and a missing permission shows a button that opens its System Settings pane.
 
 Two toggles control how you access the app:
 

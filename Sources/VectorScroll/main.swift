@@ -237,7 +237,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         fullWidth(launchAtStartupItem)
         permissionStatusLabel = label("", secondary: true)
         fullWidth(permissionStatusLabel)
-        permissionItem = button("", "hand.raised", #selector(requestPermissions))
+        permissionItem = button("", "hand.raised", #selector(openPermissionSettings))
         stack.addArrangedSubview(permissionItem)
 
         section("Updates", "arrow.down.circle")
@@ -517,27 +517,20 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         updateLaunchAtStartupItem()
     }
 
-    @objc private func requestPermissions() {
-        if CGPreflightListenEventAccess(), !AXIsProcessTrusted(), accessibilityPromptedThisRun {
-            NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!)
-            return
-        }
-        if !CGPreflightListenEventAccess() {
-            if !CGRequestListenEventAccess() {
-                NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent")!)
-            }
-            DispatchQueue.main.asyncAfter(deadline: .now() + .seconds(2)) { [weak self] in
-                guard CGPreflightListenEventAccess() else {
-                    self?.updatePermissionMenuItem()
-                    return
-                }
-                self?.requestAccessibilityPermission()
-            }
-        } else {
+    // Launch shows only the system prompts, never System Settings. The 1-second
+    // timer asks for Accessibility once Input Monitoring is granted.
+    private func requestPermissions() {
+        if CGPreflightListenEventAccess() {
             requestAccessibilityPermission()
+        } else {
+            _ = CGRequestListenEventAccess()
         }
-
         installEventTap()
+    }
+
+    @objc private func openPermissionSettings() {
+        let pane = CGPreflightListenEventAccess() ? "Privacy_Accessibility" : "Privacy_ListenEvent"
+        NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?\(pane)")!)
     }
 
     private func requestAccessibilityPermission() {
