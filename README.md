@@ -21,9 +21,11 @@ Swift and AppKit only. No Electron, web views, or third-party dependencies. One 
 
 1. Download `VectorScroll.dmg` from the [latest release](https://github.com/Sowyu/VectorScroll/releases/latest).
 2. Open the DMG and drag VectorScroll into Applications.
-3. Open VectorScroll and allow Input Monitoring, then Accessibility, when macOS asks.
+3. Open VectorScroll. A short setup guide walks through the two permissions, one page each, and moves on by itself as soon as macOS registers each grant.
 
-That is the only manual install. Every later version installs itself from inside the app.
+<img src="docs/onboarding.png" alt="Setup guide, Input Monitoring step" width="480">
+
+That is the only manual install. Every later version installs itself from inside the app. The guide can be reopened any time with Setup Guide… in Settings.
 
 ## Features
 
@@ -47,6 +49,7 @@ The click that stops toggle mode also reaches the app under the pointer. Stop ov
 - Every change saves immediately. No Apply button.
 - **Open settings on launch** and **Show menu bar icon** control how you reach the app. One of them always stays on, so the window is never unreachable.
 - **Launch at login** registers with the system login items.
+- **Setup guide** on first launch. One permission per page, plain-language reasons, live status, and no system prompt until you press the button for it. Reopen it from Settings.
 - Permission status for Input Monitoring and Accessibility refreshes every second. A missing permission shows a button that opens the right System Settings pane. Launch only shows the standard macOS prompts and never opens System Settings on its own.
 - Keyboard focus shows as an underline. Every control is a real AppKit button with native tracking and accessibility.
 

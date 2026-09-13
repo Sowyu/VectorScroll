@@ -55,6 +55,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
     }
     private var delayItem: NSStackView!
     private var reverseItem: NSButton!
+    private var onboarding: Onboarding?
     private var speedSlider: NSSlider!
     private var speedLabel: NSTextField!
     private var delayToggle: NSButton!
@@ -65,13 +66,23 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         NSApp.setActivationPolicy(.accessory)
         restoreSettings()
         configureMenu()
-        if openSettingsOnLaunch { showSettings() }
+        // Fresh installs get the guided setup instead of bare system prompts.
+        // Copies that were already set up are marked complete silently.
+        if !defaults.bool(forKey: "onboardingCompleted"), CGPreflightListenEventAccess(), AXIsProcessTrusted() {
+            defaults.set(true, forKey: "onboardingCompleted")
+        }
+        if !defaults.bool(forKey: "onboardingCompleted") {
+            showOnboarding()
+        } else {
+            if openSettingsOnLaunch { showSettings() }
+            requestPermissions()
+        }
         if let error = defaults.string(forKey: "updateInstallError"), !error.isEmpty {
             defaults.set("", forKey: "updateInstallError")
             showSettings()
             showUpdateError(error)
         }
-        requestPermissions()
+        installEventTap()
         startPermissionStatusTimer()
         checkForUpdates(manual: false)
         let updateTimer = DispatchSource.makeTimerSource(queue: .main)
@@ -265,7 +276,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         permissionStatusLabel = label("", secondary: true)
         fullWidth(permissionStatusLabel)
         permissionItem = button("", "hand.raised", #selector(openPermissionSettings))
-        stack.addArrangedSubview(permissionItem)
+        stack.addArrangedSubview(row(permissionItem, button("Setup Guide…", "questionmark.circle", #selector(showOnboarding))))
 
         section("Updates", "arrow.down.circle")
         fullWidth(label("Version \(AppUpdate.installedVersion) · Checks daily, installs automatically, keeps your previous copy", secondary: true))
@@ -512,7 +523,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
     }
 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
-        if openSettingsOnLaunch { showSettings() }
+        if onboarding != nil { showOnboarding() } else if openSettingsOnLaunch { showSettings() }
         return true
     }
 
@@ -573,6 +584,27 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         installEventTap()
     }
 
+    @objc private func showOnboarding() {
+        stopScrolling()
+        if onboarding == nil {
+            let guide = Onboarding()
+            guide.promptAccessibility = { [weak self] in
+                self?.accessibilityPromptedThisRun = true
+                _ = AXIsProcessTrustedWithOptions(["AXTrustedCheckOptionPrompt": true] as CFDictionary)
+            }
+            guide.openSettings = { [weak self] in self?.showSettings() }
+            guide.finish = { [weak self] in
+                guard let self else { return }
+                self.defaults.set(true, forKey: "onboardingCompleted")
+                self.onboarding = nil
+                if self.openSettingsOnLaunch, !self.settingsWindow.isVisible, !CGPreflightListenEventAccess() { self.showSettings() }
+            }
+            onboarding = guide
+        }
+        onboarding?.refresh(canListen: CGPreflightListenEventAccess(), canAccess: AXIsProcessTrusted())
+        onboarding?.show()
+    }
+
     @objc private func openPermissionSettings() {
         let pane = CGPreflightListenEventAccess() ? "Privacy_Accessibility" : "Privacy_ListenEvent"
         NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?\(pane)")!)
@@ -606,6 +638,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         permissionStatusLabel.stringValue = "Input Monitoring: \(canListen ? "Allowed" : "Needed") · Accessibility: \(canAccess ? "Allowed" : "Needed")"
         permissionItem.isHidden = canListen && canAccess
         permissionItem.title = canListen ? "Accessibility Settings…" : "Input Monitoring Settings…"
+        onboarding?.refresh(canListen: canListen, canAccess: canAccess)
     }
 
     private func updateSizeMenuItems() {
@@ -712,7 +745,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         let timer = DispatchSource.makeTimerSource(queue: .main)
         timer.schedule(deadline: .now() + .seconds(1), repeating: .seconds(1), leeway: .milliseconds(300))
         timer.setEventHandler { [weak self] in
-            if CGPreflightListenEventAccess() {
+            if CGPreflightListenEventAccess(), self?.onboarding == nil {
                 self?.requestAccessibilityPermission()
             }
             self?.installEventTap()
