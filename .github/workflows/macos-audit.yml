@@ -15,6 +15,7 @@ jobs:
     timeout-minutes: 10
     env:
       GH_UPDATE_TEST_TOKEN: ${{ github.token }}
+      HAS_SIGNING_CERT: ${{ secrets.CODESIGN_P12 != '' }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -32,7 +33,7 @@ jobs:
           swiftc -swift-version 6 -warnings-as-errors -parse-as-library Sources/VectorScroll/Updates.swift scripts/check-updates.swift -o .build/check-updates
           .build/check-updates
       - name: Import signing certificate
-        if: ${{ secrets.CODESIGN_P12 != '' }}
+        if: env.HAS_SIGNING_CERT == 'true'
         env:
           CODESIGN_P12: ${{ secrets.CODESIGN_P12 }}
           CODESIGN_P12_PASSWORD: ${{ secrets.CODESIGN_P12_PASSWORD }}
