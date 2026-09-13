@@ -68,9 +68,9 @@ extension VectorScrollApp {
         subject.showOnboarding()
         let guide = subject.onboarding!
         assert(guide.window.isVisible && guide.step == .welcome)
+        guide.refresh(canListen: false, canAccess: false) // Independent of the runner's real TCC state.
         guide.primary.performClick(nil)
-        assert(guide.step == .inputMonitoring || guide.step == .accessibility || guide.step == .done)
-        guide.refresh(canListen: false, canAccess: false)
+        assert(guide.step == .inputMonitoring, "Welcome must lead to Input Monitoring, got \(guide.step)")
         subject.applyPermissionStatus(canListen: true, canAccess: false)
         assert(guide.step == .accessibility, "Granting Input Monitoring must advance the guide")
         guide.secondary.performClick(nil)
@@ -248,8 +248,8 @@ extension VectorScrollApp {
         savePreview(content, "settings-preview")
         subject.defaults.removeObject(forKey: "onboardingCompleted")
         subject.showOnboarding()
-        subject.onboarding!.primary.performClick(nil)
         subject.onboarding!.refresh(canListen: false, canAccess: false)
+        subject.onboarding!.primary.performClick(nil)
         savePreview(subject.onboarding!.window.contentView!, "onboarding-preview")
         subject.onboarding!.secondary.performClick(nil)
         let closeButton = content.subviews.compactMap { $0 as? SettingsButton }.first { $0.title == "Close settings" }!
