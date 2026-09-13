@@ -2,72 +2,83 @@
 
 <img src="docs/icon.png" alt="VectorScroll icon" width="96" height="96">
 
-Middle-button autoscrolling for macOS, with a compact, dark settings window built in AppKit. Move your pointer away from the starting point to control scrolling direction and speed.
+Middle-button autoscrolling for macOS. Press the middle button, move the pointer away from where you pressed, and the window under it scrolls in that direction. Farther means faster.
 
-Built with Swift and system frameworks. No Electron, web views, or third-party dependencies. One universal app supports Intel and Apple Silicon Macs running macOS 14 or later.
+Swift and AppKit only. No Electron, web views, or third-party dependencies. One universal binary runs on Intel and Apple Silicon Macs with macOS 14 or later. The app is about 830 KB.
+
+<p>
+  <img src="docs/settings-hold.png" alt="Settings window in hold-to-scroll mode" width="420">
+  <img src="docs/settings-toggle.png" alt="Settings window in toggle mode with the delay slider" width="420">
+</p>
 
 ## Install
 
 1. Download `VectorScroll.dmg` from the [latest release](https://github.com/Sowyu/VectorScroll/releases/latest).
 2. Open the DMG and drag VectorScroll into Applications.
-3. Open VectorScroll. Enable Accessibility and Input Monitoring in System Settings when prompted.
+3. Open VectorScroll and allow Input Monitoring, then Accessibility, when macOS asks.
 
-Settings opens by default. You can also choose **Settings…** from the menu bar icon.
+That is the only manual install. Every later version installs itself from inside the app.
 
-## Scrolling
+## Features
 
-Choose a mode in Settings:
+### Scrolling
 
-- **Hold to scroll:** hold the middle button, then release it to stop.
-- **Toggle scrolling:** scrolling continues after release. Click any mouse button to stop.
+- **Hold to scroll.** Hold the middle button, move the pointer, release to stop.
+- **Toggle scrolling.** Click the middle button once and scrolling continues. Any mouse button stops it.
+- **Start delay for toggle mode.** Require a hold of 50 to 1,000 ms before scrolling engages, so an ordinary middle-click still opens links in a new tab. Default 200 ms. Turn it off to start on a plain click.
+- **Direction and speed from pointer distance.** A 10 pt dead zone around the start point, then speed scales with distance up to 120 px per tick, both axes at once.
+- **Scrolls the window under the pointer.** VectorScroll raises that window first, so the scroll goes where you are looking, not to the frontmost app.
+- **On-screen indicator.** A circle with four arrows marks the start point. Choose light or dark, and 28, 32, 40, or 48 pt.
 
-The second mode has an optional hold requirement to prevent accidental activation. Adjust it from 50 to 1,000 ms in 50 ms steps. The default is 200 ms. Turn it off to start with a normal middle-click.
+The click that stops toggle mode also reaches the app under the pointer. Stop over empty space if you do not want to activate a link or button.
 
-The click that stops scrolling also reaches the app under your pointer. Clicking a link or button will activate it. Stop over empty space to avoid that.
+### Settings window
 
-## Settings
+- Opens on launch by default and from the menu bar icon. Command-W or Close settings hides it. Scrolling keeps working.
+- Every change saves immediately. No Apply button.
+- **Open settings on launch** and **Show menu bar icon** control how you reach the app. One of them always stays on, so the window is never unreachable.
+- **Launch at login** registers with the system login items.
+- Permission status for Input Monitoring and Accessibility refreshes every second. A missing permission shows a button that opens the right System Settings pane. Launch only shows the standard macOS prompts and never opens System Settings on its own.
+- Keyboard focus shows as an underline. Every control is a real AppKit button with native tracking and accessibility.
 
-A charcoal panel with SF Symbols, clear mode buttons, and switches. The interface uses AppKit and system fonts, with no web views, bundled fonts, or UI dependencies.
-
-Change the indicator's light/dark appearance and size, set launch at login, or check for updates. Changes save immediately. Launch shows the macOS permission prompts only. Input Monitoring and Accessibility status refresh every second, and a missing permission shows a button that opens its System Settings pane.
-
-Two toggles control how you access the app:
-
-- **Open settings on launch** shows the window on launch and when you reopen the running app.
-- **Show menu bar icon** keeps Settings and Quit available from the menu bar.
-
-Both start enabled. They cannot both be off. Hiding the icon enables opening settings; disabling automatic settings opening restores the icon if needed. Close settings with Command-W or the Close settings button. Scrolling stays available.
-
-If the icon is hidden, reopen VectorScroll from Applications or run:
+If the menu bar icon is hidden, reopen the window from Applications or run:
 
 ```sh
 open -a VectorScroll
 ```
 
-## Updates
+### Updates
 
-VectorScroll checks GitHub at launch and every 24 hours while running. Choose **Check for Updates…** in Settings, then **Install Update**.
+- Checks GitHub on launch and every 24 hours. Background checks never show dialogs and need no GitHub account.
+- **Check for Updates…** then **Install Update** downloads the DMG, verifies its SHA-256 against the GitHub release digest, checks the bundle identifier, version, code signature, and processor support, swaps the app in place, and relaunches. Settings are kept.
+- The previous version stays in a hidden `.VectorScroll-update-…` folder next to the app as `Previous.app`. A failed swap or relaunch restores it. The updater never deletes anything.
+- Requires the app to live in a writable folder, normally Applications. Running from the mounted DMG is refused with an explanation.
 
-The app downloads the DMG, verifies its SHA-256 checksum against GitHub, checks the app's identity, version, signature, and processor support, then installs and restarts automatically. Your settings remain saved.
+### Permissions survive updates
 
-The previous app is kept in a hidden `.VectorScroll-update-…` folder beside the installed app, named `Previous.app`. A failed replacement or launch restores the previous copy when possible. Update files and backups are retained, never permanently deleted by the updater.
+Releases are signed with a stable certificate, so the app's designated requirement is its bundle identifier plus that certificate and does not change between builds. macOS keeps the Input Monitoring and Accessibility grants across automatic updates. Ad-hoc builds you compile yourself get a new identity every time and need re-granting after each build.
 
-Automatic installation requires the app to be in a writable folder, usually Applications. If you are running it from a DMG, move it into Applications first. Versions before 1.4.0 need one manual upgrade to gain automatic installation.
+## Requirements
 
-Background checks do not show dialogs, and no GitHub account is required.
+| | |
+|---|---|
+| macOS | 14.0 or later |
+| Architecture | arm64 and x86_64 in one binary |
+| Permissions | Input Monitoring for the middle button, Accessibility for raising the target window |
+| Network | GitHub only, for update checks and downloads |
 
 ## Build and check
 
-Requires macOS and a Swift 6 toolchain. Run from the repository root:
+Requires macOS and a Swift 6 toolchain. From the repository root:
 
 ```sh
 swift build -c release
 ./scripts/build-app.sh
 ```
 
-The bundle script builds both architectures, generates icons at fixed pixel sizes, and creates an ad-hoc-signed `dist/VectorScroll.app`. It refuses to replace an existing app. Move the previous build to Trash before rebuilding.
+The bundle script builds both architectures, renders the icon set, and writes `dist/VectorScroll.app`. It signs ad-hoc unless `CODESIGN_IDENTITY` names a certificate in your keychain. It refuses to replace an existing build. Move the previous one to Trash first.
 
-Run the native settings, access-toggle, scrolling, and update checks:
+Run the native settings, click, scrolling, and update checks:
 
 ```sh
 python3 scripts/check-hold.py
@@ -75,4 +86,22 @@ swiftc -swift-version 6 -warnings-as-errors -parse-as-library Sources/VectorScro
 .build/check-updates
 ```
 
-GitHub Actions also tests automatic installation and relaunch using a signed fixture app, replacement and launch rollback, checksum and signature failures, and a live GitHub download. It verifies the universal app, icon dimensions, signature, and DMG.
+`check-hold.py` drives the real settings window with synthetic mouse events, checks every button's hit region, and writes `.build/settings-preview.png` and `.build/settings-delay-preview.png`. The screenshots above come from that run.
+
+GitHub Actions runs the same checks on macOS, then builds and signs the universal app, verifies the signature with the certificate removed from the keychain so the result matches a user's Mac, packages the DMG, and tests automatic installation, relaunch, and rollback against a signed fixture app plus a live GitHub download.
+
+## Layout
+
+```
+Sources/VectorScroll/
+  main.swift            app delegate, event tap, scrolling, settings window
+  SettingsStyle.swift   colors, SettingsButton drawing and hit testing
+  Updates.swift         GitHub release check and validation
+  UpdateInstaller.swift download, verify, stage, swap, relaunch
+scripts/
+  build-app.sh          universal bundle, icons, signing
+  check-hold.py         settings and scrolling regression harness
+  check-updates.swift   release parsing checks and a live GitHub request
+  check-installer.swift installation and rollback checks
+  make-icons.swift      renders the icon set
+```
