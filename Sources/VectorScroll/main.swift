@@ -197,6 +197,9 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         let click = SettingsButton("Keep scrolling until the next click", symbol: "cursorarrow.click", kind: .choice, target: self, action: #selector(selectHoldToLock))
         click.displayTitle = "Toggle scrolling"
         holdToLockItem = click
+        // Cards must not outrank the window's stay-put priority (500), or the
+        // window widens to fit their full accessibility titles.
+        for card in [hold, click] { card.setContentCompressionResistancePriority(.defaultLow, for: .horizontal) }
         let modes = row(hold, click)
         modes.distribution = .fillEqually
         fullWidth(modes)
@@ -279,6 +282,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         scroll.drawsBackground = false
         scroll.hasVerticalScroller = true
         scroll.autohidesScrollers = true
+        scroll.scrollerStyle = .overlay // A plugged-in mouse would otherwise reserve a 15pt legacy scroller.
         scroll.translatesAutoresizingMaskIntoConstraints = false
         let document = SettingsDocument()
         document.translatesAutoresizingMaskIntoConstraints = false
