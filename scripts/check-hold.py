@@ -134,6 +134,7 @@ extension VectorScrollApp {
         assert(subject.holdScrollItem is SettingsButton)
         assert(subject.openSettingsButton is SettingsButton)
         func mouseClick(_ button: NSButton, at point: NSPoint) {
+            content.layoutSubtreeIfNeeded()
             button.scrollToVisible(button.bounds)
             content.layoutSubtreeIfNeeded()
             let location = button.convert(point, to: nil)
@@ -150,6 +151,7 @@ extension VectorScrollApp {
         }
         // Exercise actual hit regions. performClick bypasses mouse hit testing.
         for button in [subject.hideIconItem!, subject.holdScrollItem!, subject.holdToLockItem!, subject.updateItem!] {
+            content.layoutSubtreeIfNeeded()
             button.scrollToVisible(button.bounds)
             content.layoutSubtreeIfNeeded()
             for point in [NSPoint(x: 8, y: 8), NSPoint(x: button.bounds.midX, y: button.bounds.midY), NSPoint(x: button.bounds.maxX - 20, y: button.bounds.midY)] {
@@ -178,7 +180,6 @@ extension VectorScrollApp {
             button.action = #selector(PointerActionProbe.clicked(_:))
             let before = probe.calls
             mouseClick(button, at: NSPoint(x: 8, y: 8))
-            print("probe \(button.title): calls \(probe.calls - before), frame \(button.convert(button.bounds, to: nil)), visible \(scroll.documentVisibleRect), window \(subject.settingsWindow.frame)")
             assert(probe.calls == before + 1, "Mouse click must fire action exactly once")
             button.isEnabled = false
             mouseClick(button, at: NSPoint(x: 8, y: 8))
