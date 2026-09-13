@@ -198,7 +198,11 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         titleStack.orientation = .vertical
         titleStack.alignment = .leading
         titleStack.spacing = 3
-        stack.addArrangedSubview(row(iconTile, titleStack))
+        let spacer = NSView()
+        spacer.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        let guideButton = button("Setup Guide", "questionmark.circle", #selector(showOnboarding))
+        guideButton.setContentHuggingPriority(.required, for: .horizontal)
+        fullWidth(row(iconTile, titleStack, spacer, guideButton))
 
         section("Scrolling", "computermouse")
         let hold = SettingsButton("Scroll while holding the middle button", symbol: "hand.point.up.left", kind: .choice, target: self, action: #selector(selectHoldToScroll))
@@ -276,7 +280,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         permissionStatusLabel = label("", secondary: true)
         fullWidth(permissionStatusLabel)
         permissionItem = button("", "hand.raised", #selector(openPermissionSettings))
-        stack.addArrangedSubview(row(permissionItem, button("Setup Guide…", "questionmark.circle", #selector(showOnboarding))))
+        stack.addArrangedSubview(permissionItem)
 
         section("Updates", "arrow.down.circle")
         fullWidth(label("Version \(AppUpdate.installedVersion) · Checks daily, installs automatically, keeps your previous copy", secondary: true))

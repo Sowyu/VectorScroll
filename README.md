@@ -25,7 +25,7 @@ Swift and AppKit only. No Electron, web views, or third-party dependencies. One 
 
 <img src="docs/onboarding.png" alt="Setup guide, Input Monitoring step" width="480">
 
-That is the only manual install. Every later version installs itself from inside the app. The guide can be reopened any time with Setup Guide… in Settings.
+That is the only manual install. Every later version installs itself from inside the app. The guide can be reopened any time with Setup Guide at the top of Settings.
 
 ## Features
 
