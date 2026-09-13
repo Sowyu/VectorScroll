@@ -112,7 +112,7 @@ final class SettingsButton: NSButton {
             .draw(in: NSRect(x: 12, y: iconY, width: 16, height: 16), from: .zero, operation: .sourceOver, fraction: 1, respectFlipped: true, hints: nil)
         let paragraph = NSMutableParagraphStyle()
         paragraph.lineBreakMode = .byTruncatingTail
-        let rightInset: CGFloat = kind == .toggle ? 54 : kind == .choice ? 30 : 12
+        let rightInset: CGFloat = kind == .toggle ? 56 : kind == .choice ? 36 : 12
         let textRect = NSRect(x: 38, y: kind == .choice ? 12 : (bounds.height - 17) / 2,
                               width: max(0, bounds.width - 38 - rightInset), height: 19)
         ((displayTitle ?? title) as NSString).draw(in: textRect, withAttributes: [.font: font!, .foregroundColor: foreground, .paragraphStyle: paragraph])
@@ -121,10 +121,10 @@ final class SettingsButton: NSButton {
                                      withAttributes: [.font: NSFont.systemFont(ofSize: 11), .foregroundColor: SettingsStyle.secondary, .paragraphStyle: paragraph])
         }
         if kind == .choice && selected {
-            SettingsStyle.symbol("checkmark", color: foreground)?.draw(in: NSRect(x: bounds.width - 25, y: 14, width: 12, height: 12), from: .zero, operation: .sourceOver, fraction: 1, respectFlipped: true, hints: nil)
+            SettingsStyle.symbol("checkmark", color: foreground)?.draw(in: NSRect(x: bounds.width - 24, y: 14, width: 12, height: 12), from: .zero, operation: .sourceOver, fraction: 1, respectFlipped: true, hints: nil)
         }
         if kind == .toggle {
-            let track = NSRect(x: bounds.width - 43, y: (bounds.height - 20) / 2, width: 32, height: 20)
+            let track = NSRect(x: bounds.width - 44, y: (bounds.height - 20) / 2, width: 32, height: 20)
             NSColor(calibratedWhite: selected ? 0.9 : 0.32, alpha: alpha).setFill()
             NSBezierPath(roundedRect: track, xRadius: 10, yRadius: 10).fill()
             NSColor(calibratedWhite: selected ? 0.16 : 0.8, alpha: alpha).setFill()
