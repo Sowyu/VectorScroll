@@ -105,6 +105,7 @@ extension VectorScrollApp {
         RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.1))
         subject.settingsWindow.contentView!.layoutSubtreeIfNeeded()
         let content = subject.settingsWindow.contentView!
+        print("screen \(NSScreen.main?.frame ?? .zero) window \(subject.settingsWindow.frame)")
         let scroll = content.subviews.first as! NSScrollView
         let stack = scroll.documentView!.subviews.first as! NSStackView
         assert(stack.bounds.width <= scroll.contentView.bounds.width, "Settings must fit horizontally")

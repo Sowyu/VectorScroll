@@ -95,7 +95,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
     }
 
     private func configureSettingsWindow() {
-        settingsWindow = SettingsWindow(contentRect: NSRect(x: 0, y: 0, width: 620, height: 800),
+        settingsWindow = SettingsWindow(contentRect: NSRect(x: 0, y: 0, width: 620, height: 760),
                                   styleMask: [.titled, .closable, .miniaturizable, .fullSizeContentView], backing: .buffered, defer: false)
         settingsWindow.title = "VectorScroll Settings"
         settingsWindow.titleVisibility = .hidden
@@ -107,8 +107,8 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         settingsWindow.backgroundColor = SettingsStyle.background
         settingsWindow.appearance = NSAppearance(named: .darkAqua)
         settingsWindow.isReleasedWhenClosed = false
-        if !settingsWindow.setFrameUsingName("VectorScrollSettingsV3") { settingsWindow.center() }
-        settingsWindow.setFrameAutosaveName("VectorScrollSettingsV3")
+        if !settingsWindow.setFrameUsingName("VectorScrollSettingsV2") { settingsWindow.center() }
+        settingsWindow.setFrameAutosaveName("VectorScrollSettingsV2")
 
         func label(_ text: String, secondary: Bool = false) -> NSTextField {
             let field = NSTextField(wrappingLabelWithString: text)
@@ -245,12 +245,11 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         stack.addArrangedSubview(permissionItem)
 
         section("Updates", "arrow.down.circle")
-        fullWidth(label("Version \(AppUpdate.installedVersion) · Checks automatically each day", secondary: true))
+        fullWidth(label("Version \(AppUpdate.installedVersion) · Checks daily, installs automatically, keeps your previous copy", secondary: true))
         updateItem = button("Check for Updates…", "arrow.clockwise", #selector(checkUpdatesFromMenu))
         downloadItem = button("Install Update…", "arrow.down", #selector(installUpdate))
         downloadItem.isHidden = true
         stack.addArrangedSubview(row(updateItem, downloadItem))
-        fullWidth(label("Installs and restarts automatically. Your previous copy is kept.", secondary: true))
 
         let content = settingsWindow.contentView!
         content.wantsLayer = true
