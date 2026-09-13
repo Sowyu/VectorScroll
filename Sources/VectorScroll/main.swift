@@ -64,7 +64,6 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
             showUpdateError(error)
         }
         requestPermissions()
-        installEventTap()
         startPermissionStatusTimer()
         checkForUpdates(manual: false)
         let updateTimer = DispatchSource.makeTimerSource(queue: .main)
@@ -72,20 +71,6 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         updateTimer.setEventHandler { [weak self] in self?.checkForUpdates(manual: false) }
         self.updateTimer = updateTimer
         updateTimer.resume()
-    }
-
-    func applicationWillTerminate(_ notification: Notification) {
-        stopScrolling()
-        permissionStatusTimer?.cancel()
-        updateTask?.cancel()
-        installTask?.cancel()
-        updateTimer?.cancel()
-        if let runLoopSource {
-            CFRunLoopRemoveSource(CFRunLoopGetMain(), runLoopSource, .commonModes)
-        }
-        if let eventTap {
-            CFMachPortInvalidate(eventTap)
-        }
     }
 
     private func configureMenu() {
@@ -146,7 +131,6 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
             SettingsButton(title, symbol: symbol, kind: .toggle, target: self, action: action)
         }
         let stack = NSStackView()
-        stack.identifier = NSUserInterfaceItemIdentifier("settingsContent")
         stack.orientation = .vertical
         stack.alignment = .leading
         stack.spacing = 8
@@ -202,7 +186,6 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         holdScrollItem = hold
         let click = SettingsButton("Keep scrolling until the next click", symbol: "cursorarrow.click", kind: .choice, target: self, action: #selector(selectHoldToLock))
         click.displayTitle = "Toggle scrolling"
-        click.detail = "Click again to stop"
         holdToLockItem = click
         let modes = row(hold, click)
         modes.distribution = .fillEqually
@@ -254,7 +237,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         fullWidth(launchAtStartupItem)
         permissionStatusLabel = label("", secondary: true)
         fullWidth(permissionStatusLabel)
-        permissionItem = button("Request Permissions", "hand.raised", #selector(requestPermissions))
+        permissionItem = button("", "hand.raised", #selector(requestPermissions))
         stack.addArrangedSubview(permissionItem)
 
         section("Updates", "arrow.down.circle")
@@ -555,7 +538,6 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         }
 
         installEventTap()
-        updatePermissionMenuItem()
     }
 
     private func requestAccessibilityPermission() {
@@ -586,12 +568,6 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         permissionStatusLabel.stringValue = "Input Monitoring: \(canListen ? "Allowed" : "Needed") · Accessibility: \(canAccess ? "Allowed" : "Needed")"
         permissionItem.isHidden = canListen && canAccess
         permissionItem.title = canListen ? "Accessibility Settings…" : "Input Monitoring Settings…"
-    }
-
-    func applicationDidBecomeActive(_ notification: Notification) {
-        guard settingsWindow != nil else { return }
-        installEventTap()
-        updateLaunchAtStartupItem()
     }
 
     private func updateSizeMenuItems() {
@@ -658,11 +634,11 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
             partial | (CGEventMask(1) << CGEventMask(type.rawValue))
         }
 
-        let callback: CGEventTapCallBack = { proxy, type, event, refcon in
+        let callback: CGEventTapCallBack = { _, type, event, refcon in
             guard let refcon else { return Unmanaged.passUnretained(event) }
             let app = Unmanaged<VectorScrollApp>.fromOpaque(refcon).takeUnretainedValue()
             return MainActor.assumeIsolated {
-                app.handleEvent(proxy: proxy, type: type, event: event)
+                app.handleEvent(type: type, event: event)
             }
         }
 
@@ -677,7 +653,6 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
 
         guard let eventTap else {
             eventTapInstalled = false
-            updatePermissionMenuItem()
             return
         }
 
@@ -687,7 +662,6 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
             CFRunLoopAddSource(CFRunLoopGetMain(), runLoopSource, .commonModes)
         }
         CGEvent.tapEnable(tap: eventTap, enable: true)
-        updatePermissionMenuItem()
     }
 
     private func startPermissionStatusTimer() {
@@ -699,13 +673,12 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
                 self?.requestAccessibilityPermission()
             }
             self?.installEventTap()
-            self?.updatePermissionMenuItem()
         }
         permissionStatusTimer = timer
         timer.resume()
     }
 
-    private func handleEvent(proxy: CGEventTapProxy, type: CGEventType, event: CGEvent) -> Unmanaged<CGEvent>? {
+    private func handleEvent(type: CGEventType, event: CGEvent) -> Unmanaged<CGEvent>? {
         if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
             if let eventTap {
                 CGEvent.tapEnable(tap: eventTap, enable: true)
@@ -730,9 +703,9 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
             let buttonNumber = event.getIntegerValueField(.mouseEventButtonNumber)
             if buttonNumber == 2 {
                 if holdToLockMode {
-                    armHoldToLock(at: currentPointerLocation(), target: event.location)
+                    armHoldToLock(at: NSEvent.mouseLocation, target: event.location)
                 } else {
-                    startScrolling(at: currentPointerLocation(), target: event.location)
+                    startScrolling(at: NSEvent.mouseLocation, target: event.location)
                 }
             }
             return Unmanaged.passUnretained(event)
@@ -772,9 +745,6 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
 
     private func startScrolling(at point: CGPoint, target: CGPoint) {
         guard eventTapInstalled else { return }
-        if !AXIsProcessTrusted() {
-            updatePermissionMenuItem()
-        }
         if AXIsProcessTrusted(), let element = element(at: target) {
             focusTarget(element)
         }
@@ -806,7 +776,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
     private func emitScrollTick() {
         guard let anchor else { return }
 
-        let pointer = currentPointerLocation()
+        let pointer = NSEvent.mouseLocation
         let offset = CGPoint(x: pointer.x - anchor.x, y: pointer.y - anchor.y)
         let adjusted = CGPoint(
             x: applyDeadZone(offset.x),
@@ -841,10 +811,6 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
 
     private func clamp(_ value: CGFloat) -> CGFloat {
         min(max(value, -maxDeltaPerTick), maxDeltaPerTick)
-    }
-
-    private func currentPointerLocation() -> CGPoint {
-        NSEvent.mouseLocation
     }
 
     private func element(at point: CGPoint) -> AXUIElement? {

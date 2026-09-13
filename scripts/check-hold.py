@@ -246,13 +246,6 @@ let settings = VectorScrollApp.checkDelaySettings()
 exit(promptRelease && delayedRelease && settings ? 0 : 1)
 '''
 
-# The proxy is unused by handleEvent. Remove that parameter only in the generated
-# copy so the test can invoke the actual handler without an installed event tap.
-signature = "private func handleEvent(proxy: CGEventTapProxy, type: CGEventType, event: CGEvent)"
-assert source.count(signature) == 1, "Event handler signature changed; update the probe"
-source = source.replace(signature, "private func handleEvent(type: CGEventType, event: CGEvent)")
-source = source.replace("app.handleEvent(proxy: proxy, type: type, event: event)",
-                        "app.handleEvent(type: type, event: event)")
 output = root / ".build/audit-hold"
 output.mkdir(parents=True, exist_ok=True)
 generated = output / "main.swift"
