@@ -139,19 +139,23 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
             view.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
         }
         func section(_ title: String, _ symbol: String) {
+            // 24 above the rule, 16 below, 12 under the heading. Same on every section.
+            if let previous = stack.arrangedSubviews.last { stack.setCustomSpacing(24, after: previous) }
             let divider = NSBox()
             divider.boxType = .custom
             divider.fillColor = SettingsStyle.border
             divider.borderWidth = 0
             divider.heightAnchor.constraint(equalToConstant: 1).isActive = true
             fullWidth(divider)
-            stack.setCustomSpacing(12, after: divider)
+            stack.setCustomSpacing(16, after: divider)
             let icon = NSImageView(image: SettingsStyle.symbol(symbol)!)
             icon.widthAnchor.constraint(equalToConstant: 17).isActive = true
             icon.heightAnchor.constraint(equalToConstant: 17).isActive = true
             let heading = label(title)
             heading.font = .systemFont(ofSize: 14, weight: .semibold)
-            stack.addArrangedSubview(row(icon, heading))
+            let headingRow = row(icon, heading)
+            stack.addArrangedSubview(headingRow)
+            stack.setCustomSpacing(12, after: headingRow)
         }
         let appIcon = NSImageView(image: SettingsStyle.symbol("arrow.up.and.down.circle", color: SettingsStyle.text)!)
         appIcon.imageScaling = .scaleProportionallyUpOrDown
@@ -175,9 +179,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         titleStack.orientation = .vertical
         titleStack.alignment = .leading
         titleStack.spacing = 3
-        let header = row(iconTile, titleStack)
-        stack.addArrangedSubview(header)
-        stack.setCustomSpacing(16, after: header)
+        stack.addArrangedSubview(row(iconTile, titleStack))
 
         section("Scrolling", "computermouse")
         let hold = SettingsButton("Scroll while holding the middle button", symbol: "hand.point.up.left", kind: .choice, target: self, action: #selector(selectHoldToScroll))
@@ -275,8 +277,8 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         NSLayoutConstraint.activate([
             scroll.leadingAnchor.constraint(equalTo: content.leadingAnchor),
             scroll.trailingAnchor.constraint(equalTo: content.trailingAnchor),
-            scroll.topAnchor.constraint(equalTo: content.topAnchor, constant: 38),
-            scroll.bottomAnchor.constraint(equalTo: quit.topAnchor, constant: -16),
+            scroll.topAnchor.constraint(equalTo: content.topAnchor, constant: 24),
+            scroll.bottomAnchor.constraint(equalTo: quit.topAnchor, constant: -24),
             document.widthAnchor.constraint(equalTo: scroll.contentView.widthAnchor),
             stack.leadingAnchor.constraint(equalTo: document.leadingAnchor, constant: 32),
             stack.trailingAnchor.constraint(equalTo: document.trailingAnchor, constant: -32),
@@ -285,7 +287,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
             close.leadingAnchor.constraint(equalTo: content.leadingAnchor, constant: 32),
             close.centerYAnchor.constraint(equalTo: quit.centerYAnchor),
             quit.trailingAnchor.constraint(equalTo: content.trailingAnchor, constant: -32),
-            quit.bottomAnchor.constraint(equalTo: content.bottomAnchor, constant: -20)
+            quit.bottomAnchor.constraint(equalTo: content.bottomAnchor, constant: -32)
         ])
         updateMarkerMenuItem()
         updateSizeMenuItems()
