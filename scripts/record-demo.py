@@ -39,12 +39,12 @@ driver = r'''
 extension VectorScrollApp {
     func demoPrepare() { eventTapInstalled = true; configureMenu(); overlay.setSize(40) }
     var demoStatusButton: NSStatusBarButton { statusItem.button! }
+    var demoWindowHeight: CGFloat { settingsWindow.frame.height }
     func demoShowSettings(at origin: NSPoint) { showSettings(); settingsWindow.setFrameOrigin(origin); settingsWindow.orderFrontRegardless() }
     var demoToggleButton: NSView { holdToLockItem }
     func demoSelectToggle() { holdToLockItem.performClick(nil) }
     var demoSlider: NSSlider { speedSlider }
     func demoSetSpeed(_ value: Double) { speedSlider.doubleValue = value; changeScrollSpeed(speedSlider) }
-    var demoCloseButton: NSView? { settingsWindow.contentView!.subviews.compactMap { $0 as? SettingsButton }.first { $0.title == "Close settings" } }
     func demoCloseSettings() { settingsWindow.performClose(nil) }
     func demoPress(at point: CGPoint, target: CGPoint) { startScrolling(at: point, target: target); timer?.cancel(); timer = nil }
     func demoRelease() { stopScrolling() }
@@ -111,7 +111,8 @@ private final class Driver: NSObject {
             Phase(end: 100, target: still, hold: false) {},
             Phase(end: 115, target: still, hold: false) { [unowned self] in
                 // Right of Safari, vertically centred on it. Stays open for the rest of the take.
-                subject.demoShowSettings(at: NSPoint(x: safari.maxX + 30, y: screen.height - safari.midY - 410))
+                let h = subject.demoWindowHeight
+                subject.demoShowSettings(at: NSPoint(x: safari.maxX + 30, y: screen.height - safari.midY - h / 2))
             },
             Phase(end: 250, target: { [unowned self] in center(subject.demoToggleButton) }, hold: false) {},
             Phase(end: 275, target: still, hold: false) { [unowned self] in subject.demoSelectToggle() },
