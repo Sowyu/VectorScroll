@@ -94,7 +94,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Install ffmpeg and displayplacer
-        run: brew install ffmpeg displayplacer
+        run: brew install ffmpeg displayplacer desktoppr
       - name: Record the real app
         run: python3 -u scripts/record-demo.py
         timeout-minutes: 20
