@@ -303,12 +303,13 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
             backdrop.bottomAnchor.constraint(equalTo: content.bottomAnchor),
             scroll.leadingAnchor.constraint(equalTo: backdrop.leadingAnchor),
             scroll.trailingAnchor.constraint(equalTo: backdrop.trailingAnchor),
-            scroll.topAnchor.constraint(equalTo: backdrop.topAnchor),
+            NSLayoutConstraint(item: scroll, attribute: .top, relatedBy: .equal,
+                               toItem: settingsWindow.contentLayoutGuide, attribute: .top, multiplier: 1, constant: 0),
             scroll.bottomAnchor.constraint(equalTo: backdrop.bottomAnchor),
             document.widthAnchor.constraint(equalTo: scroll.contentView.widthAnchor),
             stack.leadingAnchor.constraint(equalTo: document.leadingAnchor, constant: 32),
             stack.trailingAnchor.constraint(equalTo: document.trailingAnchor, constant: -32),
-            stack.topAnchor.constraint(equalTo: document.topAnchor, constant: 48),
+            stack.topAnchor.constraint(equalTo: document.topAnchor, constant: 24),
             stack.bottomAnchor.constraint(equalTo: document.bottomAnchor, constant: -24)
         ])
         updateMarkerMenuItem()

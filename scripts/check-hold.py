@@ -265,6 +265,7 @@ extension VectorScrollApp {
             content.layoutSubtreeIfNeeded()
             let location = button.convert(point, to: nil)
             let hit = content.hitTest(content.convert(location, from: nil))
+            print("APP: running \(NSApp.isRunning), active \(NSApp.isActive), key \(subject.settingsWindow.isKeyWindow), main \(subject.settingsWindow.isMainWindow), movable \(button.mouseDownCanMoveWindow)")
             print("CLICK: \(button.title), bounds \(button.bounds), visible \(button.visibleRect), hit \(String(describing: hit)), state \(button.state.rawValue)")
             func event(_ type: NSEvent.EventType, at location: NSPoint) -> NSEvent {
                 NSEvent.mouseEvent(with: type, location: location, modifierFlags: [], timestamp: ProcessInfo.processInfo.systemUptime,
@@ -393,12 +394,22 @@ let app = NSApplication.shared
 app.setActivationPolicy(.regular)
 app.appearance = NSAppearance(named: .aqua)
 app.applicationIconImage = NSImage(contentsOfFile: "docs/icon.png")
-app.finishLaunching()
-let promptRelease = VectorScrollApp.checkRelease(delay: 0.1)
-let delayedRelease = VectorScrollApp.checkRelease(delay: 0.3)
-let recovery = VectorScrollApp.checkEventRecovery()
-let settings = VectorScrollApp.checkDelaySettings()
-exit(promptRelease && delayedRelease && recovery && settings ? 0 : 1)
+@MainActor
+final class AuditAppDelegate: NSObject, NSApplicationDelegate {
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        DispatchQueue.main.async {
+            NSApp.activate()
+            let promptRelease = VectorScrollApp.checkRelease(delay: 0.1)
+            let delayedRelease = VectorScrollApp.checkRelease(delay: 0.3)
+            let recovery = VectorScrollApp.checkEventRecovery()
+            let settings = VectorScrollApp.checkDelaySettings()
+            exit(promptRelease && delayedRelease && recovery && settings ? 0 : 1)
+        }
+    }
+}
+let auditDelegate = AuditAppDelegate()
+app.delegate = auditDelegate
+app.run()
 '''
 
 output = root / ".build/audit-hold"
