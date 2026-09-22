@@ -96,7 +96,8 @@ private final class Driver: NSObject {
     func run() {
         subject.demoPrepare()
         let list = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID) as! [[String: Any]]
-        for w in list where (w[kCGWindowOwnerName as String] as? String) == "Safari" && (w[kCGWindowLayer as String] as? Int) == 0 {
+        let owner = CommandLine.arguments.count > 2 ? CommandLine.arguments[2] : "Safari"
+        for w in list where (w[kCGWindowOwnerName as String] as? String) == owner && (w[kCGWindowLayer as String] as? Int) == 0 {
             let b = w[kCGWindowBounds as String] as! [String: CGFloat]
             if b["Width"]! > 400 { safari = CGRect(x: b["X"]!, y: b["Y"]!, width: b["Width"]!, height: b["Height"]!); break }
         }
@@ -248,12 +249,24 @@ for _ in range(20):
     stats = subprocess.run(["ffmpeg", "-v", "info", "-i", str(probe), "-vf", "signalstats,metadata=print", "-f", "null", "-"], capture_output=True, text=True).stderr
     yavg = next((float(l.split("=")[1]) for l in stats.splitlines() if "YAVG" in l), 0)
     log("page brightness", yavg)
-    if 0 < yavg < 250:
+    if 0 < yavg < 225:   # pure white is 235 in video luma
         break
     time.sleep(3)
-subprocess.run([str(binary), str(frames)], check=True, timeout=600)
+browser = "Safari"
+if not (0 < yavg < 225):
+    # Safari on the macOS 27 preview image does not paint web content into captures. Chrome does.
+    log("safari stayed blank, switching to Chrome")
+    subprocess.run(["osascript", "-e", 'tell application "Safari" to quit'], timeout=30)
+    profile = build / "chrome-profile"
+    shutil.rmtree(profile, ignore_errors=True)
+    subprocess.Popen(["/Applications/Google Chrome.app/Contents/MacOS/Google Chrome", f"--user-data-dir={profile}", "--no-first-run",
+                      "--no-default-browser-check", "--disable-features=TranslateUI", "--disable-sync", "--window-position=40,60",
+                      "--window-size=1180,960", "https://github.com/Sowyu/VectorScroll"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    browser = "Google Chrome"
+    time.sleep(15)
+subprocess.run([str(binary), str(frames), browser], check=True, timeout=600)
 log("frames captured", len(list(frames.iterdir())))
-subprocess.run(["osascript", "-e", 'tell application "Safari" to quit'], timeout=30)
+subprocess.run(["osascript", "-e", f'tell application "{browser}" to quit'], timeout=30)
 
 common = ["ffmpeg", "-y", "-v", "error", "-framerate", "60", "-i", str(frames / "%04d.png"), "-pix_fmt", "yuv420p", "-vf", "crop=trunc(iw/2)*2:trunc(ih/2)*2"]
 subprocess.run([*common, "-c:v", "libx264", "-preset", "slow", "-crf", "19", "-movflags", "+faststart", str(out / "demo.mp4")], check=True)
