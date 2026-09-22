@@ -173,14 +173,34 @@ extension VectorScrollApp {
         subject.settingsWindow.contentView!.layoutSubtreeIfNeeded()
         let content = subject.settingsWindow.contentView!
         print("screen \(NSScreen.main?.frame ?? .zero) window \(subject.settingsWindow.frame)")
-        let scroll = content.subviews.first as! NSScrollView
-        let stack = scroll.documentView!.subviews.first as! NSStackView
+        func descendants(_ view: NSView) -> [NSView] {
+            [view] + view.subviews.flatMap { descendants($0) }
+        }
+        let scroll = descendants(content).compactMap { $0 as? NSScrollView }.first!
+        let stack = descendants(scroll.documentView!).compactMap { $0 as? NSStackView }.first!
         assert(stack.bounds.width <= scroll.contentView.bounds.width, "Settings must fit horizontally")
         assert(scroll.hasVerticalScroller, "All settings must remain reachable on smaller screens")
+        #if compiler(>=6.2)
+        if #available(macOS 26, *) {
+            assert(descendants(content).contains { $0 is NSGlassEffectView }, "Modern settings must use native Liquid Glass")
+            assert(subject.updateItem.bezelStyle == .glass, "Modern actions must use the native glass bezel")
+            print("PASS: native Liquid Glass content and actions on macOS 26")
+        }
+        #endif
         assert(subject.settingsWindow.standardWindowButton(.closeButton)?.isHidden == false)
         assert(subject.settingsWindow.standardWindowButton(.closeButton)?.isEnabled == true)
-        assert(subject.settingsWindow.standardWindowButton(.miniaturizeButton)?.isEnabled != true)
-        assert(subject.settingsWindow.standardWindowButton(.zoomButton)?.isEnabled != true)
+        assert(subject.settingsWindow.standardWindowButton(.miniaturizeButton)?.isEnabled == true)
+        assert(subject.settingsWindow.standardWindowButton(.zoomButton)?.isEnabled == true)
+        let originalFrame = subject.settingsWindow.frame
+        subject.settingsWindow.setContentSize(NSSize(width: 520, height: 500))
+        content.layoutSubtreeIfNeeded()
+        assert(stack.bounds.width <= scroll.contentView.bounds.width, "Narrow settings must fit horizontally")
+        subject.updateItem.scrollToVisible(subject.updateItem.bounds)
+        content.layoutSubtreeIfNeeded()
+        let updateBounds = subject.updateItem.convert(subject.updateItem.bounds, to: scroll.documentView)
+        assert(scroll.contentView.documentVisibleRect.intersects(updateBounds), "Updates must remain reachable in a short window")
+        subject.settingsWindow.setFrame(originalFrame, display: true)
+        content.layoutSubtreeIfNeeded()
         let closeEvent = NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: .command,
                                          timestamp: ProcessInfo.processInfo.systemUptime, windowNumber: subject.settingsWindow.windowNumber,
                                          context: nil, characters: "w", charactersIgnoringModifiers: "w", isARepeat: false, keyCode: 13)!
@@ -272,15 +292,35 @@ extension VectorScrollApp {
             window.appearance = NSAppearance(named: appearance)
             NSApp.activate()
             window.makeKeyAndOrderFront(nil)
-            RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.05))
+            RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.2))
             let frame = window.contentView!.superview!
             frame.layoutSubtreeIfNeeded()
             frame.needsDisplay = true
             window.displayIfNeeded()
-            let bitmap = frame.bitmapImageRepForCachingDisplay(in: frame.bounds)!
-            frame.cacheDisplay(in: frame.bounds, to: bitmap)
+            let output = URL(fileURLWithPath: ".build/\(name).png")
+            // Glass and vibrancy are composed by WindowServer, outside cacheDisplay.
+            let capture = Process()
+            capture.executableURL = URL(fileURLWithPath: "/usr/sbin/screencapture")
+            capture.arguments = ["-x", "-o", "-l", String(window.windowNumber), output.path]
+            var captured = false
+            do {
+                try capture.run()
+                let deadline = Date(timeIntervalSinceNow: 5)
+                while capture.isRunning && Date() < deadline {
+                    RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.02))
+                }
+                if capture.isRunning { capture.terminate() }
+                else { captured = capture.terminationStatus == 0 && FileManager.default.fileExists(atPath: output.path) }
+            } catch {
+                print("Window capture unavailable: \(error.localizedDescription)")
+            }
+            if !captured {
+                let bitmap = frame.bitmapImageRepForCachingDisplay(in: frame.bounds)!
+                frame.cacheDisplay(in: frame.bounds, to: bitmap)
+                try! bitmap.representation(using: .png, properties: [:])!.write(to: output)
+                print("Preview \(name) uses bitmap fallback; compositor effects are not captured")
+            }
             scroll.hasVerticalScroller = true
-            try! bitmap.representation(using: .png, properties: [:])!.write(to: URL(fileURLWithPath: ".build/\(name).png"))
             window.appearance = nil
         }
         savePreview(subject.settingsWindow, "settings-delay-preview")
@@ -344,7 +384,7 @@ extension VectorScrollApp {
 
 setvbuf(stdout, nil, _IONBF, 0)
 let app = NSApplication.shared
-app.setActivationPolicy(.accessory)
+app.setActivationPolicy(.regular)
 app.appearance = NSAppearance(named: .aqua)
 app.applicationIconImage = NSImage(contentsOfFile: "docs/icon.png")
 app.finishLaunching()
