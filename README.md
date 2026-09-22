@@ -11,11 +11,11 @@ Version 1.8.0, build 15, uses native Liquid Glass controls on macOS 26. macOS 14
 <table>
   <tr>
     <td><img src="docs/settings-hold.png" alt="Settings window in hold-to-scroll mode" width="400"></td>
-    <td><img src="docs/settings-toggle.png" alt="Settings window in toggle mode with the delay slider" width="400"></td>
+    <td><img src="docs/settings-light.png" alt="Settings window in light appearance" width="400"></td>
   </tr>
   <tr>
-    <td align="center">Hold to scroll</td>
-    <td align="center">Toggle scrolling with the start delay</td>
+    <td align="center">Dark appearance</td>
+    <td align="center">Light appearance</td>
   </tr>
 </table>
 
