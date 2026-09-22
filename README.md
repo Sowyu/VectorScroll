@@ -94,6 +94,8 @@ swift build -c release
 
 The bundle script builds both architectures, renders the icon set, and writes `dist/VectorScroll.app`. It signs ad hoc unless `CODESIGN_IDENTITY` names a certificate in your keychain. Set `CODESIGN_DEVELOPER_ID=true` with a Developer ID Application identity to enable the hardened runtime and a secure timestamp. The script refuses to replace an existing build. Move the previous one to Trash first.
 
+The UI check launches a probe app and clicks its controls. Run it on a Mac with Accessibility access for the terminal. CI supplies this access and captures the windows with Screen Recording permission.
+
 Run the native settings, click, scrolling, and update checks:
 
 ```sh

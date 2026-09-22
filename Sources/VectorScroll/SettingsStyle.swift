@@ -16,6 +16,29 @@ enum SettingsStyle {
             .withSymbolConfiguration(.init(paletteColors: [color]))
     }
 
+    static func actionButton(_ title: String, symbol: String, target: AnyObject?, action: Selector?) -> NSButton {
+        let button = NSButton(title: title, target: target, action: action)
+        button.font = .systemFont(ofSize: 13, weight: .medium)
+        setSymbol(symbol, on: button)
+        button.focusRingType = .default
+        #if compiler(>=6.2)
+        if #available(macOS 26, *) {
+            button.bezelStyle = .glass
+        } else {
+            button.bezelStyle = .rounded
+        }
+        #else
+        button.bezelStyle = .rounded
+        #endif
+        return button
+    }
+
+    static func setSymbol(_ name: String, on button: NSButton) {
+        button.image = NSImage(systemSymbolName: name, accessibilityDescription: nil)
+        button.imagePosition = .imageLeading
+        button.imageHugsTitle = true
+    }
+
     static func prepareWindow(_ window: NSWindow) {
         let reduceTransparency = NSWorkspace.shared.accessibilityDisplayShouldReduceTransparency
         window.titlebarAppearsTransparent = true
@@ -101,58 +124,33 @@ private final class SettingsButtonCell: NSButtonCell {
     }
 }
 
-// Ordinary actions and checkboxes use AppKit's native rendering. The two mode
-// choices keep their card layout while retaining NSButton's radio semantics.
+// The two mode choices keep their card layout while retaining NSButton's radio
+// semantics. All ordinary actions and checkboxes are plain NSButton instances.
 @MainActor
 final class SettingsButton: NSButton {
-    enum Kind { case action, toggle, choice }
-    let kind: Kind
-    var symbolName: String { didSet { updateNativeImage(); needsDisplay = true } }
+    var symbolName: String { didSet { needsDisplay = true } }
     var displayTitle: String? { didSet { needsDisplay = true } }
     var detail: String? { didSet { needsDisplay = true } }
     private var hovered = false
     private var hoverArea: NSTrackingArea?
 
-    init(_ title: String, symbol: String, kind: Kind = .action, target: AnyObject?, action: Selector?) {
-        self.kind = kind
+    init(_ title: String, symbol: String, target: AnyObject?, action: Selector?) {
         symbolName = symbol
         super.init(frame: .zero)
-        if kind == .choice { cell = SettingsButtonCell(textCell: "") }
+        cell = SettingsButtonCell(textCell: "")
         self.title = title
         self.target = target
         self.action = action
-        setButtonType(kind == .toggle ? .switch : kind == .choice ? .radio : .momentaryPushIn)
+        setButtonType(.radio)
         font = .systemFont(ofSize: 13, weight: .medium)
-        if kind == .choice {
-            isBordered = false
-            focusRingType = .exterior
-        } else if kind == .toggle {
-            isBordered = false
-            focusRingType = .default
-        } else {
-            isBordered = true
-            #if compiler(>=6.2)
-            if #available(macOS 26, *) {
-                bezelStyle = .glass
-            } else {
-                bezelStyle = .rounded
-            }
-            #else
-            bezelStyle = .rounded
-            #endif
-            focusRingType = .default
-            updateNativeImage()
-        }
+        isBordered = false
+        focusRingType = .exterior
     }
 
     required init?(coder: NSCoder) { fatalError("init(coder:) is unsupported") }
-    // Only the custom choice cards draw in top-left coordinates. Native
-    // buttons keep AppKit's coordinate system so its view-based tracking on
-    // newer macOS releases matches the visible control.
-    override var isFlipped: Bool { kind == .choice ? true : super.isFlipped }
+    override var isFlipped: Bool { true }
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { isEnabled }
     override var intrinsicContentSize: NSSize {
-        guard kind == .choice else { return super.intrinsicContentSize }
         let width = (title as NSString).size(withAttributes: [.font: font!]).width + 56
         return NSSize(width: width, height: 64)
     }
@@ -163,7 +161,6 @@ final class SettingsButton: NSButton {
     override func updateTrackingAreas() {
         super.updateTrackingAreas()
         if let hoverArea { removeTrackingArea(hoverArea) }
-        guard kind == .choice else { hoverArea = nil; return }
         let area = NSTrackingArea(rect: .zero, options: [.mouseEnteredAndExited, .activeInKeyWindow, .inVisibleRect], owner: self)
         addTrackingArea(area)
         hoverArea = area
@@ -174,10 +171,6 @@ final class SettingsButton: NSButton {
     override func resignFirstResponder() -> Bool { needsDisplay = true; return super.resignFirstResponder() }
 
     override func draw(_ dirtyRect: NSRect) {
-        guard kind == .choice else {
-            super.draw(dirtyRect)
-            return
-        }
         let selected = state == .on
         let pressed = cell?.isHighlighted == true
         let alpha: CGFloat = isEnabled ? 1 : 0.45
@@ -189,7 +182,7 @@ final class SettingsButton: NSButton {
             hovered ? NSColor.controlTextColor.withAlphaComponent(0.07) : NSColor.clear
         fill.withAlphaComponent(fill.alphaComponent * alpha).setFill()
         box.fill()
-        (selected ? NSColor.controlAccentColor.withAlphaComponent(0.45) : SettingsStyle.border.withAlphaComponent(0.65)).setStroke()
+        (selected ? NSColor.controlAccentColor.withAlphaComponent(0.45) : SettingsStyle.border).setStroke()
         box.lineWidth = 1
         box.stroke()
         SettingsStyle.symbol(symbolName, color: secondary)?
@@ -207,20 +200,9 @@ final class SettingsButton: NSButton {
         }
     }
 
-    override var focusRingMaskBounds: NSRect { kind == .choice ? bounds : super.focusRingMaskBounds }
+    override var focusRingMaskBounds: NSRect { bounds }
 
     override func drawFocusRingMask() {
-        guard kind == .choice else {
-            super.drawFocusRingMask()
-            return
-        }
         NSBezierPath(roundedRect: bounds.insetBy(dx: 1, dy: 1), xRadius: 9, yRadius: 9).fill()
-    }
-
-    private func updateNativeImage() {
-        guard kind == .action, !symbolName.isEmpty else { return }
-        image = NSImage(systemSymbolName: symbolName, accessibilityDescription: nil)
-        imagePosition = .imageLeading
-        imageHugsTitle = true
     }
 }
