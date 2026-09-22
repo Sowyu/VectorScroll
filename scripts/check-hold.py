@@ -258,6 +258,11 @@ extension VectorScrollApp {
             button.action = originalAction
         }
         print("PASS: pointer clicks on switch, icon, subtitle, and action areas; disabled controls")
+        // Test mutations above should not leak into the presentational previews.
+        subject.scrollSpeedPercent = 100
+        subject.reverseDirection = false
+        subject.updateSpeedControls()
+        subject.applyLaunchAtStartupStatus(.notRegistered)
         content.layoutSubtreeIfNeeded()
         scroll.contentView.scroll(to: NSPoint(x: 0, y: 0))
         scroll.reflectScrolledClipView(scroll.contentView)
@@ -265,6 +270,9 @@ extension VectorScrollApp {
             // Scrolling to the top flashes the overlay scroller, so hide it for the capture.
             scroll.hasVerticalScroller = false
             window.appearance = NSAppearance(named: appearance)
+            NSApp.activate()
+            window.makeKeyAndOrderFront(nil)
+            RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.05))
             let frame = window.contentView!.superview!
             frame.layoutSubtreeIfNeeded()
             frame.needsDisplay = true
@@ -355,4 +363,4 @@ binary = output / "check-hold"
 subprocess.run(["swiftc", "-swift-version", "6", "-warnings-as-errors",
                 str(generated), str(root / "Sources/VectorScroll/SettingsStyle.swift"), str(root / "Sources/VectorScroll/Onboarding.swift"), str(root / "Sources/VectorScroll/Updates.swift"), str(root / "Sources/VectorScroll/UpdateInstaller.swift"), "-o", str(binary), "-framework", "AppKit",
                 "-framework", "ApplicationServices", "-framework", "ServiceManagement"], check=True)
-subprocess.run([str(binary)], check=True, timeout=45)
+subprocess.run([str(binary)], check=True, timeout=45, cwd=root)

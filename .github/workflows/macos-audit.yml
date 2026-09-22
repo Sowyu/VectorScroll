@@ -88,6 +88,12 @@ jobs:
           ln -s /Applications dist/installer/Applications
           hdiutil create -volname VectorScroll -srcfolder dist/installer -format UDZO dist/VectorScroll.dmg
           hdiutil verify dist/VectorScroll.dmg
+          if [ "$CODESIGN_DEVELOPER_ID" = "true" ]; then
+            security unlock-keychain -p "" "$SIGNING_KEYCHAIN"
+            trap 'security lock-keychain "$SIGNING_KEYCHAIN"' EXIT
+            codesign --force --timestamp --identifier local.vectorscroll.disk-image --sign "$CODESIGN_IDENTITY" --keychain "$SIGNING_KEYCHAIN" dist/VectorScroll.dmg
+            codesign --verify --verbose=2 dist/VectorScroll.dmg
+          fi
       - name: Automatic installation and rollback
         run: |
           swiftc -swift-version 6 -warnings-as-errors -parse-as-library Sources/VectorScroll/Updates.swift Sources/VectorScroll/UpdateInstaller.swift scripts/check-installer.swift -o .build/check-installer

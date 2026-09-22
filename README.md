@@ -25,7 +25,7 @@ Swift and AppKit only. No Electron, web views, or third-party dependencies. One 
 
 <img src="docs/onboarding.png" alt="Setup guide, Input Monitoring step" width="480">
 
-That is the only manual install. Every later version installs itself from inside the app. The guide can be reopened any time with Setup Guide at the top of Settings.
+Later releases can be installed from Check for Updates inside the app. A signing identity change requires one more manual DMG install, as described below. The guide can be reopened any time with Setup Guide at the top of Settings.
 
 ## Features
 
@@ -102,7 +102,7 @@ swiftc -swift-version 6 -warnings-as-errors -parse-as-library Sources/VectorScro
 
 `check-hold.py` drives the real settings window with synthetic mouse events, checks every control's hit region, and writes dark and light settings and onboarding previews under `.build/`. The screenshots above come from that run.
 
-GitHub Actions runs the same checks on macOS, builds the universal app, locks the signing keychain before independent signature verification, packages the DMG, and tests automatic installation, relaunch, and rollback. The current `CODESIGN_P12` and `CODESIGN_P12_PASSWORD` secrets provide a self-signed CI certificate, so those artifacts are not notarized distribution builds.
+GitHub Actions runs the same checks on macOS, builds the universal app, locks the signing keychain before independent app-signature verification, packages the DMG, and tests automatic installation, relaunch, and rollback. A Developer ID build unlocks the isolated keychain only long enough to sign the DMG, then locks it again. The current `CODESIGN_P12` and `CODESIGN_P12_PASSWORD` secrets provide a self-signed CI certificate, so those artifacts are not notarized distribution builds.
 
 For a distribution build, store a Developer ID Application certificate in those two signing secrets. Notarization runs only when all three App Store Connect API key secrets are also present: `APPLE_NOTARY_KEY_ID`, `APPLE_NOTARY_ISSUER_ID`, and base64-encoded `APPLE_NOTARY_KEY_P8`. CI submits the DMG, staples the ticket, and runs Gatekeeper assessments. The workflow reports when credentials are missing and never labels a self-signed artifact as notarized.
 

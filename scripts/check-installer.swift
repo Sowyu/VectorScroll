@@ -1,5 +1,6 @@
 import Foundation
 import CryptoKit
+import Darwin
 
 private final class ResponseBody: @unchecked Sendable {
     private let lock = NSLock()
@@ -37,10 +38,6 @@ struct CheckInstaller {
         do { try action(); fatalError("Expected installation to be rejected") } catch { }
     }
 
-    static func rejectsAsync(_ action: () async throws -> Void) async {
-        do { try await action(); fatalError("Expected installation to be rejected") } catch { }
-    }
-
     static func makeIdentity(_ name: String, at root: URL, keychain: URL) throws {
         let folder = root.appendingPathComponent(name)
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
@@ -76,7 +73,66 @@ struct CheckInstaller {
                                                        "--keychain", keychain.path, app.path])
     }
 
+    static func atomicSwap(_ first: URL, _ second: URL) throws {
+        let result = first.path.withCString { firstPath in
+            second.path.withCString { secondPath in
+                renameatx_np(AT_FDCWD, firstPath, AT_FDCWD, secondPath, UInt32(RENAME_SWAP))
+            }
+        }
+        guard result == 0 else { throw UpdateInstaller.Failure(message: "Test atomic swap failed") }
+    }
+
+    static func runReplacementBoundaryChild() throws {
+        let arguments = CommandLine.arguments
+        guard arguments.count == 5 else { throw UpdateInstaller.Failure(message: "Invalid boundary test arguments") }
+        let plan = URL(fileURLWithPath: arguments[2])
+        let boundary = arguments[3]
+        let signal = URL(fileURLWithPath: arguments[4])
+        let pause: () throws -> Void = {
+            try Data(boundary.utf8).write(to: signal, options: .withoutOverwriting)
+            Thread.sleep(forTimeInterval: 30)
+            throw UpdateInstaller.Failure(message: "Boundary test was not stopped")
+        }
+        if boundary == "before-swap" {
+            try UpdateInstaller.replace(plan, swap: { _, _ in try pause() },
+                                        launch: { _, _ in fatalError("Boundary test must not launch") })
+        } else if boundary == "after-swap" {
+            try UpdateInstaller.replace(plan, move: { _, _ in try pause() },
+                                        launch: { _, _ in fatalError("Boundary test must not launch") })
+        } else {
+            throw UpdateInstaller.Failure(message: "Unknown boundary test")
+        }
+    }
+
+    static func stopAtBoundary(_ boundary: String, plan: URL, signal: URL) throws {
+        let process = Process()
+        let executablePath = CommandLine.arguments[0].hasPrefix("/")
+            ? CommandLine.arguments[0]
+            : FileManager.default.currentDirectoryPath + "/" + CommandLine.arguments[0]
+        process.executableURL = URL(fileURLWithPath: executablePath).standardizedFileURL
+        process.arguments = ["--replacement-boundary", plan.path, boundary, signal.path]
+        try process.run()
+        let deadline = Date().addingTimeInterval(10)
+        while !FileManager.default.fileExists(atPath: signal.path) && Date() < deadline {
+            guard process.isRunning else { throw UpdateInstaller.Failure(message: "Boundary child exited early") }
+            Thread.sleep(forTimeInterval: 0.05)
+        }
+        guard FileManager.default.fileExists(atPath: signal.path) else {
+            if process.isRunning { process.terminate() }
+            throw UpdateInstaller.Failure(message: "Boundary child did not reach \(boundary)")
+        }
+        _ = kill(process.processIdentifier, SIGKILL)
+        process.waitUntilExit()
+        guard process.terminationReason == .uncaughtSignal else {
+            throw UpdateInstaller.Failure(message: "Boundary child was not stopped by signal")
+        }
+    }
+
     static func main() async throws {
+        if CommandLine.arguments.dropFirst().first == "--replacement-boundary" {
+            try runReplacementBoundaryChild()
+            return
+        }
         let files = FileManager.default
         let root = files.temporaryDirectory.appendingPathComponent("VectorScroll install test's \(UUID().uuidString)")
         try files.createDirectory(at: root, withIntermediateDirectories: true)
@@ -159,7 +215,10 @@ struct CheckInstaller {
         FixtureURLProtocol.response.set(Data([1, 2, 3, 4]))
         let oversizedUpdate = AppUpdate(version: "2.0.0", downloadURL: URL(string: "https://example.test/update")!,
                                         sha256: String(repeating: "0", count: 64), downloadSize: 3)
-        await rejectsAsync { _ = try await UpdateInstaller.download(oversizedUpdate, session: URLSession(configuration: oversizedConfiguration)) }
+        do {
+            _ = try await UpdateInstaller.download(oversizedUpdate, session: URLSession(configuration: oversizedConfiguration))
+            fatalError("Expected oversized download to be rejected")
+        } catch { }
 
         let plan = try UpdateInstaller.prepare(update, image: image, destination: destination,
                                               helperSource: helper, parentPID: getpid())
@@ -194,12 +253,27 @@ struct CheckInstaller {
         assert(versionAfterHealthFailure == "1.0.0")
 
         let staged = plan.deletingLastPathComponent().appendingPathComponent("VectorScroll.app")
+        let beforeSwapSignal = root.appendingPathComponent("before swap reached")
+        try stopAtBoundary("before-swap", plan: plan, signal: beforeSwapSignal)
+        let oldBeforeSwap = try UpdateInstaller.appVersion(destination)
+        let updateBeforeSwap = try UpdateInstaller.appVersion(staged)
+        assert(oldBeforeSwap == "1.0.0" && updateBeforeSwap == "2.0.0")
+
+        let afterSwapSignal = root.appendingPathComponent("after swap reached")
+        try stopAtBoundary("after-swap", plan: plan, signal: afterSwapSignal)
+        let updateAfterSwap = try UpdateInstaller.appVersion(destination)
+        let oldAfterSwap = try UpdateInstaller.appVersion(staged)
+        assert(updateAfterSwap == "2.0.0" && oldAfterSwap == "1.0.0")
+        try atomicSwap(destination, staged)
+        let restoredAfterKill = try UpdateInstaller.appVersion(destination)
+        assert(restoredAfterKill == "1.0.0")
+
         info["CFBundleShortVersionString"] = "2.0.0"
         info["NSHumanReadableCopyright"] = "Modified after signing"
         try PropertyListSerialization.data(fromPropertyList: info, format: .xml, options: 0)
             .write(to: staged.appendingPathComponent("Contents/Info.plist"))
         rejects { try UpdateInstaller.validateCandidate(staged, version: "2.0.0", matching: destination) }
-        print("PASS: size cap, checksum, signer, OS, tampering, atomic swap, launch, and health rollback checks")
+        print("PASS: size cap, checksum, signer, OS, tampering, atomic swap, abrupt-stop, launch, and health rollback checks")
 
         // Run the shipped executable's helper against an inert signed fixture app.
         // The fixture writes a marker on launch instead of requesting input access.
