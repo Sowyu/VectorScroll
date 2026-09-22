@@ -65,12 +65,24 @@ struct CheckInstaller {
         try UpdateInstaller.run("/usr/bin/openssl", ["pkcs12", "-export", "-inkey", key.path, "-in", certificate.path,
                                                        "-out", archive.path, "-passout", "pass:test"])
         try UpdateInstaller.run("/usr/bin/security", ["import", archive.path, "-k", keychain.path, "-P", "test",
-                                                        "-T", "/usr/bin/codesign"])
+                                                        "-T", "/usr/bin/codesign", "-T", "/usr/bin/security"])
+        try UpdateInstaller.run("/usr/bin/security", ["add-trusted-cert", "-r", "trustRoot", "-p", "codeSign",
+                                                        "-k", keychain.path, certificate.path])
     }
 
     static func sign(_ app: URL, as identity: String, keychain: URL) throws {
-        try UpdateInstaller.run("/usr/bin/codesign", ["--force", "--deep", "--sign", identity,
-                                                       "--keychain", keychain.path, app.path])
+        let process = Process()
+        let errors = Pipe()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/codesign")
+        process.arguments = ["--force", "--deep", "--sign", identity, "--keychain", keychain.path, app.path]
+        process.standardOutput = FileHandle.nullDevice
+        process.standardError = errors
+        try process.run()
+        process.waitUntilExit()
+        guard process.terminationStatus == 0 else {
+            let details = String(data: errors.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? "unknown error"
+            throw UpdateInstaller.Failure(message: "Fixture codesign failed for \(identity): \(details)")
+        }
     }
 
     static func atomicSwap(_ first: URL, _ second: URL) throws {
