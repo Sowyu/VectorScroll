@@ -62,6 +62,7 @@ private final class Driver: NSObject {
     let frames: String
     let screen = NSScreen.screens[0].frame
     let cursor = NSCursor.arrow
+    let menuBar = Int(NSStatusBar.system.thickness) + 1
     var phases: [Phase] = []
     var n = 0
     var phase = 0
@@ -171,7 +172,8 @@ private final class Driver: NSObject {
         let file = frames + "/" + String(format: "%04d.png", n)
         let shot = Process()
         shot.executableURL = URL(fileURLWithPath: "/usr/sbin/screencapture")
-        shot.arguments = ["-x", "-R", "0,0,\(Int(screen.width)),\(Int(screen.height))", file]
+        // Below the menu bar only.
+        shot.arguments = ["-x", "-R", "0,\(menuBar),\(Int(screen.width)),\(Int(screen.height) - menuBar)", file]
         try! shot.run()
         shot.waitUntilExit()
         let image = NSImage(contentsOfFile: file)!
@@ -181,7 +183,7 @@ private final class Driver: NSObject {
         canvas.lockFocus()
         image.draw(in: NSRect(origin: .zero, size: canvas.size))
         let hot = cursor.hotSpot, size = cursor.image.size
-        cursor.image.draw(in: NSRect(x: (pointer.x - hot.x) * scale, y: (screen.height - pointer.y - (size.height - hot.y)) * scale,
+        cursor.image.draw(in: NSRect(x: (pointer.x - hot.x) * scale, y: (screen.height - CGFloat(menuBar) - pointer.y - (size.height - hot.y)) * scale,
                                      width: size.width * scale, height: size.height * scale))
         canvas.unlockFocus()
         try! NSBitmapImageRep(data: canvas.tiffRepresentation!)!.representation(using: .png, properties: [:])!.write(to: URL(fileURLWithPath: file))
@@ -213,10 +215,14 @@ frames.mkdir()
 subprocess.run(["defaults", "write", "com.apple.dock", "autohide", "-bool", "true"], check=True)
 subprocess.run(["killall", "Dock"])
 # The runner desktop is plain black. Put a stock wallpaper behind the windows.
-wallpapers = sorted(Path("/System/Library/Desktop Pictures").glob("*.heic"))
-if wallpapers and shutil.which("desktoppr"):
-    r = subprocess.run(["desktoppr", str(wallpapers[0])], capture_output=True, text=True)
-    log("wallpaper", wallpapers[0].name, "ok" if r.returncode == 0 else r.stderr.strip())
+# macOS 27 Golden Gate wallpaper, dark variant, from basicappleguy.com. Falls back to a stock one.
+wallpaper = build / "wallpaper.png"
+r = subprocess.run(["curl", "-sL", "-m", "120", "-o", str(wallpaper), "https://basicappleguy.com/s/Golden_Dark_6k.png"])
+if r.returncode != 0 or wallpaper.stat().st_size < 1_000_000:
+    wallpaper = next(iter(sorted(Path("/System/Library/Desktop Pictures").glob("*.heic"))), None)
+if wallpaper and shutil.which("desktoppr"):
+    r = subprocess.run(["desktoppr", str(wallpaper)], capture_output=True, text=True)
+    log("wallpaper", wallpaper.name, "ok" if r.returncode == 0 else r.stderr.strip())
 # The runner boots at 1024x768. Ask for a larger mode if the virtual display has one, so the
 # 620x820 Settings window does not fill the frame.
 modes = subprocess.run(["displayplacer", "list"], capture_output=True, text=True).stdout
