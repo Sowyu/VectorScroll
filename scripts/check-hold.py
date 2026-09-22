@@ -80,6 +80,7 @@ extension VectorScrollApp {
         print("PASS: speed slider rounding and scale, reverse direction persistence, deferred hold-mode engagement")
         for dark in [false, true] {
             if dark { subject.selectDarkMode() } else { subject.selectLightMode() }
+            assert(subject.indicatorAppearance.selectedSegment == (dark ? 1 : 0))
             for size in subject.markerSizes {
                 subject.sizePicker.selectItem(withTag: size)
                 subject.selectMarkerSize(subject.sizePicker)
@@ -136,10 +137,12 @@ extension VectorScrollApp {
         closedGuide.window.performClose(nil)
         assert(finishes == 1, "The standard close button must defer setup exactly once")
         subject.applyLaunchAtStartupStatus(.requiresApproval)
-        assert(subject.launchAtStartupItem.state == .mixed && subject.launchAtStartupItem.isEnabled)
-        assert(subject.launchAtStartupItem.title.contains("needs approval"))
+        assert(subject.launchAtStartupItem.isEnabled)
+        assert(!subject.launchAtStartupStatusLabel.isHidden)
+        assert(subject.launchAtStartupStatusLabel.stringValue.contains("Login Items"))
         subject.applyLaunchAtStartupStatus(.notFound)
         assert(!subject.launchAtStartupItem.isEnabled)
+        assert(subject.launchAtStartupStatusLabel.stringValue.contains("Applications"))
         subject.applyLaunchAtStartupStatus(.enabled)
         assert(subject.launchAtStartupItem.state == .on && subject.launchAtStartupItem.isEnabled)
         subject.applyLaunchAtStartupStatus(.notRegistered)
@@ -226,6 +229,13 @@ extension VectorScrollApp {
         subject.settingsWindow.setContentSize(NSSize(width: 520, height: 500))
         content.layoutSubtreeIfNeeded()
         assert(stack.bounds.width <= scroll.contentView.bounds.width, "Narrow settings must fit horizontally")
+        for control in [subject.speedSlider!, subject.delaySlider!, subject.indicatorAppearance!, subject.sizePicker!,
+                        subject.reverseItem!, subject.openSettingsButton!, subject.hideIconItem!,
+                        subject.launchAtStartupItem!, subject.permissionItem!, subject.updateItem!] as [NSControl] {
+            let bounds = control.convert(control.bounds, to: scroll.documentView)
+            assert(bounds.minX >= 0 && bounds.maxX <= scroll.contentView.bounds.width,
+                   "Native settings controls must fit the narrow window: \(control)")
+        }
         subject.updateItem.scrollToVisible(subject.updateItem.bounds)
         content.layoutSubtreeIfNeeded()
         let updateBounds = subject.updateItem.convert(subject.updateItem.bounds, to: scroll.documentView)
@@ -243,15 +253,18 @@ extension VectorScrollApp {
             for canAccess in [false, true] {
                 subject.applyPermissionStatus(canListen: canListen, canAccess: canAccess)
                 assert(subject.permissionItem.isHidden == (canListen && canAccess))
-                assert(subject.permissionStatusLabel.stringValue.contains("Input Monitoring: \(canListen ? "Allowed" : "Needed")"))
-                assert(subject.permissionStatusLabel.stringValue.contains("Accessibility: \(canAccess ? "Allowed" : "Needed")"))
+                if canListen && canAccess {
+                    assert(subject.permissionStatusLabel.stringValue == "Ready to scroll")
+                } else {
+                    if !canListen { assert(subject.permissionStatusLabel.stringValue.contains("Input Monitoring")) }
+                    if !canAccess { assert(subject.permissionStatusLabel.stringValue.contains("Accessibility")) }
+                }
                 assert(subject.permissionItem.title == (canListen ? "Accessibility Settings…" : "Input Monitoring Settings…"))
             }
         }
         subject.updatePermissionMenuItem()
         print("PASS: native close control, Command-W close/reopen, and permission status transitions")
         assert(subject.holdScrollItem is SettingsButton)
-        assert(!(subject.openSettingsButton is SettingsButton), "Checkboxes must retain native AppKit rendering")
         func savePreview(_ window: NSWindow, _ name: String, appearance: NSAppearance.Name = .darkAqua) {
             // Scrolling to the top flashes the overlay scroller, so hide it for the capture.
             scroll.hasVerticalScroller = false
@@ -285,14 +298,14 @@ extension VectorScrollApp {
             window.appearance = nil
         }
         savePreview(subject.settingsWindow, "settings-preview")
-        func mouseClick(_ button: NSButton, at point: NSPoint) {
+        func mouseClick(_ button: NSControl, at point: NSPoint) {
             content.layoutSubtreeIfNeeded()
             button.scrollToVisible(button.bounds)
             content.layoutSubtreeIfNeeded()
             let location = button.convert(point, to: nil)
             let hit = content.hitTest(content.convert(location, from: nil))
             print("APP: running \(NSApp.isRunning), active \(NSApp.isActive), key \(subject.settingsWindow.isKeyWindow), main \(subject.settingsWindow.isMainWindow), movable \(button.mouseDownCanMoveWindow)")
-            print("CLICK: \(button.title), bounds \(button.bounds), visible \(button.visibleRect), hit \(String(describing: hit)), state \(button.state.rawValue)")
+            print("CLICK: \(button.accessibilityLabel() ?? String(describing: type(of: button))), bounds \(button.bounds), hit \(String(describing: hit))")
             let screenPoint = subject.settingsWindow.convertPoint(toScreen: location)
             let pointer = CGPoint(x: screenPoint.x, y: NSScreen.screens[0].frame.maxY - screenPoint.y)
             let request = URL(fileURLWithPath: CommandLine.arguments[3]).appendingPathComponent(UUID().uuidString)
@@ -323,9 +336,12 @@ extension VectorScrollApp {
                 assert(hit.contains(.trackableArea), "Entire drawn button must be clickable")
             }
         }
-        // The visible label is a native checkbox activation target.
-        mouseClick(subject.hideIconItem, at: NSPoint(x: 80, y: subject.hideIconItem.bounds.midY))
-        assert(subject.hideIconItem.state == .on && subject.statusItem != nil, "Checkbox must use native click tracking")
+        mouseClick(subject.hideIconItem, at: NSPoint(x: subject.hideIconItem.bounds.midX, y: subject.hideIconItem.bounds.midY))
+        assert(subject.hideIconItem.state == .on && subject.statusItem != nil, "Native switch clicks must update menu bar access")
+        mouseClick(subject.indicatorAppearance, at: NSPoint(x: subject.indicatorAppearance.bounds.width * 0.75, y: subject.indicatorAppearance.bounds.midY))
+        assert(subject.overlay.isDarkMode && subject.markerPreview.isDarkMode)
+        mouseClick(subject.indicatorAppearance, at: NSPoint(x: subject.indicatorAppearance.bounds.width * 0.25, y: subject.indicatorAppearance.bounds.midY))
+        assert(!subject.overlay.isDarkMode && !subject.markerPreview.isDarkMode)
         mouseClick(subject.holdScrollItem, at: NSPoint(x: 8, y: 8))
         assert(!subject.holdToLockMode && subject.holdScrollItem.state == .on)
         mouseClick(subject.holdToLockItem, at: NSPoint(x: 80, y: 48))
@@ -368,6 +384,9 @@ extension VectorScrollApp {
         subject.setUpdateStatus("Checking for updates…", busy: true)
         savePreview(subject.settingsWindow, "settings-update-preview")
         subject.setUpdateStatus("", busy: false)
+        subject.applyLaunchAtStartupStatus(.notFound)
+        savePreview(subject.settingsWindow, "settings-login-preview")
+        subject.applyLaunchAtStartupStatus(.notRegistered)
         subject.defaults.removeObject(forKey: "onboardingCompleted")
         subject.showOnboarding()
         subject.onboarding!.refresh(canListen: false, canAccess: false)

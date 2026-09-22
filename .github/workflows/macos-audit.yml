@@ -130,7 +130,7 @@ jobs:
           fi
       - uses: actions/upload-artifact@v4
         with:
-          name: VectorScroll-1.8.0
+          name: VectorScroll-1.8.1
           path: dist/VectorScroll.dmg
           if-no-files-found: error
       - uses: actions/upload-artifact@v4
@@ -142,6 +142,7 @@ jobs:
             .build/settings-delay-preview.png
             .build/settings-light-preview.png
             .build/settings-update-preview.png
+            .build/settings-login-preview.png
             .build/onboarding-preview.png
             .build/onboarding-light-preview.png
           if-no-files-found: error

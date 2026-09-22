@@ -75,8 +75,6 @@ enum SettingsStyle {
         effect.state = NSWorkspace.shared.accessibilityDisplayShouldReduceTransparency ? .inactive : .active
         effect.wantsLayer = true
         effect.layer?.cornerRadius = cornerRadius
-        effect.layer?.borderWidth = 1
-        effect.layer?.borderColor = border.withAlphaComponent(0.55).cgColor
         content.translatesAutoresizingMaskIntoConstraints = false
         effect.addSubview(content)
         NSLayoutConstraint.activate([
@@ -86,6 +84,24 @@ enum SettingsStyle {
             content.bottomAnchor.constraint(equalTo: effect.bottomAnchor)
         ])
         return effect
+    }
+
+    static func groupContainer(for content: NSView) -> NSView {
+        let container = NSBox()
+        container.boxType = .custom
+        container.cornerRadius = 10
+        container.fillColor = .controlBackgroundColor
+        container.borderColor = .separatorColor
+        container.borderWidth = 1
+        content.translatesAutoresizingMaskIntoConstraints = false
+        container.addSubview(content)
+        NSLayoutConstraint.activate([
+            content.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 14),
+            content.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -14),
+            content.topAnchor.constraint(equalTo: container.topAnchor, constant: 12),
+            content.bottomAnchor.constraint(equalTo: container.bottomAnchor, constant: -12)
+        ])
+        return container
     }
 }
 
