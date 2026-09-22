@@ -39,7 +39,6 @@ extension VectorScrollApp {
         subject.eventTapInstalled = true
         subject.overlay.setSize(40)
         let screen = NSScreen.screens[0].frame
-        let display = CGMainDisplayID()
         let origin = CGPoint(x: window.midX + window.width * 0.06, y: window.minY + window.height * 0.5)
         let seg: (Double, Double, Double) -> Double = { ms, a, b in min(1, max(0, (ms - a) / (b - a))) }
         let ease: (Double) -> Double = { t in t < 0.5 ? 2 * t * t : 1 - pow(-2 * t + 2, 2) / 2 }
@@ -56,7 +55,6 @@ extension VectorScrollApp {
             if ms < 10200 { return (CGPoint(x: o.x + lerp(-6, 2, seg(ms, 9200, 10200)), y: o.y + lerp(-90, 3, ease(seg(ms, 9200, 10000)))), ms < 10000) }
             return (CGPoint(x: lerp(o.x + 2, start.x, ease(seg(ms, 10400, 12000))), y: lerp(o.y + 3, start.y, ease(seg(ms, 10400, 12000)))), false)
         }
-        let cursor = NSCursor.arrow
         var wasDown = false
         // One app tick per frame, then a still of the window. The app's own 16 ms timer is
         // replaced by a direct tick so the result is an exact 60 fps regardless of how fast
@@ -80,18 +78,12 @@ extension VectorScrollApp {
             }
             if subject.isActive { subject.emitScrollTick() }
             RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.045))
-            guard let shot = CGDisplayCreateImage(display, rect: window) else { fatalError("screen capture failed") }
-            let scale = CGFloat(shot.width) / window.width
-            let image = NSImage(size: NSSize(width: shot.width, height: shot.height))
-            image.lockFocus()
-            NSGraphicsContext.current!.cgContext.draw(shot, in: CGRect(x: 0, y: 0, width: shot.width, height: shot.height))
-            let hot = cursor.hotSpot
-            let size = cursor.image.size
-            let at = NSPoint(x: (cg.x - window.minX - hot.x) * scale, y: (window.maxY - cg.y - (size.height - hot.y)) * scale)
-            cursor.image.draw(in: NSRect(x: at.x, y: at.y, width: size.width * scale, height: size.height * scale))
-            image.unlockFocus()
-            let png = NSBitmapImageRep(data: image.tiffRepresentation!)!.representation(using: .png, properties: [:])!
-            try! png.write(to: URL(fileURLWithPath: frames).appendingPathComponent(String(format: "%04d.png", n)))
+            let shot = Process()
+            shot.executableURL = URL(fileURLWithPath: "/usr/sbin/screencapture")
+            shot.arguments = ["-x", "-C", "-R", "\(Int(window.minX)),\(Int(window.minY)),\(Int(window.width)),\(Int(window.height))",
+                              frames + "/" + String(format: "%04d.png", n)]
+            try! shot.run()
+            shot.waitUntilExit()
             if n % 60 == 0 { print("frame \(n)") }
         }
         subject.stopScrolling()
