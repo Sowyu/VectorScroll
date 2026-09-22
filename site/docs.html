@@ -16,12 +16,9 @@
 <a class="skip" href="#main">Skip to main content</a>
 <header>
   <a href="index.html" class="home" aria-label="VectorScroll home"><svg class="mark" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="32" cy="32" r="28"/><circle cx="32" cy="32" r="3" fill="currentColor" stroke="none"/><path d="M32 24V12M27 17l5-5 5 5M32 40v12M27 47l5 5 5-5M24 32H12M17 27l-5 5 5 5M40 32h12M47 27l5 5-5 5"/></svg><span>VectorScroll</span></a>
-  <nav><a href="download.html">download</a><a href="about.html">about</a><a href="docs.html" aria-current="page">docs</a><a href="https://github.com/Sowyu/VectorScroll" class="pill">github</a></nav>
+  <nav><a href="download.html">download</a><a href="about.html">about</a><a href="docs.html" aria-current="page">docs</a><a href="https://github.com/Sowyu/VectorScroll">github</a></nav>
 </header>
 <main id="main" class="docs">
-  <nav class="rail" aria-label="Sections">
-    <a href="#start" aria-label="Getting started"></a><a href="#scrolling" aria-label="Scrolling"></a><a href="#indicator" aria-label="Indicator"></a><a href="#settings" aria-label="Settings"></a><a href="#updates" aria-label="Updates"></a><a href="#permissions" aria-label="Permissions"></a><a href="#trouble" aria-label="Troubleshooting"></a><a href="#build" aria-label="Building from source"></a>
-  </nav>
   <div class="doc">
     <h1>Docs</h1>
     <h2 id="start">Getting started</h2>
@@ -61,19 +58,6 @@
     <p>The bundle script builds both architectures, renders the icon set, and writes <code>dist/VectorScroll.app</code>. It signs ad hoc unless <code>CODESIGN_IDENTITY</code> names a certificate in your keychain. The <a href="https://github.com/Sowyu/VectorScroll#build-and-check">README</a> covers the test harness.</p>
   </div>
 </main>
-<script>
-  // Light each bar in the rail once its section has scrolled into the top third of the window.
-  const bars = [...document.querySelectorAll('.rail a')];
-  const heads = bars.map(a => document.querySelector(a.getAttribute('href')));
-  const paint = () => {
-    const line = innerHeight / 3;
-    let current = 0;
-    heads.forEach((h, i) => { if (h.getBoundingClientRect().top <= line) current = i; });
-    bars.forEach((a, i) => a.classList.toggle('on', i <= current));
-  };
-  addEventListener('scroll', paint, { passive: true });
-  paint();
-</script>
 <footer>made by <a href="https://github.com/Sowyu">Sowyu</a></footer>
 </body>
 </html>
