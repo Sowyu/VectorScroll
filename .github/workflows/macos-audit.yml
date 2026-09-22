@@ -87,14 +87,14 @@ jobs:
 
   demo:
     if: github.event_name == 'workflow_dispatch'
-    runs-on: macos-15
+    runs-on: macos-26
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-      - name: Install ffmpeg
-        run: brew install ffmpeg
+      - name: Install ffmpeg and displayplacer
+        run: brew install ffmpeg displayplacer
       - name: Record the real app
         run: python3 -u scripts/record-demo.py
         timeout-minutes: 20

@@ -128,7 +128,7 @@ private final class Driver: NSObject {
             Phase(end: 1140, target: { CGPoint(x: origin.x - 6, y: origin.y - 70) }, hold: true) {},
             Phase(end: 1230, target: { CGPoint(x: origin.x + 2, y: origin.y + 3) }, hold: true) {},
             Phase(end: 1260, target: still, hold: false) {},
-            Phase(end: 1380, target: { [unowned self] in CGPoint(x: safari.maxX - 120, y: safari.maxY - 80) }, hold: false) {},
+            Phase(end: 1320, target: { CGPoint(x: origin.x + 40, y: origin.y + 25) }, hold: false) {},
         ]
         // 40 ms between ticks gives Safari and the app windows time to paint. Common modes keep it firing while the menu tracks.
         let timer = Timer(timeInterval: 0.04, target: self, selector: #selector(tick), userInfo: nil, repeats: true)
@@ -146,7 +146,7 @@ private final class Driver: NSObject {
             p.start()
         }
         let t = Double(n - lastStart) / Double(max(1, p.end - lastStart))
-        let e = t < 0.5 ? 2 * t * t : 1 - pow(-2 * t + 2, 2) / 2
+        let e = t < 0.5 ? 8 * pow(t, 4) : 1 - 8 * pow(1 - t, 4)   // quartic: slow start, quick middle, soft landing
         let goal = p.target()
         let s = Double(n) / 60
         pointer = CGPoint(x: from.x + (goal.x - from.x) * e + 0.6 * sin(s * 8.1) + 0.3 * sin(s * 13.7),
@@ -213,6 +213,19 @@ shutil.rmtree(frames, ignore_errors=True)
 frames.mkdir()
 subprocess.run(["defaults", "write", "com.apple.dock", "autohide", "-bool", "true"], check=True)
 subprocess.run(["killall", "Dock"])
+# The runner boots at 1024x768. Ask for a larger mode if the virtual display has one, so the
+# 620x820 Settings window does not fill the frame.
+modes = subprocess.run(["displayplacer", "list"], capture_output=True, text=True).stdout
+screen_id = next((line.split(":", 1)[1].strip() for line in modes.splitlines() if line.startswith("Persistent screen id")), None)
+for res in ("1920x1080", "1680x1050", "1600x900", "1440x900"):
+    if screen_id and f"res:{res}" in modes:
+        r = subprocess.run(["displayplacer", f"id:{screen_id} res:{res}"], capture_output=True, text=True)
+        log("display", res, "ok" if r.returncode == 0 else r.stderr.strip())
+        if r.returncode == 0:
+            break
+else:
+    log("display unchanged; modes:", " ".join(sorted({m for m in modes.split() if m.startswith("res:")})))
+time.sleep(2)
 subprocess.run(["open", "-a", "Safari", "https://github.com/Sowyu/VectorScroll"], check=True, timeout=60)
 log("safari opened")
 time.sleep(12)
