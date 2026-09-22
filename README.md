@@ -6,7 +6,7 @@ Middle-button autoscrolling for macOS. Press the middle button, move the pointer
 
 Swift and AppKit only. No Electron, web views, or third-party dependencies. One universal binary runs on Intel and Apple Silicon Macs with macOS 14 or later.
 
-Version 1.8.0, build 15, uses native Liquid Glass controls on macOS 26. macOS 14 and 15 keep the standard AppKit appearance.
+Version 1.8.1, build 16, uses native Liquid Glass controls on macOS 26. macOS 14 and 15 keep the standard AppKit appearance.
 
 <table>
   <tr>
@@ -41,7 +41,7 @@ Later releases can be installed from Check for Updates inside the app. A signing
 - **Start delay for toggle mode.** Require a hold of 50 to 1,000 ms before scrolling engages, so an ordinary middle-click still opens links in a new tab. Default 200 ms. Turn it off to start on a plain click.
 - **Direction and speed from pointer distance.** A 10 pt dead zone around the start point, then speed scales with distance up to 120 px per tick, both axes at once.
 - **Scrolls the window under the pointer.** Accessibility lets VectorScroll post generated scroll events and raise that window first, so the scroll goes where you are looking.
-- **On-screen indicator.** A circle with four arrows marks the start point. Choose light or dark, and 28, 32, 40, or 48 pt.
+- **On-screen indicator.** A circle with four arrows marks the start point. Choose light or dark, and 28, 32, 40, or 48 pt. Settings show a live preview at the chosen size.
 
 The click that stops toggle mode also reaches the app under the pointer. Stop over empty space if you do not want to activate a link or button.
 
@@ -53,7 +53,8 @@ The click that stops toggle mode also reaches the app under the pointer. Stop ov
 - **Launch at login** registers with the system login items.
 - **Setup guide** on first launch. One permission per page, plain-language reasons, live status, and no system prompt until you press the button for it. Reopen it from Settings.
 - Permission status for Input Monitoring and Accessibility refreshes every second. A missing permission shows a button that opens the right System Settings pane. Permission prompts appear only after you press the matching button in the setup guide.
-- Settings use native AppKit controls with standard keyboard focus and accessibility labels.
+- Settings use grouped rows, native switches, and a compact appearance picker. Hover help explains controls, and slider accessibility values include their units.
+- Update checks report their result inline. A busy indicator shows checking and installation phases without interrupting settings with a success dialog.
 
 If the menu bar icon is hidden, reopen the window from Applications or run:
 

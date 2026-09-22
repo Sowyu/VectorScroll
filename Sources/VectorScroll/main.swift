@@ -18,16 +18,16 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
     private var menu: NSMenu!
     private var permissionItem: NSButton!
     private var permissionStatusLabel: NSTextField!
-    private var lightModeItem: NSButton!
-    private var darkModeItem: NSButton!
+    private var indicatorAppearance: NSSegmentedControl!
     private var holdScrollItem: NSButton!
     private var holdToLockItem: NSButton!
-    private var launchAtStartupItem: NSButton!
-    private var hideIconItem: NSButton!
+    private var launchAtStartupItem: NSSwitch!
+    private var launchAtStartupStatusLabel: NSTextField!
+    private var hideIconItem: NSSwitch!
     private var sizePicker: NSPopUpButton!
     private let markerPreview = ScrollOverlayView(frame: .zero)
     private var settingsWindow: NSWindow!
-    private var openSettingsButton: NSButton!
+    private var openSettingsButton: NSSwitch!
     private var openSettingsOnLaunch = true
     private var eventTap: CFMachPort?
     private var runLoopSource: CFRunLoopSource?
@@ -55,11 +55,11 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         holdDelayEnabled ? Double(holdDelayMilliseconds) / 1000 : 0
     }
     private var delayItem: NSStackView!
-    private var reverseItem: NSButton!
+    private var reverseItem: NSSwitch!
     private var onboarding: Onboarding?
     private var speedSlider: NSSlider!
     private var speedLabel: NSTextField!
-    private var delayToggle: NSButton!
+    private var delayToggle: NSSwitch!
     private var delaySlider: NSSlider!
     private var delayLabel: NSTextField!
     private var hasAccessibilityAccess: Bool { CGPreflightPostEventAccess() && AXIsProcessTrusted() }
@@ -146,10 +146,12 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
             view.toolTip = text
             view.setAccessibilityHelp(text)
         }
-        func checkbox(_ title: String, _ action: Selector) -> NSButton {
-            let control = NSButton(checkboxWithTitle: title, target: self, action: action)
-            control.font = .systemFont(ofSize: 13, weight: .medium)
-            control.focusRingType = .default
+        func toggle(_ accessibilityLabel: String, _ action: Selector) -> NSSwitch {
+            let control = NSSwitch(frame: .zero)
+            control.target = self
+            control.action = action
+            control.controlSize = .small
+            control.setAccessibilityLabel(accessibilityLabel)
             return control
         }
         let stack = NSStackView()
@@ -160,24 +162,37 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
             stack.addArrangedSubview(view)
             view.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
         }
-        func section(_ title: String, _ symbol: String) {
-            // Keep groups distinct without pushing common controls below the window.
-            if let previous = stack.arrangedSubviews.last { stack.setCustomSpacing(16, after: previous) }
-            let divider = NSBox()
-            divider.boxType = .custom
-            divider.fillColor = SettingsStyle.border
-            divider.borderWidth = 0
-            divider.heightAnchor.constraint(equalToConstant: 1).isActive = true
-            fullWidth(divider)
-            stack.setCustomSpacing(12, after: divider)
+        func sectionHeading(_ title: String, _ symbol: String) -> NSView {
             let icon = NSImageView(image: SettingsStyle.symbol(symbol)!)
             icon.widthAnchor.constraint(equalToConstant: 17).isActive = true
             icon.heightAnchor.constraint(equalToConstant: 17).isActive = true
             let heading = label(title)
             heading.font = .systemFont(ofSize: 14, weight: .semibold)
-            let headingRow = row(icon, heading)
-            stack.addArrangedSubview(headingRow)
-            stack.setCustomSpacing(8, after: headingRow)
+            return row(icon, heading)
+        }
+        func settingsRow(_ title: String, control: NSView, detail: String? = nil) -> NSView {
+            let text = NSStackView()
+            text.orientation = .vertical
+            text.alignment = .leading
+            text.spacing = 2
+            let titleLabel = label(title)
+            titleLabel.font = .systemFont(ofSize: 13, weight: .medium)
+            text.addArrangedSubview(titleLabel)
+            if let detail { text.addArrangedSubview(label(detail, secondary: true)) }
+            let spacer = NSView()
+            spacer.setContentHuggingPriority(.defaultLow, for: .horizontal)
+            control.setContentHuggingPriority(.required, for: .horizontal)
+            let result = row(text, spacer, control)
+            result.setContentCompressionResistancePriority(.defaultHigh, for: .vertical)
+            return result
+        }
+        func group(_ views: NSView...) -> NSView {
+            let content = NSStackView(views: views)
+            content.orientation = .vertical
+            content.alignment = .leading
+            content.spacing = 12
+            for view in views { view.widthAnchor.constraint(equalTo: content.widthAnchor).isActive = true }
+            return SettingsStyle.groupContainer(for: content)
         }
         let appIcon = NSImageView(image: NSApp.applicationIconImage)
         appIcon.imageScaling = .scaleProportionallyUpOrDown
@@ -195,7 +210,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         guideButton.setContentHuggingPriority(.required, for: .horizontal)
         fullWidth(row(appIcon, title, spacer, guideButton))
 
-        section("Scrolling", "computermouse")
+        fullWidth(sectionHeading("Scrolling", "computermouse"))
         let hold = SettingsButton("Scroll while holding the middle button", symbol: "hand.point.up.left", target: self, action: #selector(selectHoldToScroll))
         hold.displayTitle = "Hold to scroll"
         hold.detail = "Release the middle button to stop"
@@ -222,9 +237,8 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         let modesGlass = SettingsStyle.glassContainer(for: modesPadding, cornerRadius: 12)
         modesGlass.heightAnchor.constraint(equalToConstant: 80).isActive = true
         fullWidth(modesGlass)
-        reverseItem = checkbox("Reverse direction", #selector(toggleReverseDirection))
+        reverseItem = toggle("Reverse direction", #selector(toggleReverseDirection))
         help(reverseItem, "Reverse both scrolling axes without changing your macOS mouse settings.")
-        fullWidth(reverseItem)
         speedSlider = NSSlider(value: Double(scrollSpeedPercent), minValue: 50, maxValue: 200,
                                target: self, action: #selector(changeScrollSpeed(_:)))
         speedSlider.numberOfTickMarks = 16
@@ -236,9 +250,9 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         speedSlider.widthAnchor.constraint(equalToConstant: 240).isActive = true
         speedLabel = label("")
         speedLabel.font = .monospacedDigitSystemFont(ofSize: 12, weight: .medium)
-        let speedRow = row(label("Speed", secondary: true), speedSlider, speedLabel)
-        stack.addArrangedSubview(speedRow)
-        delayToggle = checkbox("Delay before scrolling starts", #selector(toggleHoldDelay))
+        let speedControl = row(speedSlider, speedLabel)
+        let speedRow = settingsRow("Scroll speed", control: speedControl)
+        delayToggle = toggle("Delay before scrolling starts", #selector(toggleHoldDelay))
         help(delayToggle, "Require a brief hold so a normal middle-click can still open a link in a new tab.")
         delaySlider = NSSlider(value: Double(holdDelayMilliseconds), minValue: 50, maxValue: 1000,
                                target: self, action: #selector(changeHoldDelay(_:)))
@@ -251,16 +265,22 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         delaySlider.widthAnchor.constraint(equalToConstant: 240).isActive = true
         delayLabel = label("")
         delayLabel.font = .monospacedDigitSystemFont(ofSize: 12, weight: .medium)
-        delayItem = NSStackView(views: [delayToggle, row(delaySlider, delayLabel)])
+        delayItem = NSStackView(views: [
+            settingsRow("Delay before scrolling starts", control: delayToggle),
+            settingsRow("Hold duration", control: row(delaySlider, delayLabel))
+        ])
         delayItem.orientation = .vertical
         delayItem.alignment = .leading
-        delayItem.spacing = 4
-        fullWidth(delayItem)
-        stack.setCustomSpacing(12, after: speedRow) // delayItem hides in hold mode
+        delayItem.spacing = 12
+        for view in delayItem.arrangedSubviews { view.widthAnchor.constraint(equalTo: delayItem.widthAnchor).isActive = true }
+        let scrollingGroup = group(settingsRow("Reverse direction", control: reverseItem), speedRow, delayItem)
+        fullWidth(scrollingGroup)
 
-        section("Indicator", "scope")
-        lightModeItem = NSButton(radioButtonWithTitle: "Light", target: self, action: #selector(selectLightMode))
-        darkModeItem = NSButton(radioButtonWithTitle: "Dark", target: self, action: #selector(selectDarkMode))
+        fullWidth(sectionHeading("Indicator", "scope"))
+        indicatorAppearance = NSSegmentedControl(labels: ["Light", "Dark"], trackingMode: .selectOne,
+                                                  target: self, action: #selector(changeIndicatorAppearance(_:)))
+        indicatorAppearance.controlSize = .small
+        indicatorAppearance.setAccessibilityLabel("Indicator appearance")
         sizePicker = NSPopUpButton(frame: .zero, pullsDown: false)
         for size in markerSizes {
             sizePicker.addItem(withTitle: "\(size) pt")
@@ -269,8 +289,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         sizePicker.target = self
         sizePicker.action = #selector(selectMarkerSize(_:))
         sizePicker.setAccessibilityLabel("Indicator size")
-        help(lightModeItem, "Use a light scrolling indicator, best against dark content.")
-        help(darkModeItem, "Use a dark scrolling indicator, best against light content.")
+        help(indicatorAppearance, "Choose a light or dark scrolling indicator for contrast with the content beneath it.")
         help(sizePicker, "Change the scrolling indicator's diameter. The preview shows its actual size.")
         let previewBox = NSView(frame: NSRect(x: 0, y: 0, width: 48, height: 48))
         previewBox.widthAnchor.constraint(equalToConstant: 48).isActive = true
@@ -280,28 +299,31 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         markerPreview.setAccessibilityRole(.image)
         markerPreview.setAccessibilityLabel("Scrolling indicator preview")
         help(markerPreview, "Actual-size preview of the scrolling indicator.")
-        let indicatorSpacer = NSView()
-        indicatorSpacer.setContentHuggingPriority(.defaultLow, for: .horizontal)
-        fullWidth(row(lightModeItem, darkModeItem, label("Size", secondary: true), sizePicker, indicatorSpacer, previewBox))
+        let appearanceRow = settingsRow("Appearance", control: indicatorAppearance)
+        let sizeAndPreview = row(sizePicker, previewBox)
+        let sizeRow = settingsRow("Size", control: sizeAndPreview, detail: "Actual-size preview")
+        fullWidth(group(appearanceRow, sizeRow))
 
-        section("App", "slider.horizontal.3")
-        openSettingsButton = checkbox("Open settings on launch", #selector(toggleOpenSettings))
-        hideIconItem = checkbox("Show menu bar icon", #selector(toggleMenuBarIcon))
-        launchAtStartupItem = checkbox("Launch at login", #selector(toggleLaunchAtStartup))
-        launchAtStartupItem.allowsMixedState = true
+        fullWidth(sectionHeading("App", "slider.horizontal.3"))
+        openSettingsButton = toggle("Open settings on launch", #selector(toggleOpenSettings))
+        hideIconItem = toggle("Show menu bar icon", #selector(toggleMenuBarIcon))
+        launchAtStartupItem = toggle("Launch at login", #selector(toggleLaunchAtStartup))
         help(openSettingsButton, "Show this window when VectorScroll starts. If both access options are off, the menu bar icon returns.")
         help(hideIconItem, "Keep Settings and Quit in the menu bar. Hiding the icon enables Open settings on launch.")
-        fullWidth(openSettingsButton)
-        fullWidth(hideIconItem)
-        fullWidth(label("Keep one enabled to reopen settings.", secondary: true))
-        fullWidth(launchAtStartupItem)
         permissionStatusLabel = label("", secondary: true)
-        fullWidth(permissionStatusLabel)
         permissionItem = button("", "hand.raised", #selector(openPermissionSettings))
-        stack.addArrangedSubview(permissionItem)
+        let permissionSpacer = NSView()
+        permissionSpacer.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        launchAtStartupStatusLabel = label("", secondary: true)
+        let appGroup = group(
+            settingsRow("Open settings on launch", control: openSettingsButton),
+            settingsRow("Show menu bar icon", control: hideIconItem),
+            settingsRow("Launch at login", control: launchAtStartupItem),
+            launchAtStartupStatusLabel,
+            row(permissionStatusLabel, permissionSpacer, permissionItem)
+        )
+        fullWidth(appGroup)
 
-        section("Updates", "arrow.down.circle")
-        fullWidth(label("Version \(AppUpdate.installedVersion) · Checks daily. Installs when you choose.", secondary: true))
         updateItem = button("Check for Updates…", "arrow.clockwise", #selector(checkUpdatesFromMenu))
         downloadItem = button("Install Update…", "arrow.down", #selector(installUpdate))
         downloadItem.isHidden = true
@@ -314,9 +336,14 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         updateProgress.widthAnchor.constraint(equalToConstant: 16).isActive = true
         updateProgress.heightAnchor.constraint(equalToConstant: 16).isActive = true
         updateProgress.setAccessibilityLabel("Update in progress")
-        stack.addArrangedSubview(row(updateItem, downloadItem, updateProgress))
+        let updateSpacer = NSView()
+        updateSpacer.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        let updateControls = row(updateSpacer, updateItem, downloadItem, updateProgress)
         updateStatusLabel = label("", secondary: true)
         updateStatusLabel.isHidden = true
+        let version = label("Version \(AppUpdate.installedVersion)", secondary: true)
+        help(updateItem, "Checks daily and installs only when you choose.")
+        fullWidth(row(version, updateControls))
         fullWidth(updateStatusLabel)
 
         let content = settingsWindow.contentView!
@@ -349,7 +376,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
             stack.leadingAnchor.constraint(equalTo: document.leadingAnchor, constant: 32),
             stack.trailingAnchor.constraint(equalTo: document.trailingAnchor, constant: -32),
             stack.topAnchor.constraint(equalTo: document.topAnchor, constant: 16),
-            stack.bottomAnchor.constraint(equalTo: document.bottomAnchor, constant: -24)
+            stack.bottomAnchor.constraint(equalTo: document.bottomAnchor, constant: -16)
         ])
         updateMarkerMenuItem()
         updateSizeMenuItems()
@@ -560,6 +587,14 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         updateMarkerMenuItem()
     }
 
+    @objc private func changeIndicatorAppearance(_ sender: NSSegmentedControl) {
+        if sender.selectedSegment == 0 {
+            selectLightMode()
+        } else if sender.selectedSegment == 1 {
+            selectDarkMode()
+        }
+    }
+
     @objc private func selectHoldToScroll() {
         stopScrolling()
         holdToLockMode = false
@@ -645,8 +680,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
     }
 
     private func updateMarkerMenuItem() {
-        lightModeItem.state = overlay.isDarkMode ? .off : .on
-        darkModeItem.state = overlay.isDarkMode ? .on : .off
+        indicatorAppearance.selectedSegment = overlay.isDarkMode ? 1 : 0
         updateMarkerPreview()
     }
 
@@ -669,7 +703,15 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
     }
 
     private func applyPermissionStatus(canListen: Bool, canAccess: Bool) {
-        permissionStatusLabel.stringValue = "Input Monitoring: \(canListen ? "Allowed" : "Needed") · Accessibility: \(canAccess ? "Allowed" : "Needed")"
+        if canListen && canAccess {
+            permissionStatusLabel.stringValue = "Ready to scroll"
+        } else if !canListen && !canAccess {
+            permissionStatusLabel.stringValue = "Input Monitoring and Accessibility are required"
+        } else if !canListen {
+            permissionStatusLabel.stringValue = "Input Monitoring is required"
+        } else {
+            permissionStatusLabel.stringValue = "Accessibility is required"
+        }
         permissionItem.isHidden = canListen && canAccess
         permissionItem.title = canListen ? "Accessibility Settings…" : "Input Monitoring Settings…"
         onboarding?.refresh(canListen: canListen, canAccess: canAccess)
@@ -686,25 +728,29 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
 
     private func applyLaunchAtStartupStatus(_ status: SMAppService.Status) {
         launchAtStartupItem.isEnabled = true
-        launchAtStartupItem.title = "Launch at login"
         launchAtStartupItem.toolTip = nil
+        launchAtStartupStatusLabel.stringValue = ""
+        launchAtStartupStatusLabel.isHidden = true
         switch status {
         case .enabled:
             launchAtStartupItem.state = .on
         case .notRegistered:
             launchAtStartupItem.state = .off
         case .requiresApproval:
-            launchAtStartupItem.state = .mixed
-            launchAtStartupItem.title = "Launch at login: needs approval"
+            launchAtStartupItem.state = .off
+            launchAtStartupStatusLabel.stringValue = "Approval is required in Login Items."
+            launchAtStartupStatusLabel.isHidden = false
             launchAtStartupItem.toolTip = "Open Login Items to allow VectorScroll."
         case .notFound:
             launchAtStartupItem.state = .off
             launchAtStartupItem.isEnabled = false
-            launchAtStartupItem.title = "Launch at login unavailable"
+            launchAtStartupStatusLabel.stringValue = "Open VectorScroll from Applications to enable this."
+            launchAtStartupStatusLabel.isHidden = false
             launchAtStartupItem.toolTip = "Run the installed VectorScroll app from Applications."
         @unknown default:
-            launchAtStartupItem.state = .mixed
-            launchAtStartupItem.title = "Review Login Items"
+            launchAtStartupItem.state = .off
+            launchAtStartupStatusLabel.stringValue = "Review VectorScroll in Login Items."
+            launchAtStartupStatusLabel.isHidden = false
         }
     }
 
