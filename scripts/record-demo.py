@@ -16,6 +16,12 @@ import subprocess
 import sys
 import time
 
+T0 = time.time()
+
+
+def log(*a):
+    print(f"[{time.time() - T0:6.1f}s]", *a, flush=True)
+
 root = Path(__file__).resolve().parent.parent
 out = root / "dist/demo"
 out.mkdir(parents=True, exist_ok=True)
@@ -91,25 +97,32 @@ generated = build / "main.swift"
 generated.write_text(source.split(entry)[0] + driver)
 binary = build / "record-demo"
 sources = [str(root / "Sources/VectorScroll" / f) for f in ["SettingsStyle.swift", "Onboarding.swift", "Updates.swift", "UpdateInstaller.swift"]]
+log("compiling driver")
 subprocess.run(["swiftc", "-swift-version", "6", "-warnings-as-errors", str(generated), *sources, "-o", str(binary),
-                "-framework", "AppKit", "-framework", "ApplicationServices", "-framework", "ServiceManagement"], check=True)
+                "-framework", "AppKit", "-framework", "ApplicationServices", "-framework", "ServiceManagement"], check=True, timeout=600)
+log("compiled")
 
 chrome = "/Applications/Google Chrome.app"
 if not Path(chrome).exists():
     sys.exit("Google Chrome is required for a browser window with a known position")
-sw, sh = map(int, subprocess.check_output([str(binary), "--screen"]).split())
+sw, sh = map(int, subprocess.check_output([str(binary), "--screen"], timeout=60).split())
+log("screen", sw, sh)
 w, h = min(1440, sw - 40), min(900, sh - 120)
 x, y = (sw - w) // 2, max(40, (sh - h) // 2)
 subprocess.run(["open", "-na", chrome, "--args", "--no-first-run", "--no-default-browser-check", "--disable-features=TranslateUI",
-                f"--window-position={x},{y}", f"--window-size={w},{h}", "--new-window", "https://en.wikipedia.org/wiki/Scrolling"], check=True)
+                f"--window-position={x},{y}", f"--window-size={w},{h}", "--new-window", "https://en.wikipedia.org/wiki/Scrolling"], check=True, timeout=60)
+log("chrome opened")
 time.sleep(10)
 
 raw = build / "raw.mov"
 raw.unlink(missing_ok=True)
 recorder = subprocess.Popen(["screencapture", "-v", "-C", "-x", "-V", "15", str(raw)])
+log("recording")
 time.sleep(1.5)
 subprocess.run([str(binary), str(x), str(y), str(w), str(h)], check=True, timeout=30)
+log("driver finished")
 recorder.wait(timeout=30)
+log("recorder finished", raw.stat().st_size if raw.exists() else "no file")
 subprocess.run(["pkill", "-x", "Google Chrome"])
 assert raw.exists() and raw.stat().st_size > 100_000, "screencapture wrote nothing"
 
@@ -121,4 +134,4 @@ subprocess.run([*common, "-c:v", "libx264", "-preset", "slow", "-crf", "19", "-m
 subprocess.run([*common, "-c:v", "libvpx-vp9", "-b:v", "0", "-crf", "30", "-row-mt", "1", str(out / "demo.webm")], check=True)
 subprocess.run(["ffmpeg", "-y", "-v", "error", "-ss", "4", "-i", str(raw), "-vf", crop, "-frames:v", "1", "-q:v", "3", str(out / "poster.jpg")], check=True)
 shutil.copy(raw, out / "raw.mov")
-print("wrote", *sorted(p.name for p in out.iterdir()))
+log("wrote", *sorted(p.name for p in out.iterdir()))
