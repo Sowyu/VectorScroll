@@ -109,8 +109,11 @@ sw, sh = map(int, subprocess.check_output([str(binary), "--screen"], timeout=60)
 log("screen", sw, sh)
 w, h = min(1440, sw - 40), min(900, sh - 120)
 x, y = (sw - w) // 2, max(40, (sh - h) // 2)
-subprocess.run(["open", "-na", chrome, "--args", "--no-first-run", "--no-default-browser-check", "--disable-features=TranslateUI",
-                f"--window-position={x},{y}", f"--window-size={w},{h}", "--new-window", "https://en.wikipedia.org/wiki/Scrolling"], check=True, timeout=60)
+profile = build / "chrome-profile"
+shutil.rmtree(profile, ignore_errors=True)
+browser = subprocess.Popen([f"{chrome}/Contents/MacOS/Google Chrome", f"--user-data-dir={profile}", "--no-first-run", "--no-default-browser-check",
+                            "--disable-features=TranslateUI", "--disable-sync", f"--window-position={x},{y}", f"--window-size={w},{h}",
+                            "https://en.wikipedia.org/wiki/Scrolling"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 log("chrome opened")
 time.sleep(10)
 
@@ -123,12 +126,12 @@ subprocess.run([str(binary), str(x), str(y), str(w), str(h)], check=True, timeou
 log("driver finished")
 recorder.wait(timeout=30)
 log("recorder finished", raw.stat().st_size if raw.exists() else "no file")
-subprocess.run(["pkill", "-x", "Google Chrome"])
+browser.terminate()
 assert raw.exists() and raw.stat().st_size > 100_000, "screencapture wrote nothing"
 
 probe = json.loads(subprocess.check_output(["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height", "-of", "json", str(raw)]))
 scale = probe["streams"][0]["width"] / sw  # Retina runners record at 2x
-crop = f"crop={int(w * scale)}:{int(h * scale)}:{int(x * scale)}:{int(y * scale)},scale=1440:-2,fps=60"
+crop = f"crop={int(w * scale)}:{int(h * scale)}:{int(x * scale)}:{int(y * scale)},fps=60"
 common = ["ffmpeg", "-y", "-v", "error", "-ss", "1.5", "-t", "12", "-i", str(raw), "-vf", crop, "-pix_fmt", "yuv420p", "-an"]
 subprocess.run([*common, "-c:v", "libx264", "-preset", "slow", "-crf", "19", "-movflags", "+faststart", str(out / "demo.mp4")], check=True)
 subprocess.run([*common, "-c:v", "libvpx-vp9", "-b:v", "0", "-crf", "30", "-row-mt", "1", str(out / "demo.webm")], check=True)
