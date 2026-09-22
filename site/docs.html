@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VectorScroll docs</title>
+<meta name="description" content="Scrolling modes, indicator, settings, updates, permissions, and troubleshooting.">
+<meta name="color-scheme" content="light dark">
+<meta property="og:title" content="VectorScroll docs">
+<meta property="og:description" content="Scrolling modes, indicator, settings, updates, permissions, and troubleshooting.">
+<meta property="og:image" content="poster.jpg">
+<link rel="icon" href="icon.png">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to main content</a>
+<header>
+  <a href="index.html" class="home" aria-label="VectorScroll home"><svg class="mark" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="32" cy="32" r="28"/><circle cx="32" cy="32" r="3" fill="currentColor" stroke="none"/><path d="M32 24V12M27 17l5-5 5 5M32 40v12M27 47l5 5 5-5M24 32H12M17 27l-5 5 5 5M40 32h12M47 27l5 5-5 5"/></svg><span>VectorScroll</span></a>
+  <nav><a href="download.html">download</a><a href="about.html">about</a><a href="docs.html" aria-current="page">docs</a><a href="https://github.com/Sowyu/VectorScroll" class="pill">github</a></nav>
+</header>
+<main id="main" class="docs">
+  <nav class="toc" aria-label="On this page">
+    <a href="#start">Getting started</a><a href="#scrolling">Scrolling</a><a href="#indicator">Indicator</a><a href="#settings">Settings</a><a href="#updates">Updates</a><a href="#permissions">Permissions</a><a href="#trouble">Troubleshooting</a><a href="#build">Building from source</a>
+  </nav>
+  <div class="doc">
+    <h1>Docs</h1>
+    <h2 id="start">Getting started</h2>
+    <p>Download the <a href="https://github.com/Sowyu/VectorScroll/releases/latest/download/VectorScroll.dmg">DMG</a>, drag VectorScroll into Applications, and open it. The setup guide asks for two permissions, one page each. Then press the middle button in any window and move the pointer.</p>
+    <img src="onboarding.png" alt="Setup guide, Input Monitoring step" width="480" height="292">
+    <h2 id="scrolling">Scrolling</h2>
+    <p><b>Hold to scroll</b> is the default. Hold the middle button, move, release to stop. Nothing happens until the pointer leaves the 10 pt dead zone, so a quick middle click still opens a link in a new tab.</p>
+    <p><b>Toggle scrolling</b> keeps going after you let go. Any mouse button stops it. The click that stops it also reaches the app under the pointer, so stop over empty space if you do not want to activate something.</p>
+    <p><b>Start delay</b> applies to toggle mode. Require a hold of 50 to 1,000 ms before scrolling engages. Default 200 ms. Turn it off to start on a plain click.</p>
+    <p><b>Speed</b> runs from 50% to 200% in 10% steps and applies to both axes. Outside the dead zone, speed scales with distance up to 120 px per tick. <b>Reverse direction</b> flips it for people who expect natural scrolling.</p>
+    <p>VectorScroll scrolls the window under the pointer, not the frontmost app. It raises that window first.</p>
+    <h2 id="indicator">Indicator</h2>
+    <p>A circle with four arrows marks the point where you pressed. Choose light or dark, and 28, 32, 40, or 48 pt.</p>
+    <h2 id="settings">Settings</h2>
+    <img src="settings-hold.png" alt="Settings window in hold-to-scroll mode" width="400" height="529">
+    <p>The window opens on launch by default and from the menu bar icon. Command-W hides it and scrolling keeps working. Every change saves immediately.</p>
+    <p><b>Open settings on launch</b> and <b>Show menu bar icon</b> control how you reach the app. One of them always stays on. <b>Launch at login</b> registers with the system login items. <b>Setup guide</b> at the top of the window reopens the permission walkthrough.</p>
+    <p>If the menu bar icon is hidden, reopen the window from Applications or run:</p>
+    <pre>open -a VectorScroll</pre>
+    <h2 id="updates">Updates</h2>
+    <p>The app checks GitHub on launch and every 24 hours. Background checks never show dialogs and need no account.</p>
+    <p><b>Check for Updates</b> then <b>Install Update</b> downloads the DMG, verifies its SHA-256 against the release digest, checks the bundle identifier, version, code signature, and processor support, swaps the app in place, and relaunches. Settings are kept. The previous version stays next to the app as <code>Previous.app</code> inside a hidden folder, and a failed swap restores it.</p>
+    <p>The app has to live in a writable folder, normally Applications. Running from the mounted DMG is refused with an explanation.</p>
+    <h2 id="permissions">Permissions</h2>
+    <p><b>Input Monitoring</b> lets the app see the middle button. Nothing you type is read. <b>Accessibility</b> lets it raise the window under the pointer.</p>
+    <p>Releases are signed with a stable certificate, so macOS keeps both grants across automatic updates. Builds you compile yourself are signed ad hoc and need re-granting after each build.</p>
+    <p>Status for both refreshes every second in Settings. A missing permission shows a button that opens the right System Settings pane.</p>
+    <h2 id="trouble">Troubleshooting</h2>
+    <p><b>Nothing happens on middle click.</b> Check Input Monitoring in Settings. If it says Allowed and still nothing, quit and reopen the app. macOS sometimes needs a relaunch after a grant.</p>
+    <p><b>The wrong window scrolls.</b> Accessibility is missing, so the app cannot raise the window under the pointer. Grant it in System Settings.</p>
+    <p><b>Middle click stopped opening links in new tabs.</b> You are in toggle mode with the start delay off. Turn the delay on, or switch to hold mode.</p>
+    <p><b>Install Update is refused.</b> The app is running from the DMG or from a read-only folder. Move it to Applications.</p>
+    <h2 id="build">Building from source</h2>
+    <p>Requires macOS and a Swift 6 toolchain.</p>
+    <pre>swift build -c release
+./scripts/build-app.sh</pre>
+    <p>The bundle script builds both architectures, renders the icon set, and writes <code>dist/VectorScroll.app</code>. It signs ad hoc unless <code>CODESIGN_IDENTITY</code> names a certificate in your keychain. The <a href="https://github.com/Sowyu/VectorScroll#build-and-check">README</a> covers the test harness.</p>
+  </div>
+</main>
+<footer>made by <a href="https://github.com/Sowyu">Sowyu</a></footer>
+</body>
+</html>

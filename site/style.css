@@ -1,0 +1,101 @@
+:root {
+  --bg: #fff7ec;
+  --text: #3a2a2c;
+  --accent: #ff9a9e;
+  --accent-light: #ffc4c6;
+  --accent-dark: #5c0f1c;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1d1a1a;
+    --text: #f1e9e3;
+    --accent: #e0757b;
+    --accent-light: #f09a9e;
+    --accent-dark: #2a0a0f;
+  }
+}
+
+* { box-sizing: border-box; }
+html { background: var(--bg); color: var(--text); }
+body {
+  margin: 0 auto; max-width: 680px; min-height: 100dvh; padding: 0 16px;
+  display: flex; flex-direction: column; gap: 3rem;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 16px; line-height: 1.6; letter-spacing: .02rem;
+}
+h1, h2, h3 { margin: 0 0 .75rem; font-weight: 600; line-height: 1.3; }
+h1 { font-size: 1.875rem; line-height: 1.2; }
+h2 { font-size: 1.5rem; }
+h3 { font-size: 1.375rem; font-weight: 500; }
+p { margin: 0 0 1rem; }
+a { color: inherit; text-decoration: underline; text-underline-offset: 3px; text-decoration-color: color-mix(in oklab, var(--text) 40%, transparent); }
+a:hover { text-decoration-color: var(--accent); }
+:focus-visible { outline: 2px solid var(--accent-dark); outline-offset: 3px; border-radius: 4px; }
+hr { width: 100%; height: 1px; border: 0; margin: 0; background: color-mix(in oklab, var(--text) 20%, transparent); }
+img, video { max-width: 100%; height: auto; }
+pre, code { font-family: ui-monospace, Menlo, monospace; font-size: .9em; }
+pre { background: color-mix(in oklab, var(--text) 8%, transparent); border-radius: .5rem; padding: .75rem 1rem; overflow-x: auto; margin: 0 0 1rem; }
+code { background: color-mix(in oklab, var(--text) 8%, transparent); border-radius: .25rem; padding: .1em .35em; }
+
+.skip { position: absolute; left: -999px; top: 1rem; background: var(--accent); color: var(--accent-dark); padding: .5rem 1rem; border-radius: .5rem; }
+.skip:focus { left: 1rem; z-index: 10; }
+
+header { width: 100%; display: flex; justify-content: space-between; align-items: center; padding-top: 2rem; }
+.home { display: flex; align-items: center; gap: .6rem; text-decoration: none; font-weight: 600; font-size: 1.1rem; }
+.mark { width: 2.5rem; height: 2.5rem; }
+nav { display: flex; gap: 1rem; align-items: center; }
+nav a { text-decoration: none; }
+nav a:hover, nav a[aria-current] { text-decoration: underline; text-decoration-color: var(--accent); }
+.pill, .button { background: var(--accent); color: var(--accent-dark); border-radius: .5rem; text-decoration: none; }
+.pill { padding: 6px 1.25rem; }
+.pill:hover, .button:hover { background: var(--accent-light); text-decoration: none; }
+.button { display: inline-block; padding: 1rem 1.5rem; font-size: 1.25rem; }
+
+.hero { display: flex; gap: 2rem; align-items: center; }
+.hero-mark { width: 7rem; height: 7rem; flex: none; }
+.hero h3 { color: color-mix(in oklab, var(--text) 70%, transparent); margin: 0; }
+.hero h1 { margin-bottom: 10px; }
+
+main { width: 100%; flex-grow: 1; display: flex; flex-direction: column; gap: 3rem; }
+.cta { display: flex; gap: 1rem; align-items: center; }
+video { width: 100%; border-radius: .5rem; background: #000; box-shadow: 0 0 0 1px color-mix(in oklab, var(--text) 10%, transparent); }
+.grid { width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 3rem; }
+.grid p { margin: 0; }
+
+.doc { width: 100%; align-items: stretch; display: block; }
+.doc h1 { margin-bottom: 1.5rem; }
+.doc h2 { margin-top: 2.5rem; }
+.doc ol, .doc ul { padding-left: 1.4rem; margin: 0 0 1rem; }
+.doc li { margin-bottom: .4rem; }
+.doc img { border-radius: .5rem; margin: 0 0 1rem; box-shadow: 0 0 0 1px color-mix(in oklab, var(--text) 10%, transparent); }
+.dl { border: 1px solid color-mix(in oklab, var(--text) 20%, transparent); border-radius: .5rem; padding: 1.5rem; margin-bottom: 1rem; }
+.dl h2 { margin-top: 0; }
+.dl p { margin: 1rem 0 0; }
+
+body:has(.docs) { max-width: 960px; }
+.docs { display: grid; grid-template-columns: 180px minmax(0, 680px); gap: 3rem; align-items: start; justify-content: center; }
+.toc { position: sticky; top: 1.5rem; display: flex; flex-direction: column; align-items: flex-start; text-align: left; gap: .35rem; font-size: .95rem; padding-top: .4rem; }
+.toc a { text-decoration: none; color: color-mix(in oklab, var(--text) 70%, transparent); }
+.toc a:hover, .toc a[aria-current] { color: var(--text); text-decoration: underline; text-decoration-color: var(--accent); }
+.doc h2 { scroll-margin-top: 1.5rem; }
+@media (max-width: 800px) {
+  .docs { grid-template-columns: 1fr; gap: 1.5rem; }
+  .toc { position: static; flex-direction: row; flex-wrap: wrap; gap: .25rem 1rem; border-bottom: 1px solid color-mix(in oklab, var(--text) 20%, transparent); padding-bottom: 1rem; }
+}
+
+footer { padding: 2rem 0; font-size: .9rem; }
+
+
+@media (max-width: 640px) {
+  body { gap: 2rem; }
+  header { padding-top: 1rem; }
+  .mark { width: 2rem; height: 2rem; }
+  .home span { display: none; }
+  .hero { gap: 1.25rem; }
+  .hero-mark { width: 5rem; height: 5rem; }
+  .hero h1 { font-size: 1.5rem; }
+  .hero h3 { font-size: 1.1rem; }
+  .cta { flex-wrap: wrap; }
+  .grid { grid-template-columns: 1fr; gap: 1rem; }
+  .grid div { margin-bottom: .5rem; }
+}

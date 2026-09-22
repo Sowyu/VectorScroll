@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>About VectorScroll</title>
+<meta name="description" content="Why VectorScroll exists and how it works.">
+<meta name="color-scheme" content="light dark">
+<meta property="og:title" content="About VectorScroll">
+<meta property="og:description" content="Why VectorScroll exists and how it works.">
+<meta property="og:image" content="poster.jpg">
+<link rel="icon" href="icon.png">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to main content</a>
+<header>
+  <a href="index.html" class="home" aria-label="VectorScroll home"><svg class="mark" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="32" cy="32" r="28"/><circle cx="32" cy="32" r="3" fill="currentColor" stroke="none"/><path d="M32 24V12M27 17l5-5 5 5M32 40v12M27 47l5 5 5-5M24 32H12M17 27l-5 5 5 5M40 32h12M47 27l5 5-5 5"/></svg><span>VectorScroll</span></a>
+  <nav><a href="download.html">download</a><a href="about.html" aria-current="page">about</a><a href="docs.html">docs</a><a href="https://github.com/Sowyu/VectorScroll" class="pill">github</a></nav>
+</header>
+<main id="main" class="doc">
+  <h1>About VectorScroll</h1>
+  <p>Windows has had middle-button autoscroll since the nineties. macOS never did. The existing options were either abandoned, wrapped in a subscription, or shipped as a hundred megabyte Electron app for what is, underneath, one event tap and a timer.</p>
+  <p>VectorScroll is that event tap and timer, and not much more. Press the middle button, move the pointer away from where you pressed, and the window under it scrolls in that direction. Farther means faster. Release to stop.</p>
+  <h2 id="goals">Goals</h2>
+  <p>Do one thing, feel native, and stay small. The app is about 830 KB, uses only Swift and AppKit, and has no third party dependencies. Every setting is a real AppKit control with keyboard focus and accessibility labels.</p>
+  <p>The second goal is not to get in the way. A plain middle click has to keep opening links in new tabs, so nothing happens until the pointer leaves a 10 pt dead zone. No indicator flash, no window raise.</p>
+  <h2 id="hood">Under the hood</h2>
+  <ul>
+    <li>A CGEvent tap watches for the middle button. This needs the Input Monitoring permission.</li>
+    <li>On press, the app remembers the origin and shows a circle with four arrows there.</li>
+    <li>A timer turns pointer distance from the origin into scroll events. 10 pt of dead zone, then speed scales with distance up to 120 px per tick, on both axes.</li>
+    <li>The window under the pointer is raised first so the scroll goes where you are looking. This needs the Accessibility permission.</li>
+    <li>Updates come straight from GitHub releases. The app verifies the SHA-256, the signature, and the bundle identifier before swapping itself in place.</li>
+  </ul>
+  <p>That is it.</p>
+  <h2 id="contribute">Contributing</h2>
+  <p>The whole app is a handful of Swift files. If you see something that could be simpler, more robust, or more accessible, open a pull request on <a href="https://github.com/Sowyu/VectorScroll">GitHub</a>. Bug reports with the macOS version and the app under the pointer are the most useful kind.</p>
+</main>
+<footer>made by <a href="https://github.com/Sowyu">Sowyu</a></footer>
+</body>
+</html>

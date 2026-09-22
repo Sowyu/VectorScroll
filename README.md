@@ -102,6 +102,16 @@ swiftc -swift-version 6 -warnings-as-errors -parse-as-library Sources/VectorScro
 
 GitHub Actions runs the same checks on macOS, then builds and signs the universal app, verifies the signature with the certificate removed from the keychain so the result matches a user's Mac, packages the DMG, and tests automatic installation, relaunch, and rollback against a signed fixture app plus a live GitHub download.
 
+## Website
+
+`site/` is a static site: home, download, about and docs pages, one stylesheet, and the demo video. Serve the folder as is, for example with GitHub Pages pointed at `site/`.
+
+The demo video comes from the real app. `scripts/record-demo.py` builds the app with a small driver appended, opens Chrome on a real page, moves the real pointer, runs the production scroll path with the indicator, and records the screen with `screencapture`. The `demo` job in the macOS workflow runs it on `workflow_dispatch` and uploads `demo-video` with `demo.mp4`, `demo.webm` and `poster.jpg`. Copy those into `site/`.
+
+```sh
+python3 scripts/record-demo.py   # on a Mac with Chrome and ffmpeg, writes dist/demo/
+```
+
 ## Layout
 
 ```
@@ -115,5 +125,6 @@ scripts/
   check-hold.py         settings and scrolling regression harness
   check-updates.swift   release parsing checks and a live GitHub request
   check-installer.swift installation and rollback checks
+  record-demo.py        records the website demo video from the real app
   make-icons.swift      renders the icon set
 ```
