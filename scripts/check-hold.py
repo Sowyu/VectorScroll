@@ -8,6 +8,9 @@ Run on macOS with: python3 scripts/check-hold.py
 
 from pathlib import Path
 import subprocess
+import plistlib
+import shutil
+import uuid
 
 root = Path(__file__).resolve().parent.parent
 source = (root / "Sources/VectorScroll/main.swift").read_text()
@@ -390,6 +393,7 @@ extension VectorScrollApp {
 }
 
 setvbuf(stdout, nil, _IONBF, 0)
+precondition(FileManager.default.changeCurrentDirectoryPath(CommandLine.arguments[1]))
 let app = NSApplication.shared
 app.setActivationPolicy(.regular)
 app.appearance = NSAppearance(named: .aqua)
@@ -403,7 +407,11 @@ final class AuditAppDelegate: NSObject, NSApplicationDelegate {
             let delayedRelease = VectorScrollApp.checkRelease(delay: 0.3)
             let recovery = VectorScrollApp.checkEventRecovery()
             let settings = VectorScrollApp.checkDelaySettings()
-            exit(promptRelease && delayedRelease && recovery && settings ? 0 : 1)
+            let passed = promptRelease && delayedRelease && recovery && settings
+            if passed {
+                try! "PASS".write(toFile: CommandLine.arguments[2], atomically: true, encoding: .utf8)
+            }
+            exit(passed ? 0 : 1)
         }
     }
 }
@@ -420,4 +428,28 @@ binary = output / "check-hold"
 subprocess.run(["swiftc", "-swift-version", "6", "-warnings-as-errors",
                 str(generated), str(root / "Sources/VectorScroll/SettingsStyle.swift"), str(root / "Sources/VectorScroll/Onboarding.swift"), str(root / "Sources/VectorScroll/Updates.swift"), str(root / "Sources/VectorScroll/UpdateInstaller.swift"), "-o", str(binary), "-framework", "AppKit",
                 "-framework", "ApplicationServices", "-framework", "ServiceManagement"], check=True)
-subprocess.run([str(binary)], check=True, timeout=45, cwd=root)
+# LaunchServices registers the probe as a real foreground app. macOS 26 will
+# not activate an unbundled command-line process for native control tracking.
+run_id = uuid.uuid4().hex
+bundle = output / f"VectorScrollAudit-{run_id}.app"
+macos = bundle / "Contents/MacOS"
+macos.mkdir(parents=True)
+shutil.copy2(binary, macos / "check-hold")
+(bundle / "Contents/Info.plist").write_bytes(plistlib.dumps({
+    "CFBundleIdentifier": f"local.vectorscroll.audit.{run_id}",
+    "CFBundleName": "VectorScroll UI Audit",
+    "CFBundleExecutable": "check-hold",
+    "CFBundlePackageType": "APPL",
+    "NSHighResolutionCapable": True,
+}))
+result = output / f"{run_id}.passed"
+stdout = output / f"{run_id}.stdout"
+stderr = output / f"{run_id}.stderr"
+try:
+    subprocess.run(["open", "-n", "-W", "--stdout", str(stdout), "--stderr", str(stderr),
+                    str(bundle), "--args", str(root), str(result)], check=True, timeout=60, cwd=root)
+finally:
+    for log in [stdout, stderr]:
+        if log.exists():
+            print(log.read_text(), end="", flush=True)
+assert result.exists() and result.read_text() == "PASS", "The UI app did not finish all assertions"
