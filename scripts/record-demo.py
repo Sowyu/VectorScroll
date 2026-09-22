@@ -49,12 +49,13 @@ extension VectorScrollApp {
             if ms < 900 { return (CGPoint(x: lerp(start.x, o.x + 30, ease(seg(ms, 0, 900))), y: lerp(start.y, o.y + 15, ease(seg(ms, 0, 900)))), false) }
             if ms < 1500 { return (CGPoint(x: lerp(o.x + 30, o.x, ease(seg(ms, 900, 1400))), y: lerp(o.y + 15, o.y, ease(seg(ms, 900, 1400)))), false) }
             if ms < 1800 { return (o, true) }
-            if ms < 4800 { return (CGPoint(x: o.x + 14 * seg(ms, 1800, 4800), y: o.y + 60 * ease(seg(ms, 1800, 3200))), true) }
-            if ms < 6000 { return (CGPoint(x: o.x + lerp(14, 9, seg(ms, 4800, 6000)), y: o.y + lerp(60, 25, ease(seg(ms, 4800, 6000)))), true) }
-            if ms < 9200 { return (CGPoint(x: o.x + lerp(9, -6, seg(ms, 6000, 9200)), y: o.y + lerp(25, -90, ease(seg(ms, 6000, 7600)))), true) }
-            if ms < 10200 { return (CGPoint(x: o.x + lerp(-6, 2, seg(ms, 9200, 10200)), y: o.y + lerp(-90, 3, ease(seg(ms, 9200, 10000)))), ms < 10000) }
+            if ms < 4800 { return (CGPoint(x: o.x + 14 * seg(ms, 1800, 4800), y: o.y + 40 * ease(seg(ms, 1800, 3200))), true) }
+            if ms < 6000 { return (CGPoint(x: o.x + lerp(14, 9, seg(ms, 4800, 6000)), y: o.y + lerp(40, 18, ease(seg(ms, 4800, 6000)))), true) }
+            if ms < 9200 { return (CGPoint(x: o.x + lerp(9, -6, seg(ms, 6000, 9200)), y: o.y + lerp(18, -70, ease(seg(ms, 6000, 7600)))), true) }
+            if ms < 10200 { return (CGPoint(x: o.x + lerp(-6, 2, seg(ms, 9200, 10200)), y: o.y + lerp(-70, 3, ease(seg(ms, 9200, 10000)))), ms < 10000) }
             return (CGPoint(x: lerp(o.x + 2, start.x, ease(seg(ms, 10400, 12000))), y: lerp(o.y + 3, start.y, ease(seg(ms, 10400, 12000)))), false)
         }
+        let cursor = NSCursor.arrow
         var wasDown = false
         // One app tick per frame, then a still of the window. The app's own 16 ms timer is
         // replaced by a direct tick so the result is an exact 60 fps regardless of how fast
@@ -84,6 +85,18 @@ extension VectorScrollApp {
                               frames + "/" + String(format: "%04d.png", n)]
             try! shot.run()
             shot.waitUntilExit()
+            // screencapture -R leaves the cursor out, so draw the arrow where the pointer is.
+            let file = frames + "/" + String(format: "%04d.png", n)
+            let image = NSImage(contentsOfFile: file)!
+            let scale = image.representations[0].pixelsWide > Int(window.width) ? 2.0 : 1.0
+            let canvas = NSImage(size: NSSize(width: image.representations[0].pixelsWide, height: image.representations[0].pixelsHigh))
+            canvas.lockFocus()
+            image.draw(in: NSRect(origin: .zero, size: canvas.size))
+            let hot = cursor.hotSpot, size = cursor.image.size
+            cursor.image.draw(in: NSRect(x: (cg.x - window.minX - hot.x) * scale, y: (window.maxY - cg.y - (size.height - hot.y)) * scale,
+                                         width: size.width * scale, height: size.height * scale))
+            canvas.unlockFocus()
+            try! NSBitmapImageRep(data: canvas.tiffRepresentation!)!.representation(using: .png, properties: [:])!.write(to: URL(fileURLWithPath: file))
             if n % 60 == 0 { print("frame \(n)") }
         }
         subject.stopScrolling()
