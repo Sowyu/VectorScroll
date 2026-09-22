@@ -31,7 +31,6 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
     private var runLoopSource: CFRunLoopSource?
     private var timer: DispatchSourceTimer?
     private var permissionStatusTimer: DispatchSourceTimer?
-    private var accessibilityPromptedThisRun = false
     private var anchor: CGPoint?
     private var isActive = false
     private var eventTapInstalled = false
@@ -61,6 +60,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
     private var delayToggle: NSButton!
     private var delaySlider: NSSlider!
     private var delayLabel: NSTextField!
+    private var hasAccessibilityAccess: Bool { CGPreflightPostEventAccess() && AXIsProcessTrusted() }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
@@ -68,14 +68,13 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         configureMenu()
         // Fresh installs get the guided setup instead of bare system prompts.
         // Copies that were already set up are marked complete silently.
-        if !defaults.bool(forKey: "onboardingCompleted"), CGPreflightListenEventAccess(), AXIsProcessTrusted() {
+        if !defaults.bool(forKey: "onboardingCompleted"), CGPreflightListenEventAccess(), hasAccessibilityAccess {
             defaults.set(true, forKey: "onboardingCompleted")
         }
         if !defaults.bool(forKey: "onboardingCompleted") {
             showOnboarding()
         } else {
             if openSettingsOnLaunch { showSettings() }
-            requestPermissions()
         }
         if let error = defaults.string(forKey: "updateInstallError"), !error.isEmpty {
             defaults.set("", forKey: "updateInstallError")
@@ -90,6 +89,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         updateTimer.setEventHandler { [weak self] in self?.checkForUpdates(manual: false) }
         self.updateTimer = updateTimer
         updateTimer.resume()
+        try? UpdateInstaller.acknowledgeLaunch()
     }
 
     private func configureMenu() {
@@ -114,20 +114,15 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
     }
 
     private func configureSettingsWindow() {
-        settingsWindow = SettingsWindow(contentRect: NSRect(x: 0, y: 0, width: 620, height: 820),
-                                  styleMask: [.titled, .closable, .miniaturizable, .fullSizeContentView], backing: .buffered, defer: false)
+        settingsWindow = SettingsWindow(contentRect: NSRect(x: 0, y: 0, width: 620, height: 720),
+                                  styleMask: [.titled, .closable], backing: .buffered, defer: false)
         settingsWindow.title = "VectorScroll Settings"
-        settingsWindow.titleVisibility = .hidden
-        settingsWindow.titlebarAppearsTransparent = true
-        for control in [NSWindow.ButtonType.closeButton, .miniaturizeButton, .zoomButton] {
-            settingsWindow.standardWindowButton(control)?.isHidden = true
-        }
-        settingsWindow.isMovableByWindowBackground = true
         settingsWindow.backgroundColor = SettingsStyle.background
-        settingsWindow.appearance = NSAppearance(named: .darkAqua)
         settingsWindow.isReleasedWhenClosed = false
-        if !settingsWindow.setFrameUsingName("VectorScrollSettingsV3") { settingsWindow.center() }
-        settingsWindow.setFrameAutosaveName("VectorScrollSettingsV3")
+        settingsWindow.standardWindowButton(.miniaturizeButton)?.isEnabled = false
+        settingsWindow.standardWindowButton(.zoomButton)?.isEnabled = false
+        if !settingsWindow.setFrameUsingName("VectorScrollSettingsV4") { settingsWindow.center() }
+        settingsWindow.setFrameAutosaveName("VectorScrollSettingsV4")
 
         func label(_ text: String, secondary: Bool = false) -> NSTextField {
             let field = NSTextField(wrappingLabelWithString: text)
@@ -176,33 +171,20 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
             stack.addArrangedSubview(headingRow)
             stack.setCustomSpacing(12, after: headingRow)
         }
-        let appIcon = NSImageView(image: SettingsStyle.symbol("arrow.up.and.down.circle", color: SettingsStyle.text)!)
+        let appIcon = NSImageView(image: NSApp.applicationIconImage)
         appIcon.imageScaling = .scaleProportionallyUpOrDown
         appIcon.translatesAutoresizingMaskIntoConstraints = false
-        let iconTile = NSView()
-        iconTile.wantsLayer = true
-        iconTile.layer?.backgroundColor = NSColor(calibratedWhite: 0.16, alpha: 1).cgColor
-        iconTile.layer?.cornerRadius = 12
-        iconTile.addSubview(appIcon)
         NSLayoutConstraint.activate([
-            iconTile.widthAnchor.constraint(equalToConstant: 48),
-            iconTile.heightAnchor.constraint(equalToConstant: 48),
-            appIcon.widthAnchor.constraint(equalToConstant: 32),
-            appIcon.heightAnchor.constraint(equalToConstant: 32),
-            appIcon.centerXAnchor.constraint(equalTo: iconTile.centerXAnchor),
-            appIcon.centerYAnchor.constraint(equalTo: iconTile.centerYAnchor)
+            appIcon.widthAnchor.constraint(equalToConstant: 48),
+            appIcon.heightAnchor.constraint(equalToConstant: 48)
         ])
         let title = label("VectorScroll")
-        title.font = .systemFont(ofSize: 25, weight: .semibold)
-        let titleStack = NSStackView(views: [title, label("Settings", secondary: true)])
-        titleStack.orientation = .vertical
-        titleStack.alignment = .leading
-        titleStack.spacing = 3
+        title.font = .systemFont(ofSize: 22, weight: .semibold)
         let spacer = NSView()
         spacer.setContentHuggingPriority(.defaultLow, for: .horizontal)
         let guideButton = button("Setup Guide", "questionmark.circle", #selector(showOnboarding))
         guideButton.setContentHuggingPriority(.required, for: .horizontal)
-        fullWidth(row(iconTile, titleStack, spacer, guideButton))
+        fullWidth(row(appIcon, title, spacer, guideButton))
 
         section("Scrolling", "computermouse")
         let hold = SettingsButton("Scroll while holding the middle button", symbol: "hand.point.up.left", kind: .choice, target: self, action: #selector(selectHoldToScroll))
@@ -249,15 +231,11 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         delayItem.spacing = 4
         fullWidth(delayItem)
         stack.setCustomSpacing(24, after: speedRow) // delayItem hides in hold mode
-        delayToggle.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
 
         section("Indicator", "scope")
-        lightModeItem = button("Light", "sun.max", #selector(selectLightMode))
-        lightModeItem.setButtonType(.pushOnPushOff)
-        darkModeItem = button("Dark", "moon", #selector(selectDarkMode))
-        darkModeItem.setButtonType(.pushOnPushOff)
+        lightModeItem = NSButton(radioButtonWithTitle: "Light", target: self, action: #selector(selectLightMode))
+        darkModeItem = NSButton(radioButtonWithTitle: "Dark", target: self, action: #selector(selectDarkMode))
         sizePicker = NSPopUpButton(frame: .zero, pullsDown: false)
-        sizePicker.isBordered = false
         for size in markerSizes {
             sizePicker.addItem(withTitle: "\(size) pt")
             sizePicker.lastItem?.tag = size
@@ -271,6 +249,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         openSettingsButton = checkbox("Open settings on launch", "macwindow", #selector(toggleOpenSettings))
         hideIconItem = checkbox("Show menu bar icon", "menubar.rectangle", #selector(toggleMenuBarIcon))
         launchAtStartupItem = checkbox("Launch at login", "power", #selector(toggleLaunchAtStartup))
+        launchAtStartupItem.allowsMixedState = true
         fullWidth(openSettingsButton)
         stack.setCustomSpacing(0, after: openSettingsButton)
         fullWidth(hideIconItem)
@@ -283,16 +262,13 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         stack.addArrangedSubview(permissionItem)
 
         section("Updates", "arrow.down.circle")
-        fullWidth(label("Version \(AppUpdate.installedVersion) · Checks daily, installs automatically, keeps your previous copy", secondary: true))
+        fullWidth(label("Version \(AppUpdate.installedVersion) · Checks daily. Installs when you choose.", secondary: true))
         updateItem = button("Check for Updates…", "arrow.clockwise", #selector(checkUpdatesFromMenu))
         downloadItem = button("Install Update…", "arrow.down", #selector(installUpdate))
         downloadItem.isHidden = true
         stack.addArrangedSubview(row(updateItem, downloadItem))
 
         let content = settingsWindow.contentView!
-        content.wantsLayer = true
-        content.layer?.backgroundColor = SettingsStyle.background.cgColor
-        content.layer?.cornerRadius = 12
         let scroll = NSScrollView()
         scroll.drawsBackground = false
         scroll.hasVerticalScroller = true
@@ -305,29 +281,16 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         stack.translatesAutoresizingMaskIntoConstraints = false
         document.addSubview(stack)
         content.addSubview(scroll)
-        let close = SettingsButton("Close settings", symbol: "xmark", target: settingsWindow, action: #selector(NSWindow.performClose(_:)))
-        close.toolTip = "Close settings · ⌘W"
-        close.translatesAutoresizingMaskIntoConstraints = false
-        content.addSubview(close)
-        let quit = SettingsButton("Quit VectorScroll", symbol: "rectangle.portrait.and.arrow.right", kind: .destructive, target: NSApp, action: #selector(NSApplication.terminate(_:)))
-        quit.keyEquivalent = "q"
-        quit.keyEquivalentModifierMask = .command
-        quit.translatesAutoresizingMaskIntoConstraints = false
-        content.addSubview(quit)
         NSLayoutConstraint.activate([
             scroll.leadingAnchor.constraint(equalTo: content.leadingAnchor),
             scroll.trailingAnchor.constraint(equalTo: content.trailingAnchor),
-            scroll.topAnchor.constraint(equalTo: content.topAnchor, constant: 24),
-            scroll.bottomAnchor.constraint(equalTo: quit.topAnchor, constant: -24),
+            scroll.topAnchor.constraint(equalTo: content.topAnchor),
+            scroll.bottomAnchor.constraint(equalTo: content.bottomAnchor),
             document.widthAnchor.constraint(equalTo: scroll.contentView.widthAnchor),
             stack.leadingAnchor.constraint(equalTo: document.leadingAnchor, constant: 32),
             stack.trailingAnchor.constraint(equalTo: document.trailingAnchor, constant: -32),
-            stack.topAnchor.constraint(equalTo: document.topAnchor, constant: 8),
-            stack.bottomAnchor.constraint(equalTo: document.bottomAnchor, constant: -8),
-            close.leadingAnchor.constraint(equalTo: content.leadingAnchor, constant: 32),
-            close.centerYAnchor.constraint(equalTo: quit.centerYAnchor),
-            quit.trailingAnchor.constraint(equalTo: content.trailingAnchor, constant: -32),
-            quit.bottomAnchor.constraint(equalTo: content.bottomAnchor, constant: -32)
+            stack.topAnchor.constraint(equalTo: document.topAnchor, constant: 24),
+            stack.bottomAnchor.constraint(equalTo: document.bottomAnchor, constant: -24)
         ])
         updateMarkerMenuItem()
         updateSizeMenuItems()
@@ -565,27 +528,29 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
     }
 
     @objc private func toggleLaunchAtStartup() {
+        stopScrolling()
         do {
-            if SMAppService.mainApp.status == .enabled {
+            switch SMAppService.mainApp.status {
+            case .enabled:
                 try SMAppService.mainApp.unregister()
-            } else {
+            case .notRegistered:
                 try SMAppService.mainApp.register()
+            case .requiresApproval:
+                SMAppService.openSystemSettingsLoginItems()
+            case .notFound:
+                break
+            @unknown default:
+                SMAppService.openSystemSettingsLoginItems()
             }
         } catch {
-            NSSound.beep()
+            let alert = NSAlert()
+            alert.messageText = "Launch at login could not be changed"
+            alert.informativeText = error.localizedDescription
+            alert.addButton(withTitle: "Open Login Items")
+            alert.addButton(withTitle: "Cancel")
+            if alert.runModal() == .alertFirstButtonReturn { SMAppService.openSystemSettingsLoginItems() }
         }
         updateLaunchAtStartupItem()
-    }
-
-    // Launch shows only the system prompts, never System Settings. The 1-second
-    // timer asks for Accessibility once Input Monitoring is granted.
-    private func requestPermissions() {
-        if CGPreflightListenEventAccess() {
-            requestAccessibilityPermission()
-        } else {
-            _ = CGRequestListenEventAccess()
-        }
-        installEventTap()
     }
 
     @objc private func showOnboarding() {
@@ -593,19 +558,19 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         if onboarding == nil {
             let guide = Onboarding()
             guide.promptAccessibility = { [weak self] in
-                self?.accessibilityPromptedThisRun = true
-                _ = AXIsProcessTrustedWithOptions(["AXTrustedCheckOptionPrompt": true] as CFDictionary)
+                self?.requestAccessibilityPermission()
             }
             guide.openSettings = { [weak self] in self?.showSettings() }
-            guide.finish = { [weak self] in
+            guide.finish = { [weak self] completed in
                 guard let self else { return }
-                self.defaults.set(true, forKey: "onboardingCompleted")
+                self.defaults.set(completed, forKey: "onboardingCompleted")
                 self.onboarding = nil
-                if self.openSettingsOnLaunch, !self.settingsWindow.isVisible, !CGPreflightListenEventAccess() { self.showSettings() }
+                if self.openSettingsOnLaunch, !self.settingsWindow.isVisible,
+                   !CGPreflightListenEventAccess() || !self.hasAccessibilityAccess { self.showSettings() }
             }
             onboarding = guide
         }
-        onboarding?.refresh(canListen: CGPreflightListenEventAccess(), canAccess: AXIsProcessTrusted())
+        onboarding?.refresh(canListen: CGPreflightListenEventAccess(), canAccess: hasAccessibilityAccess)
         onboarding?.show()
     }
 
@@ -615,11 +580,13 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
     }
 
     private func requestAccessibilityPermission() {
-        guard !AXIsProcessTrusted() else { return }
-        guard !accessibilityPromptedThisRun else { return }
-        accessibilityPromptedThisRun = true
-        let axOptions = ["AXTrustedCheckOptionPrompt": true] as CFDictionary
-        _ = AXIsProcessTrustedWithOptions(axOptions)
+        // Only the setup button calls this. Polling and launch never prompt.
+        guard !hasAccessibilityAccess else { return }
+        if !CGPreflightPostEventAccess() {
+            _ = CGRequestPostEventAccess()
+        } else {
+            _ = AXIsProcessTrustedWithOptions(["AXTrustedCheckOptionPrompt": true] as CFDictionary)
+        }
         updatePermissionMenuItem()
     }
 
@@ -635,7 +602,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
     }
 
     private func updatePermissionMenuItem() {
-        applyPermissionStatus(canListen: CGPreflightListenEventAccess(), canAccess: AXIsProcessTrusted())
+        applyPermissionStatus(canListen: CGPreflightListenEventAccess(), canAccess: hasAccessibilityAccess)
     }
 
     private func applyPermissionStatus(canListen: Bool, canAccess: Bool) {
@@ -650,7 +617,31 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
     }
 
     private func updateLaunchAtStartupItem() {
-        launchAtStartupItem.state = SMAppService.mainApp.status == .enabled ? .on : .off
+        applyLaunchAtStartupStatus(SMAppService.mainApp.status)
+    }
+
+    private func applyLaunchAtStartupStatus(_ status: SMAppService.Status) {
+        launchAtStartupItem.isEnabled = true
+        launchAtStartupItem.title = "Launch at login"
+        launchAtStartupItem.toolTip = nil
+        switch status {
+        case .enabled:
+            launchAtStartupItem.state = .on
+        case .notRegistered:
+            launchAtStartupItem.state = .off
+        case .requiresApproval:
+            launchAtStartupItem.state = .mixed
+            launchAtStartupItem.title = "Launch at login: needs approval"
+            launchAtStartupItem.toolTip = "Open Login Items to allow VectorScroll."
+        case .notFound:
+            launchAtStartupItem.state = .off
+            launchAtStartupItem.isEnabled = false
+            launchAtStartupItem.title = "Launch at login unavailable"
+            launchAtStartupItem.toolTip = "Run the installed VectorScroll app from Applications."
+        @unknown default:
+            launchAtStartupItem.state = .mixed
+            launchAtStartupItem.title = "Review Login Items"
+        }
     }
 
     private func restoreSettings() {
@@ -684,7 +675,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
 
     private func installEventTap() {
         updatePermissionMenuItem()
-        guard CGPreflightListenEventAccess() else {
+        guard CGPreflightListenEventAccess(), hasAccessibilityAccess else {
             // Permission can be revoked while running. Retire the old tap before
             // retrying, instead of overwriting a still-registered run-loop source.
             stopScrolling()
@@ -705,9 +696,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
             .leftMouseDown,
             .rightMouseDown,
             .otherMouseDown,
-            .otherMouseUp,
-            .tapDisabledByTimeout,
-            .tapDisabledByUserInput
+            .otherMouseUp
         ]
 
         let mask = events.reduce(CGEventMask(0)) { partial, type in
@@ -749,10 +738,8 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         let timer = DispatchSource.makeTimerSource(queue: .main)
         timer.schedule(deadline: .now() + .seconds(1), repeating: .seconds(1), leeway: .milliseconds(300))
         timer.setEventHandler { [weak self] in
-            if CGPreflightListenEventAccess(), self?.onboarding == nil {
-                self?.requestAccessibilityPermission()
-            }
             self?.installEventTap()
+            self?.updateLaunchAtStartupItem()
         }
         permissionStatusTimer = timer
         timer.resume()
@@ -760,6 +747,8 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
 
     private func handleEvent(type: CGEventType, event: CGEvent) -> Unmanaged<CGEvent>? {
         if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
+            // The release may have happened while input delivery was disabled.
+            stopScrolling()
             if let eventTap {
                 CGEvent.tapEnable(tap: eventTap, enable: true)
             }
@@ -783,9 +772,9 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
             let buttonNumber = event.getIntegerValueField(.mouseEventButtonNumber)
             if buttonNumber == 2 {
                 if holdToLockMode {
-                    armHoldToLock(at: NSEvent.mouseLocation, target: event.location)
+                    armHoldToLock(at: event.unflippedLocation, target: event.location)
                 } else {
-                    startScrolling(at: NSEvent.mouseLocation, target: event.location)
+                    startScrolling(at: event.unflippedLocation, target: event.location)
                 }
             }
             return Unmanaged.passUnretained(event)

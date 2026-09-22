@@ -16,6 +16,9 @@ jobs:
     env:
       GH_UPDATE_TEST_TOKEN: ${{ github.token }}
       HAS_SIGNING_CERT: ${{ secrets.CODESIGN_P12 != '' }}
+      HAS_NOTARY_CREDENTIALS: ${{ secrets.APPLE_NOTARY_KEY_ID != '' && secrets.APPLE_NOTARY_ISSUER_ID != '' && secrets.APPLE_NOTARY_KEY_P8 != '' }}
+      CODESIGN_DEVELOPER_ID: 'false'
+      NOTARIZED: 'false'
     steps:
       - uses: actions/checkout@v4
         with:
@@ -39,22 +42,41 @@ jobs:
           CODESIGN_P12_PASSWORD: ${{ secrets.CODESIGN_P12_PASSWORD }}
         run: |
           KEYCHAIN="$RUNNER_TEMP/signing.keychain-db"
+          security list-keychains -d user > "$RUNNER_TEMP/keychains-before-signing.txt"
           security create-keychain -p "" "$KEYCHAIN"
           security set-keychain-settings "$KEYCHAIN"
           security unlock-keychain -p "" "$KEYCHAIN"
           echo "$CODESIGN_P12" | base64 --decode > "$RUNNER_TEMP/codesign.p12"
           security import "$RUNNER_TEMP/codesign.p12" -k "$KEYCHAIN" -P "$CODESIGN_P12_PASSWORD" -T /usr/bin/codesign
           security set-key-partition-list -S apple-tool:,apple: -s -k "" "$KEYCHAIN" >/dev/null
-          security list-keychains -d user -s "$KEYCHAIN" $(security list-keychains -d user | tr -d '"')
-          echo "CODESIGN_IDENTITY=VectorScroll" >> "$GITHUB_ENV"
+          set -- "$KEYCHAIN"
+          while IFS= read -r LINE; do
+            CURRENT=$(echo "$LINE" | sed -E 's/^[[:space:]]*"//; s/"[[:space:]]*$//')
+            set -- "$@" "$CURRENT"
+          done < "$RUNNER_TEMP/keychains-before-signing.txt"
+          security list-keychains -d user -s "$@"
+          IDENTITY=$(security find-identity -v -p codesigning "$KEYCHAIN" | awk -F '"' '/Developer ID Application:/ { print $2; exit }')
+          if [ -z "$IDENTITY" ]; then IDENTITY=VectorScroll; fi
+          echo "CODESIGN_IDENTITY=$IDENTITY" >> "$GITHUB_ENV"
+          case "$IDENTITY" in
+            "Developer ID Application:"*) echo "CODESIGN_DEVELOPER_ID=true" >> "$GITHUB_ENV" ;;
+          esac
           echo "SIGNING_KEYCHAIN=$KEYCHAIN" >> "$GITHUB_ENV"
       - name: Build universal app bundle
         run: ./scripts/build-app.sh
       - name: Verify release bundle
         run: |
-          # Delete the keychain first so verification matches a user's Mac,
-          # which never has this certificate installed.
-          if [ -n "${SIGNING_KEYCHAIN:-}" ]; then security delete-keychain "$SIGNING_KEYCHAIN"; fi
+          # Remove the test identity from the search list and lock its keychain.
+          # Verification then matches a Mac without the signing certificate.
+          if [ -n "${SIGNING_KEYCHAIN:-}" ]; then
+            set --
+            while IFS= read -r LINE; do
+              CURRENT=$(echo "$LINE" | sed -E 's/^[[:space:]]*"//; s/"[[:space:]]*$//')
+              set -- "$@" "$CURRENT"
+            done < "$RUNNER_TEMP/keychains-before-signing.txt"
+            security list-keychains -d user -s "$@"
+            security lock-keychain "$SIGNING_KEYCHAIN"
+          fi
           lipo dist/VectorScroll.app/Contents/MacOS/VectorScroll -verify_arch arm64 x86_64
           codesign --verify --deep --strict dist/VectorScroll.app
           codesign -d -r- dist/VectorScroll.app 2>&1 | grep designated
@@ -70,6 +92,35 @@ jobs:
         run: |
           swiftc -swift-version 6 -warnings-as-errors -parse-as-library Sources/VectorScroll/Updates.swift Sources/VectorScroll/UpdateInstaller.swift scripts/check-installer.swift -o .build/check-installer
           .build/check-installer
+      - name: Notarize Developer ID build
+        if: env.CODESIGN_DEVELOPER_ID == 'true' && env.HAS_NOTARY_CREDENTIALS == 'true'
+        env:
+          APPLE_NOTARY_KEY_ID: ${{ secrets.APPLE_NOTARY_KEY_ID }}
+          APPLE_NOTARY_ISSUER_ID: ${{ secrets.APPLE_NOTARY_ISSUER_ID }}
+          APPLE_NOTARY_KEY_P8: ${{ secrets.APPLE_NOTARY_KEY_P8 }}
+        run: |
+          NOTARY_KEY="$RUNNER_TEMP/AuthKey_${APPLE_NOTARY_KEY_ID}.p8"
+          echo "$APPLE_NOTARY_KEY_P8" | base64 --decode > "$NOTARY_KEY"
+          xcrun notarytool submit dist/VectorScroll.dmg --key "$NOTARY_KEY" --key-id "$APPLE_NOTARY_KEY_ID" --issuer "$APPLE_NOTARY_ISSUER_ID" --wait
+          xcrun stapler staple dist/VectorScroll.dmg
+          xcrun stapler validate dist/VectorScroll.dmg
+          spctl --assess --type execute --verbose=2 dist/VectorScroll.app
+          spctl --assess --type open --context context:primary-signature --verbose=2 dist/VectorScroll.dmg
+          echo "NOTARIZED=true" >> "$GITHUB_ENV"
+      - name: Report distribution status
+        if: always()
+        run: |
+          if [ "$NOTARIZED" = "true" ]; then
+            echo "Developer ID signed, notarized, stapled, and Gatekeeper assessed." | tee -a "$GITHUB_STEP_SUMMARY"
+          elif [ "$CODESIGN_DEVELOPER_ID" = "true" ] && [ "$HAS_NOTARY_CREDENTIALS" = "true" ]; then
+            echo "Notarization was configured but did not complete. See the failed notarization step." | tee -a "$GITHUB_STEP_SUMMARY"
+          elif [ "$CODESIGN_DEVELOPER_ID" = "true" ]; then
+            echo "Developer ID signed but not notarized because notary credentials are unavailable." | tee -a "$GITHUB_STEP_SUMMARY"
+          elif [ "$HAS_SIGNING_CERT" = "true" ]; then
+            echo "Signed with the CI test certificate. This artifact is not notarized for distribution." | tee -a "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Ad-hoc signed for CI. This artifact is not notarized for distribution." | tee -a "$GITHUB_STEP_SUMMARY"
+          fi
       - uses: actions/upload-artifact@v4
         with:
           name: VectorScroll-1.7.0
@@ -82,7 +133,9 @@ jobs:
           path: |
             .build/settings-preview.png
             .build/settings-delay-preview.png
+            .build/settings-light-preview.png
             .build/onboarding-preview.png
+            .build/onboarding-light-preview.png
           if-no-files-found: error
 
   demo:

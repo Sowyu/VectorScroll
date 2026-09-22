@@ -30,7 +30,7 @@
     <a href="https://github.com/Sowyu/VectorScroll/releases/latest/download/VectorScroll.dmg" class="button">download vectorscroll</a>
     <a href="https://github.com/Sowyu/VectorScroll" class="steal"><svg class="ico" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6.51734 17.1132C6.91177 17.6905 8.10883 18.9228 9.74168 19.2333M9.86428 22C8.83582 21.8306 2 19.6057 2 12.0926C2 5.06329 8.0019 2 12.0008 2C15.9996 2 22 5.06329 22 12.0926C22 19.6057 15.1642 21.8306 14.1357 22C14.1357 22 13.9267 18.5826 14.0487 17.9969C14.1706 17.4113 13.7552 16.4688 13.7552 16.4688C14.7262 16.1055 16.2043 15.5847 16.7001 14.1874C17.0848 13.1032 17.3268 11.5288 16.2508 10.0489C16.2508 10.0489 16.5318 7.65809 15.9996 7.56548C15.4675 7.47287 13.8998 8.51192 13.8998 8.51192C13.4432 8.38248 12.4243 8.13476 12.0018 8.17939C11.5792 8.13476 10.5568 8.38248 10.1002 8.51192C10.1002 8.51192 8.53249 7.47287 8.00036 7.56548C7.46823 7.65809 7.74917 10.0489 7.74917 10.0489C6.67316 11.5288 6.91516 13.1032 7.2999 14.1874C7.79575 15.5847 9.27384 16.1055 10.2448 16.4688C10.2448 16.4688 9.82944 17.4113 9.95135 17.9969C10.0733 18.5826 9.86428 22 9.86428 22Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg> steal our code legally</a>
   </div>
-  <video width="1920" height="1080" autoplay muted loop playsinline controls preload="metadata" poster="poster.jpg" aria-label="A middle click shows the four-arrow indicator, moving the pointer down scrolls the page, pulling back slows and reverses it.">
+  <video width="1920" height="1080" muted loop playsinline controls preload="none" poster="poster.jpg" aria-label="A middle click shows the four-arrow indicator, moving the pointer down scrolls the page, pulling back slows and reverses it.">
     <source src="demo.webm" type="video/webm">
     <source src="demo.mp4" type="video/mp4">
   </video>
@@ -38,22 +38,22 @@
   <div class="grid">
     <div><h2>Native</h2><p>Swift and AppKit only. No Electron, web views, or third-party dependencies. One universal binary runs on Intel and Apple Silicon Macs. The app is about 830 KB.</p></div>
     <div><h2>Free</h2><p>No licence, no account, no trial. MIT.</p></div>
-    <div><h2>Open source</h2><p>Read it, fork it, or fix the one thing that bugs you. Every release is built and signed on GitHub Actions.</p></div>
+    <div><h2>Open source</h2><p>Read it, fork it, or fix the one thing that bugs you. GitHub Actions builds and checks the release bundle.</p></div>
   </div>
   <hr>
   <div class="compare">
     <h2>Versus the others</h2>
     <div class="scroll">
     <table>
-      <thead><tr><th>App</th><th>Price</th><th>Open source</th><th>Middle-button autoscroll</th><th>Built with</th></tr></thead>
+      <thead><tr><th>App</th><th>Price</th><th>Open source</th><th>Middle-button autoscroll</th><th>Implementation</th></tr></thead>
       <tbody>
         <tr><th>VectorScroll</th><td>free</td><td><svg class="ico" viewBox="0 0 24 24" fill="none" role="img" aria-label="yes"><path d="M5 14L8.5 17.5L19 6.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg> MIT</td><td><svg class="ico" viewBox="0 0 24 24" fill="none" role="img" aria-label="yes"><path d="M5 14L8.5 17.5L19 6.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></td><td>Swift, AppKit, public APIs</td></tr>
-        <tr><th>WheelClick</th><td>$4.99 one-time</td><td><svg class="ico" viewBox="0 0 24 24" fill="none" role="img" aria-label="no"><path d="M18 6L6.00081 17.9992M17.9992 18L6 6.00085" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></td><td><svg class="ico" viewBox="0 0 24 24" fill="none" role="img" aria-label="yes"><path d="M5 14L8.5 17.5L19 6.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg> paid tier</td><td>public Accessibility API</td></tr>
-        <tr><th>BetterTouchTool</th><td>$15 for 2 years, $25 lifetime</td><td><svg class="ico" viewBox="0 0 24 24" fill="none" role="img" aria-label="no"><path d="M18 6L6.00081 17.9992M17.9992 18L6 6.00085" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></td><td>basic auto-scroll action</td><td>private APIs</td></tr>
+        <tr><th>WheelClick</th><td>$4.99 one-time</td><td><svg class="ico" viewBox="0 0 24 24" fill="none" role="img" aria-label="no"><path d="M18 6L6.00081 17.9992M17.9992 18L6 6.00085" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></td><td><svg class="ico" viewBox="0 0 24 24" fill="none" role="img" aria-label="yes"><path d="M5 14L8.5 17.5L19 6.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg> paid plug-in</td><td>public APIs; separate Magic Mouse helper</td></tr>
+        <tr><th>BetterTouchTool</th><td>$15 with 2 years of updates; $25 lifetime updates</td><td>not published</td><td>configurable scrolling actions</td><td>not documented</td></tr>
       </tbody>
     </table>
     </div>
-    <p class="note">Prices and details from <a href="https://wheelclick.app/vs/everything">wheelclick.app</a>, September 2026.</p>
+    <p class="note">Prices and features checked against <a href="https://wheelclick.app/">WheelClick</a> and BetterTouchTool's <a href="https://folivora.ai/buy/">pricing</a> and <a href="https://docs.folivora.ai/docs/normal-mouse/assigning-actions/">mouse-action documentation</a>, 22 September 2026.</p>
   </div>
 </main>
 <footer>made by <a href="https://github.com/Sowyu">Sowyu</a></footer>

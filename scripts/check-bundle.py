@@ -12,16 +12,19 @@ assert info["LSMinimumSystemVersion"] == "14.0"
 assert (contents / "MacOS" / info["CFBundleExecutable"]).stat().st_size > 0
 # check-hold.py checks real menu items. Optimized Swift short strings need not
 # appear as contiguous text in the executable, so binary string scans are invalid.
-assert (contents / "Resources/VectorScroll.icns").stat().st_size > 0
-
-icons = list((root / "dist").glob("VectorScroll-icons.*/VectorScroll.iconset/*.png"))
-assert len(icons) == 10, f"Expected ten icons, got {len(icons)}"
-for icon in icons:
-    size = int(icon.stem.split("_")[1].split("x")[0])
-    expected = size * (2 if "@2x" in icon.stem else 1)
-    png = icon.read_bytes()
-    assert png[:8] == b"\x89PNG\r\n\x1a\n"
-    assert struct.unpack(">II", png[16:24]) == (expected, expected), icon.name
-print("PASS: version, executable, icon resource, and all ten PNG dimensions")
+icon_data = (contents / "Resources/VectorScroll.icns").read_bytes()
+assert icon_data[:4] == b"icns", "Packaged icon is not an ICNS file"
+assert struct.unpack(">I", icon_data[4:8])[0] == len(icon_data), "ICNS length header is invalid"
+icon_types = []
+offset = 8
+while offset < len(icon_data):
+    icon_type = icon_data[offset:offset + 4]
+    chunk_size = struct.unpack(">I", icon_data[offset + 4:offset + 8])[0]
+    assert chunk_size >= 8 and offset + chunk_size <= len(icon_data), "Invalid ICNS chunk"
+    icon_types.append(icon_type)
+    offset += chunk_size
+assert offset == len(icon_data), "ICNS chunks do not fill the container"
+assert b"ic10" in icon_types, "Packaged icon has no 1024 px representation"
+print("PASS: version, executable, and packaged ICNS resource")
 
 print(f"Universal executable: {(contents / 'MacOS' / info['CFBundleExecutable']).stat().st_size:,} bytes")

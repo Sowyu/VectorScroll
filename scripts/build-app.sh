@@ -58,8 +58,13 @@ cat > "$CONTENTS/Info.plist" <<'PLIST'
 PLIST
 
 # A stable identity keeps TCC grants across updates. Ad-hoc signatures change
-# every build, so macOS forgets Input Monitoring after each one.
-codesign --force --deep --sign "${CODESIGN_IDENTITY:--}" "$APP_DIR" >/dev/null
+# every build, so macOS forgets Input Monitoring after each one. Developer ID
+# releases also use the hardened runtime and a secure timestamp for notarization.
+if [ "${CODESIGN_DEVELOPER_ID:-false}" = "true" ]; then
+    codesign --force --deep --options runtime --timestamp --sign "${CODESIGN_IDENTITY:?Developer ID identity is required}" "$APP_DIR" >/dev/null
+else
+    codesign --force --deep --sign "${CODESIGN_IDENTITY:--}" "$APP_DIR" >/dev/null
+fi
 touch "$APP_DIR"
 
 echo "Built $APP_DIR"

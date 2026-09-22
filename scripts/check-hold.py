@@ -30,7 +30,6 @@ extension VectorScrollApp {
         assert(subject.holdScrollItem.action == #selector(selectHoldToScroll))
         assert(subject.holdToLockItem.action == #selector(selectHoldToLock))
         assert(subject.sizePicker.numberOfItems == 4)
-        assert(!subject.sizePicker.isBordered)
         print("PASS: minimal menu and native settings controls")
         assert(subject.updateItem.action == #selector(checkUpdatesFromMenu))
         assert(subject.downloadItem.isHidden)
@@ -74,10 +73,48 @@ extension VectorScrollApp {
         subject.applyPermissionStatus(canListen: true, canAccess: false)
         assert(guide.step == .accessibility, "Granting Input Monitoring must advance the guide")
         guide.secondary.performClick(nil)
-        assert(guide.step == .done, "Skip must reach the final step")
-        guide.primary.performClick(nil)
-        assert(!guide.window.isVisible && subject.onboarding == nil && subject.defaults.bool(forKey: "onboardingCompleted"))
-        print("PASS: setup guide advances on permission grant, skip, and finish")
+        assert(!guide.window.isVisible && subject.onboarding == nil)
+        assert(!subject.defaults.bool(forKey: "onboardingCompleted"), "Later must not claim that setup is complete")
+        subject.startPermissionStatusTimer()
+        RunLoop.main.run(until: Date(timeIntervalSinceNow: 1.5))
+        subject.permissionStatusTimer?.cancel()
+        subject.permissionStatusTimer = nil
+        assert(subject.onboarding == nil && !subject.defaults.bool(forKey: "onboardingCompleted"))
+        subject.showOnboarding()
+        let completedGuide = subject.onboarding!
+        completedGuide.refresh(canListen: false, canAccess: false)
+        completedGuide.primary.performClick(nil)
+        completedGuide.refresh(canListen: true, canAccess: false)
+        var permissionRequests = 0
+        completedGuide.promptAccessibility = { permissionRequests += 1 }
+        completedGuide.primary.performClick(nil)
+        assert(permissionRequests == 1, "The setup button must request permission explicitly")
+        completedGuide.refresh(canListen: true, canAccess: true)
+        assert(completedGuide.step == .done)
+        completedGuide.refresh(canListen: false, canAccess: true)
+        assert(completedGuide.step == .inputMonitoring, "Revoking a permission must leave the completed step")
+        completedGuide.refresh(canListen: true, canAccess: true)
+        completedGuide.refresh(canListen: true, canAccess: false)
+        assert(completedGuide.step == .accessibility)
+        completedGuide.refresh(canListen: true, canAccess: true)
+        completedGuide.primary.performClick(nil)
+        assert(subject.onboarding == nil && subject.defaults.bool(forKey: "onboardingCompleted"))
+        let closedGuide = Onboarding()
+        var finishes = 0
+        closedGuide.finish = { completed in assert(!completed); finishes += 1 }
+        closedGuide.show()
+        closedGuide.window.performClose(nil)
+        assert(finishes == 1, "The standard close button must defer setup exactly once")
+        subject.applyLaunchAtStartupStatus(.requiresApproval)
+        assert(subject.launchAtStartupItem.state == .mixed && subject.launchAtStartupItem.isEnabled)
+        assert(subject.launchAtStartupItem.title.contains("needs approval"))
+        subject.applyLaunchAtStartupStatus(.notFound)
+        assert(!subject.launchAtStartupItem.isEnabled)
+        subject.applyLaunchAtStartupStatus(.enabled)
+        assert(subject.launchAtStartupItem.state == .on && subject.launchAtStartupItem.isEnabled)
+        subject.applyLaunchAtStartupStatus(.notRegistered)
+        assert(subject.launchAtStartupItem.state == .off)
+        print("PASS: setup deferral, explicit permission action, completion, window close, and login approval states")
         assert(subject.delayItem.isHidden)
         subject.selectHoldToLock()
         assert(!subject.delayItem.isHidden)
@@ -140,9 +177,10 @@ extension VectorScrollApp {
         let stack = scroll.documentView!.subviews.first as! NSStackView
         assert(stack.bounds.width <= scroll.contentView.bounds.width, "Settings must fit horizontally")
         assert(scroll.hasVerticalScroller, "All settings must remain reachable on smaller screens")
-        for control in [NSWindow.ButtonType.closeButton, .miniaturizeButton, .zoomButton] {
-            assert(subject.settingsWindow.standardWindowButton(control)?.isHidden == true)
-        }
+        assert(subject.settingsWindow.standardWindowButton(.closeButton)?.isHidden == false)
+        assert(subject.settingsWindow.standardWindowButton(.closeButton)?.isEnabled == true)
+        assert(subject.settingsWindow.standardWindowButton(.miniaturizeButton)?.isEnabled != true)
+        assert(subject.settingsWindow.standardWindowButton(.zoomButton)?.isEnabled != true)
         let closeEvent = NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: .command,
                                          timestamp: ProcessInfo.processInfo.systemUptime, windowNumber: subject.settingsWindow.windowNumber,
                                          context: nil, characters: "w", charactersIgnoringModifiers: "w", isARepeat: false, keyCode: 13)!
@@ -160,7 +198,7 @@ extension VectorScrollApp {
             }
         }
         subject.updatePermissionMenuItem()
-        print("PASS: hidden traffic lights, Command-W close/reopen, and permission status transitions")
+        print("PASS: native close control, Command-W close/reopen, and permission status transitions")
         assert(subject.holdScrollItem is SettingsButton)
         assert(subject.openSettingsButton is SettingsButton)
         func mouseClick(_ button: NSButton, at point: NSPoint) {
@@ -179,8 +217,9 @@ extension VectorScrollApp {
             // A disabled control does not enter tracking and leaves mouse-up queued.
             _ = NSApp.nextEvent(matching: .leftMouseUp, until: .distantPast, inMode: .default, dequeue: true)
         }
-        // Exercise actual hit regions. performClick bypasses mouse hit testing.
-        for button in [subject.hideIconItem!, subject.holdScrollItem!, subject.holdToLockItem!, subject.updateItem!] {
+        // The custom cards promise a full-surface target. Standard controls use
+        // their native glyph/title or bezel, tested through real mouse tracking.
+        for button in [subject.holdScrollItem!, subject.holdToLockItem!] {
             content.layoutSubtreeIfNeeded()
             button.scrollToVisible(button.bounds)
             content.layoutSubtreeIfNeeded()
@@ -193,26 +232,26 @@ extension VectorScrollApp {
                 assert(hit.contains(.trackableArea), "Entire drawn button must be clickable")
             }
         }
-        mouseClick(subject.hideIconItem, at: NSPoint(x: subject.hideIconItem.bounds.maxX - 25, y: 17))
-        assert(subject.hideIconItem.state == .on && subject.statusItem != nil, "Styled toggle must use native click tracking")
+        mouseClick(subject.hideIconItem, at: NSPoint(x: 8, y: subject.hideIconItem.bounds.midY))
+        assert(subject.hideIconItem.state == .on && subject.statusItem != nil, "Checkbox must use native click tracking")
         mouseClick(subject.holdScrollItem, at: NSPoint(x: 8, y: 8))
         assert(!subject.holdToLockMode && subject.holdScrollItem.state == .on)
         mouseClick(subject.holdToLockItem, at: NSPoint(x: 80, y: 48))
         assert(subject.holdToLockMode && subject.holdToLockItem.state == .on)
         let probe = PointerActionProbe()
-        let quit = content.subviews.last as! SettingsButton
         // Synthetic drag-out events hang even an unmodified NSButton in this
         // runner. Clicks use the real window routing; native drag tracking is unchanged.
-        for button in [subject.updateItem!, quit] {
+        for button in [subject.updateItem!] {
             let originalTarget = button.target
             let originalAction = button.action
             button.target = probe
             button.action = #selector(PointerActionProbe.clicked(_:))
             let before = probe.calls
-            mouseClick(button, at: NSPoint(x: 8, y: 8))
+            let center = NSPoint(x: button.bounds.midX, y: button.bounds.midY)
+            mouseClick(button, at: center)
             assert(probe.calls == before + 1, "Mouse click must fire action exactly once")
             button.isEnabled = false
-            mouseClick(button, at: NSPoint(x: 8, y: 8))
+            mouseClick(button, at: center)
             assert(probe.calls == before + 1, "Disabled buttons must ignore clicks")
             button.isEnabled = true
             button.target = originalTarget
@@ -222,39 +261,34 @@ extension VectorScrollApp {
         content.layoutSubtreeIfNeeded()
         scroll.contentView.scroll(to: NSPoint(x: 0, y: 0))
         scroll.reflectScrolledClipView(scroll.contentView)
-        func savePreview(_ content: NSView, _ name: String) {
+        func savePreview(_ window: NSWindow, _ name: String, appearance: NSAppearance.Name = .darkAqua) {
             // Scrolling to the top flashes the overlay scroller, so hide it for the capture.
             scroll.hasVerticalScroller = false
-            content.layoutSubtreeIfNeeded()
-            let bitmap = content.bitmapImageRepForCachingDisplay(in: content.bounds)!
-            content.cacheDisplay(in: content.bounds, to: bitmap)
+            window.appearance = NSAppearance(named: appearance)
+            let frame = window.contentView!.superview!
+            frame.layoutSubtreeIfNeeded()
+            frame.needsDisplay = true
+            window.displayIfNeeded()
+            let bitmap = frame.bitmapImageRepForCachingDisplay(in: frame.bounds)!
+            frame.cacheDisplay(in: frame.bounds, to: bitmap)
             scroll.hasVerticalScroller = true
-            // The window supplies its background and rounded corners outside the
-            // content view. Reproduce both so the export matches the real window.
-            let preview = NSImage(size: content.bounds.size)
-            preview.lockFocus()
-            NSBezierPath(roundedRect: content.bounds, xRadius: 12, yRadius: 12).addClip()
-            SettingsStyle.background.setFill()
-            NSBezierPath(rect: content.bounds).fill()
-            bitmap.draw(in: content.bounds, from: .zero, operation: .sourceOver, fraction: 1,
-                        respectFlipped: true, hints: nil)
-            preview.unlockFocus()
-            let png = NSBitmapImageRep(data: preview.tiffRepresentation!)!
-            try! png.representation(using: .png, properties: [:])!.write(to: URL(fileURLWithPath: ".build/\(name).png"))
+            try! bitmap.representation(using: .png, properties: [:])!.write(to: URL(fileURLWithPath: ".build/\(name).png"))
+            window.appearance = nil
         }
-        savePreview(content, "settings-delay-preview")
+        savePreview(subject.settingsWindow, "settings-delay-preview")
         subject.selectHoldToScroll()
         content.layoutSubtreeIfNeeded()
-        savePreview(content, "settings-preview")
+        savePreview(subject.settingsWindow, "settings-preview")
+        savePreview(subject.settingsWindow, "settings-light-preview", appearance: .aqua)
         subject.defaults.removeObject(forKey: "onboardingCompleted")
         subject.showOnboarding()
         subject.onboarding!.refresh(canListen: false, canAccess: false)
         subject.onboarding!.primary.performClick(nil)
-        savePreview(subject.onboarding!.window.contentView!, "onboarding-preview")
+        savePreview(subject.onboarding!.window, "onboarding-preview")
+        savePreview(subject.onboarding!.window, "onboarding-light-preview", appearance: .aqua)
         subject.onboarding!.secondary.performClick(nil)
-        let closeButton = content.subviews.compactMap { $0 as? SettingsButton }.first { $0.title == "Close settings" }!
-        mouseClick(closeButton, at: NSPoint(x: 12, y: 17))
-        assert(!subject.settingsWindow.isVisible, "Close settings button must close only the window")
+        subject.settingsWindow.standardWindowButton(.closeButton)!.performClick(nil)
+        assert(!subject.settingsWindow.isVisible, "The standard close button must close only the window")
         print("PASS: both access-toggle directions, persistence, invalid settings repair, window reopen, and layout fit")
         print("PASS: delay toggle, slider rounding, immediate start, persistence, and mode cancellation")
         return true
@@ -268,9 +302,9 @@ extension VectorScrollApp {
                          mouseCursorPosition: .zero, mouseButton: .center)!
         down.timestamp = 1_000_000_000
         up.timestamp = down.timestamp + 100_000_000 // Physical press lasts 100 ms.
-        // armHoldToLock is the exact path used by the middle-down handler.
-        // Calling it directly avoids needing a live CGEventTapProxy or TCC access.
-        subject.armHoldToLock(at: .zero, target: .zero)
+        // Drive the real handler with event coordinates; no live tap is needed.
+        _ = subject.handleEvent(type: .otherMouseDown, event: down)
+        assert(subject.engageWorkItem != nil)
         Thread.sleep(forTimeInterval: delay)
         _ = subject.handleEvent(type: .otherMouseUp, event: up)
         let canceled = subject.engageWorkItem == nil && !subject.isActive
@@ -278,17 +312,39 @@ extension VectorScrollApp {
         print("\(canceled ? "PASS" : "FAIL"): 100 ms click, release handled after \(Int(delay * 1000)) ms")
         return canceled
     }
+
+    static func checkEventRecovery() -> Bool {
+        let subject = VectorScrollApp()
+        subject.eventTapInstalled = true
+        let down = CGEvent(mouseEventSource: nil, mouseType: .otherMouseDown,
+                           mouseCursorPosition: CGPoint(x: 123, y: 234), mouseButton: .center)!
+        _ = subject.handleEvent(type: .otherMouseDown, event: down)
+        assert(subject.isActive && subject.timer != nil)
+        assert(subject.anchor == down.unflippedLocation, "Anchor must come from the press event")
+        assert(subject.pendingTarget == down.location, "AX targeting must retain CoreGraphics coordinates")
+        _ = subject.handleEvent(type: .tapDisabledByTimeout, event: down)
+        assert(!subject.isActive && subject.timer == nil && subject.anchor == nil && subject.pendingTarget == nil)
+        subject.holdToLockMode = true
+        _ = subject.handleEvent(type: .otherMouseDown, event: down)
+        assert(subject.engageWorkItem != nil)
+        _ = subject.handleEvent(type: .tapDisabledByUserInput, event: down)
+        assert(subject.engageWorkItem == nil && !subject.isActive)
+        print("PASS: press-event anchoring and disabled-tap cancellation of scrolling and delayed holds")
+        return true
+    }
 }
 
 setvbuf(stdout, nil, _IONBF, 0)
 let app = NSApplication.shared
 app.setActivationPolicy(.accessory)
 app.appearance = NSAppearance(named: .aqua)
+app.applicationIconImage = NSImage(contentsOfFile: "docs/icon.png")
 app.finishLaunching()
 let promptRelease = VectorScrollApp.checkRelease(delay: 0.1)
 let delayedRelease = VectorScrollApp.checkRelease(delay: 0.3)
+let recovery = VectorScrollApp.checkEventRecovery()
 let settings = VectorScrollApp.checkDelaySettings()
-exit(promptRelease && delayedRelease && settings ? 0 : 1)
+exit(promptRelease && delayedRelease && recovery && settings ? 0 : 1)
 '''
 
 output = root / ".build/audit-hold"

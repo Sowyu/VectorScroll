@@ -34,20 +34,21 @@
     <p>A circle with four arrows marks the point where you pressed. Choose light or dark, and 28, 32, 40, or 48 pt.</p>
     <h2 id="settings">Settings</h2>
     <img src="settings-hold.png" alt="Settings window in hold-to-scroll mode" width="400" height="529">
-    <p>The window opens on launch by default and from the menu bar icon. Command-W hides it and scrolling keeps working. Every change saves immediately.</p>
+    <p>The window opens on launch by default and from the menu bar icon. Command-W or the window close button hides it, and scrolling keeps working. Every change saves immediately.</p>
     <p><b>Open settings on launch</b> and <b>Show menu bar icon</b> control how you reach the app. One of them always stays on. <b>Launch at login</b> registers with the system login items. <b>Setup guide</b> at the top of the window reopens the permission walkthrough.</p>
     <p>If the menu bar icon is hidden, reopen the window from Applications or run:</p>
     <pre>open -a VectorScroll</pre>
     <h2 id="updates">Updates</h2>
     <p>The app checks GitHub on launch and every 24 hours. Background checks never show dialogs and need no account.</p>
-    <p><b>Check for Updates</b> then <b>Install Update</b> downloads the DMG, verifies its SHA-256 against the release digest, checks the bundle identifier, version, code signature, and processor support, swaps the app in place, and relaunches. Settings are kept. The previous version stays next to the app as <code>Previous.app</code> inside a hidden folder, and a failed swap restores it.</p>
+    <p><b>Check for Updates</b> then <b>Install Update</b> downloads the DMG, verifies its SHA-256 against the release digest, checks the bundle identifier, version, processor support, and exact signing identity against the installed app, then swaps the app in place. It keeps the update only if the relaunched app returns a one-time health token. Settings are kept. The previous version stays next to the app as <code>Previous.app</code> inside a hidden folder, and a failed swap restores it.</p>
     <p>The app has to live in a writable folder, normally Applications. Running from the mounted DMG is refused with an explanation.</p>
     <h2 id="permissions">Permissions</h2>
-    <p><b>Input Monitoring</b> lets the app see the middle button. Nothing you type is read. <b>Accessibility</b> lets it raise the window under the pointer.</p>
-    <p>Releases are signed with a stable certificate, so macOS keeps both grants across automatic updates. Builds you compile yourself are signed ad hoc and need re-granting after each build.</p>
+    <p><b>Input Monitoring</b> lets the app see the middle button. Nothing you type is read. <b>Accessibility</b> lets it post generated scroll events and raise the window under the pointer. Both permissions are required.</p>
+    <p>Automatic updates require the exact signing identity of the installed app. A stable release certificate lets macOS keep both grants across those updates. Builds you compile yourself are signed ad hoc and need re-granting after each build.</p>
+    <p>When releases move from the current self-signed certificate to Developer ID, install that first Developer ID release manually once. Automatic updates then resume under the new identity.</p>
     <p>Status for both refreshes every second in Settings. A missing permission shows a button that opens the right System Settings pane.</p>
     <h2 id="trouble">Troubleshooting</h2>
-    <p><b>Nothing happens on middle click.</b> Check Input Monitoring in Settings. If it says Allowed and still nothing, quit and reopen the app. macOS sometimes needs a relaunch after a grant.</p>
+    <p><b>Nothing happens on middle click.</b> Check Input Monitoring and Accessibility in Settings. Both must say Allowed. If they do and scrolling still does not start, quit and reopen the app. macOS sometimes needs a relaunch after a grant.</p>
     <p><b>The wrong window scrolls.</b> Accessibility is missing, so the app cannot raise the window under the pointer. Grant it in System Settings.</p>
     <p><b>Middle click stopped opening links in new tabs.</b> You are in toggle mode with the start delay off. Turn the delay on, or switch to hold mode.</p>
     <p><b>Install Update is refused.</b> The app is running from the DMG or from a read-only folder. Move it to Applications.</p>
