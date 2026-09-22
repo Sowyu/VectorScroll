@@ -3,18 +3,20 @@ import AppKit
 // First-launch setup. One permission per step, live status, and no system
 // prompt fires until the person presses the button for it.
 @MainActor
-final class Onboarding {
+final class Onboarding: NSObject, NSWindowDelegate {
     enum Step: Int { case welcome, inputMonitoring, accessibility, done }
 
     private(set) var step = Step.welcome
     let window: NSWindow
     var promptAccessibility: () -> Void = {}
     var openSettings: () -> Void = {}
-    var finish: () -> Void = {}
+    var finish: (Bool) -> Void = { _ in }
     private var askedInputMonitoring = false
     private var askedAccessibility = false
     private var canListen = false
     private var canAccess = false
+    private var didFinish = false
+    private var openSettingsAfterFinish = false
     private let stepLabel: NSTextField
     private let title: NSTextField
     private let body: NSTextField
@@ -22,20 +24,14 @@ final class Onboarding {
     let primary: SettingsButton
     let secondary: SettingsButton
 
-    init() {
-        window = SettingsWindow(contentRect: NSRect(x: 0, y: 0, width: 480, height: 292),
-                                styleMask: [.titled, .closable, .fullSizeContentView], backing: .buffered, defer: false)
-        window.title = "VectorScroll Setup"
-        window.titleVisibility = .hidden
-        window.titlebarAppearsTransparent = true
-        for control in [NSWindow.ButtonType.closeButton, .miniaturizeButton, .zoomButton] {
-            window.standardWindowButton(control)?.isHidden = true
-        }
-        window.isMovableByWindowBackground = true
-        window.backgroundColor = SettingsStyle.background
-        window.appearance = NSAppearance(named: .darkAqua)
-        window.isReleasedWhenClosed = false
-        window.center()
+    override init() {
+        let setupWindow = SettingsWindow(contentRect: NSRect(x: 0, y: 0, width: 480, height: 292),
+                                         styleMask: [.titled, .closable], backing: .buffered, defer: false)
+        setupWindow.title = "VectorScroll Setup"
+        setupWindow.backgroundColor = SettingsStyle.background
+        setupWindow.isReleasedWhenClosed = false
+        setupWindow.center()
+        window = setupWindow
 
         func label(_ size: CGFloat, weight: NSFont.Weight = .regular, color: NSColor = SettingsStyle.text) -> NSTextField {
             let field = NSTextField(wrappingLabelWithString: "")
@@ -50,6 +46,11 @@ final class Onboarding {
         status = label(12, weight: .medium, color: SettingsStyle.secondary)
         primary = SettingsButton("", symbol: "arrow.right", target: nil, action: nil)
         secondary = SettingsButton("", symbol: "xmark", target: nil, action: nil)
+        super.init()
+
+        window.delegate = self
+        window.standardWindowButton(.miniaturizeButton)?.isEnabled = false
+        window.standardWindowButton(.zoomButton)?.isEnabled = false
 
         let stack = NSStackView(views: [stepLabel, title, body, status])
         stack.orientation = .vertical
@@ -62,8 +63,6 @@ final class Onboarding {
         buttons.spacing = 12
         buttons.translatesAutoresizingMaskIntoConstraints = false
         let content = window.contentView!
-        content.wantsLayer = true
-        content.layer?.backgroundColor = SettingsStyle.background.cgColor
         content.addSubview(stack)
         content.addSubview(buttons)
         NSLayoutConstraint.activate([
@@ -75,8 +74,12 @@ final class Onboarding {
         ])
         primary.target = self
         primary.action = #selector(primaryPressed)
+        primary.keyEquivalent = "\r"
+        primary.keyEquivalentModifierMask = []
         secondary.target = self
         secondary.action = #selector(secondaryPressed)
+        secondary.keyEquivalent = "\u{1b}"
+        secondary.keyEquivalentModifierMask = []
         render()
     }
 
@@ -86,19 +89,26 @@ final class Onboarding {
         NSApp.activate()
     }
 
-    // Called every second by the app. Advances as soon as a permission lands.
+    // Called by the app's status timer. No permission prompt starts here.
     func refresh(canListen: Bool, canAccess: Bool) {
         self.canListen = canListen
         self.canAccess = canAccess
-        if step == .inputMonitoring, canListen { step = canAccess ? .done : .accessibility }
-        if step == .accessibility, canAccess { step = .done }
-        render()
+        if step == .inputMonitoring, canListen {
+            transition(to: canAccess ? .done : .accessibility)
+        } else if step == .accessibility, canAccess {
+            transition(to: canListen ? .done : .inputMonitoring)
+        } else if step == .done, !canListen || !canAccess {
+            transition(to: canListen ? .accessibility : .inputMonitoring)
+        } else {
+            render()
+        }
     }
 
     @objc private func primaryPressed() {
         switch step {
         case .welcome:
-            step = canListen ? (canAccess ? .done : .accessibility) : .inputMonitoring
+            transition(to: canListen ? (canAccess ? .done : .accessibility) : .inputMonitoring)
+            return
         case .inputMonitoring:
             if askedInputMonitoring {
                 NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent")!)
@@ -114,25 +124,18 @@ final class Onboarding {
                 promptAccessibility()
             }
         case .done:
-            window.close()
-            finish()
+            window.performClose(nil)
         }
         render()
     }
 
     @objc private func secondaryPressed() {
-        switch step {
-        case .welcome, .inputMonitoring:
-            window.close()
-            finish()
-        case .accessibility:
-            step = .done
-        case .done:
-            window.close()
-            finish()
-            openSettings()
-        }
-        render()
+        openSettingsAfterFinish = step == .done
+        window.performClose(nil)
+    }
+
+    func windowWillClose(_ notification: Notification) {
+        completeOnce()
     }
 
     private func render() {
@@ -153,18 +156,41 @@ final class Onboarding {
             status.stringValue = askedInputMonitoring ? "Waiting for Input Monitoring. This page moves on by itself once it is allowed." : "Required"
         case .accessibility:
             title.stringValue = "Allow Accessibility"
-            body.stringValue = "With Accessibility, VectorScroll brings the window under your pointer to the front before scrolling, so background windows scroll too. Without it, only the active window scrolls."
+            body.stringValue = "Accessibility lets VectorScroll bring the window under your pointer forward and send scroll events to it. Vector scrolling stays off until this permission is allowed."
             primary.title = askedAccessibility ? "Open System Settings" : "Allow Accessibility"
-            secondary.title = "Skip"
-            status.stringValue = askedAccessibility ? "Waiting for Accessibility. This page moves on by itself once it is allowed." : "Recommended, not required"
+            secondary.title = "Later"
+            status.stringValue = askedAccessibility ? "Waiting for Accessibility. This page moves on by itself once it is allowed." : "Required"
         case .done:
             title.stringValue = "You're set"
-            body.stringValue = canAccess ? "Hold the middle button over any window and move the pointer. Change the mode, speed, direction, and indicator in Settings."
-                : "Hold the middle button over the active window and move the pointer. Accessibility can be allowed later from Settings."
+            body.stringValue = "Hold the middle button over any window and move the pointer. Change the mode, speed, direction, and indicator in Settings."
             primary.title = "Finish"
             secondary.title = "Open Settings"
         }
         primary.symbolName = step == .done ? "checkmark" : (askedInputMonitoring && step == .inputMonitoring) || (askedAccessibility && step == .accessibility) ? "gearshape" : "arrow.right"
+        secondary.symbolName = step == .done ? "gearshape" : "xmark"
+        secondary.keyEquivalent = step == .done ? "" : "\u{1b}"
         primary.needsDisplay = true
+    }
+
+    private func transition(to newStep: Step) {
+        guard newStep != step else { render(); return }
+        step = newStep
+        render()
+        window.makeFirstResponder(primary)
+        NSAccessibility.post(element: window, notification: .announcementRequested, userInfo: [
+            .announcement: "\(stepLabel.stringValue). \(title.stringValue)",
+            .priority: NSAccessibilityPriorityLevel.high.rawValue
+        ])
+    }
+
+    private func completeOnce() {
+        guard !didFinish else { return }
+        didFinish = true
+        let completed = canListen && canAccess
+        let shouldOpenSettings = openSettingsAfterFinish
+        let finishHandler = finish
+        let settingsHandler = openSettings
+        finishHandler(completed)
+        if shouldOpenSettings { settingsHandler() }
     }
 }

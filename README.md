@@ -38,20 +38,20 @@ That is the only manual install. Every later version installs itself from inside
 - **A plain middle-click stays a middle-click.** In hold mode nothing happens until the pointer leaves the 10 pt dead zone. No indicator flash, no window raise, so opening a link in a new tab works as before.
 - **Start delay for toggle mode.** Require a hold of 50 to 1,000 ms before scrolling engages, so an ordinary middle-click still opens links in a new tab. Default 200 ms. Turn it off to start on a plain click.
 - **Direction and speed from pointer distance.** A 10 pt dead zone around the start point, then speed scales with distance up to 120 px per tick, both axes at once.
-- **Scrolls the window under the pointer.** VectorScroll raises that window first, so the scroll goes where you are looking, not to the frontmost app.
+- **Scrolls the window under the pointer.** Accessibility lets VectorScroll post generated scroll events and raise that window first, so the scroll goes where you are looking.
 - **On-screen indicator.** A circle with four arrows marks the start point. Choose light or dark, and 28, 32, 40, or 48 pt.
 
 The click that stops toggle mode also reaches the app under the pointer. Stop over empty space if you do not want to activate a link or button.
 
 ### Settings window
 
-- Opens on launch by default and from the menu bar icon. Command-W or Close settings hides it. Scrolling keeps working.
+- Opens on launch by default and from the menu bar icon. Command-W or the window close button hides it. Scrolling keeps working.
 - Every change saves immediately. No Apply button.
 - **Open settings on launch** and **Show menu bar icon** control how you reach the app. One of them always stays on, so the window is never unreachable.
 - **Launch at login** registers with the system login items.
 - **Setup guide** on first launch. One permission per page, plain-language reasons, live status, and no system prompt until you press the button for it. Reopen it from Settings.
-- Permission status for Input Monitoring and Accessibility refreshes every second. A missing permission shows a button that opens the right System Settings pane. Launch only shows the standard macOS prompts and never opens System Settings on its own.
-- Keyboard focus shows as an underline. Every control is a real AppKit button with native tracking and accessibility.
+- Permission status for Input Monitoring and Accessibility refreshes every second. A missing permission shows a button that opens the right System Settings pane. Permission prompts appear only after you press the matching button in the setup guide.
+- Settings use native AppKit controls with standard keyboard focus and accessibility labels.
 
 If the menu bar icon is hidden, reopen the window from Applications or run:
 
@@ -62,13 +62,15 @@ open -a VectorScroll
 ### Updates
 
 - Checks GitHub on launch and every 24 hours. Background checks never show dialogs and need no GitHub account.
-- **Check for Updates…** then **Install Update** downloads the DMG, verifies its SHA-256 against the GitHub release digest, checks the bundle identifier, version, code signature, and processor support, swaps the app in place, and relaunches. Settings are kept.
+- **Check for Updates…** then **Install Update** downloads the DMG, verifies its SHA-256 against the GitHub release digest, checks the bundle identifier, version, processor support, and exact signing identity against the installed app, then swaps the app in place. It keeps the update only if the relaunched app returns a one-time health token. Settings are kept.
 - The previous version stays in a hidden `.VectorScroll-update-…` folder next to the app as `Previous.app`. A failed swap or relaunch restores it. The updater never deletes anything.
 - Requires the app to live in a writable folder, normally Applications. Running from the mounted DMG is refused with an explanation.
 
 ### Permissions survive updates
 
-Releases are signed with a stable certificate, so the app's designated requirement is its bundle identifier plus that certificate and does not change between builds. macOS keeps the Input Monitoring and Accessibility grants across automatic updates. Ad-hoc builds you compile yourself get a new identity every time and need re-granting after each build.
+Automatic updates require the exact designated requirement and leaf certificate of the installed app. A stable release certificate lets macOS keep the Input Monitoring and Accessibility grants across those updates. Ad-hoc builds you compile yourself get a new identity every time and need re-granting after each build.
+
+The updater rejects a different signing identity. When releases move from the current self-signed certificate to Developer ID, install that first Developer ID release manually once. Automatic updates then resume under the new identity.
 
 ## Requirements
 
@@ -76,7 +78,7 @@ Releases are signed with a stable certificate, so the app's designated requireme
 |---|---|
 | macOS | 14.0 or later |
 | Architecture | arm64 and x86_64 in one binary |
-| Permissions | Input Monitoring for the middle button, Accessibility for raising the target window |
+| Permissions | Input Monitoring for the middle button, Accessibility for posting scroll events and raising the target window |
 | Network | GitHub only, for update checks and downloads |
 
 ## Build and check
@@ -88,7 +90,7 @@ swift build -c release
 ./scripts/build-app.sh
 ```
 
-The bundle script builds both architectures, renders the icon set, and writes `dist/VectorScroll.app`. It signs ad-hoc unless `CODESIGN_IDENTITY` names a certificate in your keychain. It refuses to replace an existing build. Move the previous one to Trash first.
+The bundle script builds both architectures, renders the icon set, and writes `dist/VectorScroll.app`. It signs ad hoc unless `CODESIGN_IDENTITY` names a certificate in your keychain. Set `CODESIGN_DEVELOPER_ID=true` with a Developer ID Application identity to enable the hardened runtime and a secure timestamp. The script refuses to replace an existing build. Move the previous one to Trash first.
 
 Run the native settings, click, scrolling, and update checks:
 
@@ -98,13 +100,15 @@ swiftc -swift-version 6 -warnings-as-errors -parse-as-library Sources/VectorScro
 .build/check-updates
 ```
 
-`check-hold.py` drives the real settings window with synthetic mouse events, checks every button's hit region, and writes `.build/settings-preview.png` and `.build/settings-delay-preview.png`. The screenshots above come from that run.
+`check-hold.py` drives the real settings window with synthetic mouse events, checks every control's hit region, and writes dark and light settings and onboarding previews under `.build/`. The screenshots above come from that run.
 
-GitHub Actions runs the same checks on macOS, then builds and signs the universal app, verifies the signature with the certificate removed from the keychain so the result matches a user's Mac, packages the DMG, and tests automatic installation, relaunch, and rollback against a signed fixture app plus a live GitHub download.
+GitHub Actions runs the same checks on macOS, builds the universal app, locks the signing keychain before independent signature verification, packages the DMG, and tests automatic installation, relaunch, and rollback. The current `CODESIGN_P12` and `CODESIGN_P12_PASSWORD` secrets provide a self-signed CI certificate, so those artifacts are not notarized distribution builds.
+
+For a distribution build, store a Developer ID Application certificate in those two signing secrets. Notarization runs only when all three App Store Connect API key secrets are also present: `APPLE_NOTARY_KEY_ID`, `APPLE_NOTARY_ISSUER_ID`, and base64-encoded `APPLE_NOTARY_KEY_P8`. CI submits the DMG, staples the ticket, and runs Gatekeeper assessments. The workflow reports when credentials are missing and never labels a self-signed artifact as notarized.
 
 ## Website
 
-`site/` is a static site: home, download, about and docs pages, one stylesheet, and the demo video. Serve the folder as is, for example with GitHub Pages pointed at `site/`.
+`site/` is a static site: home, download, about and docs pages, one stylesheet, and the demo video. Preview it locally with `python3 -m http.server 8000 --directory site`, then open `http://localhost:8000`.
 
 The demo video comes from the real app. `scripts/record-demo.py` builds the app with a driver appended, opens Settings, switches modes, drags the speed slider, then scrolls Safari through the production scroll path, taking one still per frame with the cursor drawn in. The `demo` job in the macOS workflow runs it on `workflow_dispatch` and uploads `demo-video`. Copy `demo.mp4`, `demo.webm` and `poster.jpg` into `site/`.
 

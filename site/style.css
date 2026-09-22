@@ -30,7 +30,7 @@ h3 { font-size: 1.375rem; font-weight: 500; }
 p { margin: 0 0 1rem; }
 a { color: inherit; text-decoration: underline; text-underline-offset: 3px; text-decoration-color: color-mix(in oklab, var(--text) 40%, transparent); }
 a:hover { text-decoration-color: var(--accent); }
-:focus-visible { outline: 2px solid var(--accent-dark); outline-offset: 3px; border-radius: 4px; }
+:focus-visible { outline: 2px solid var(--text); outline-offset: 3px; border-radius: 4px; }
 hr { width: 100%; height: 1px; border: 0; margin: 0; background: color-mix(in oklab, var(--text) 20%, transparent); }
 img { max-width: 100%; height: auto; }
 video { height: auto; }
