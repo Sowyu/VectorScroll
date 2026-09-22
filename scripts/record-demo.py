@@ -199,7 +199,7 @@ let app = NSApplication.shared
 app.setActivationPolicy(.accessory)
 app.appearance = NSAppearance(named: .aqua)
 app.finishLaunching()
-let driver = Driver(frames: CommandLine.arguments[1])
+private let driver = Driver(frames: CommandLine.arguments[1])
 driver.run()
 app.run()
 '''
