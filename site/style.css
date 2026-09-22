@@ -40,15 +40,14 @@ code { background: color-mix(in oklab, var(--text) 8%, transparent); border-radi
 .skip { position: absolute; left: -999px; top: 1rem; background: var(--accent); color: var(--accent-dark); padding: .5rem 1rem; border-radius: .5rem; }
 .skip:focus { left: 1rem; z-index: 10; }
 
-header { width: 100%; display: flex; justify-content: space-between; align-items: center; padding-top: 2rem; }
+header { width: 100%; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: .75rem 1.5rem; padding-top: 2rem; }
 .home { display: flex; align-items: center; gap: .6rem; text-decoration: none; font-weight: 600; font-size: 1.1rem; }
 .mark { width: 2.5rem; height: 2.5rem; }
-nav { display: flex; gap: 1rem; align-items: center; }
+nav { display: flex; gap: 1.5rem; align-items: center; }
 nav a { text-decoration: none; }
 nav a:hover, nav a[aria-current] { text-decoration: underline; text-decoration-color: var(--accent); }
-.pill, .button { background: var(--accent); color: var(--accent-dark); border-radius: .5rem; text-decoration: none; }
-.pill { padding: 6px 1.25rem; }
-.pill:hover, .button:hover { background: var(--accent-light); text-decoration: none; }
+.button { background: var(--accent); color: var(--accent-dark); border-radius: .5rem; text-decoration: none; }
+.button:hover { background: var(--accent-light); text-decoration: none; }
 .button { display: inline-block; padding: 1rem 1.5rem; font-size: 1.25rem; }
 
 .hero { display: flex; gap: 2rem; align-items: center; }
@@ -74,17 +73,6 @@ video { width: 100%; border-radius: .5rem; background: #000; box-shadow: 0 0 0 1
 
 .docs { display: block; }
 .doc h2 { scroll-margin-top: 1.5rem; }
-.rail { position: fixed; left: max(16px, calc(50% - 340px - 96px)); top: 50%; translate: 0 -50%; display: flex; flex-direction: column; align-items: flex-start; gap: 22px; }
-.rail a { display: block; height: 5px; width: 24px; border-radius: 1px; background: color-mix(in oklab, var(--text) 30%, transparent); transition: background-color .25s; }
-.rail a:nth-child(2) { width: 34px; } .rail a:nth-child(3) { width: 48px; } .rail a:nth-child(4) { width: 60px; }
-.rail a:nth-child(5) { width: 46px; } .rail a:nth-child(6) { width: 38px; } .rail a:nth-child(7) { width: 54px; } .rail a:nth-child(8) { width: 30px; }
-.rail a.on { background: var(--text); }
-.rail a:hover { background: var(--accent); }
-@media (max-width: 900px) {
-  .rail { left: auto; right: 6px; align-items: flex-end; gap: 14px; scale: .6; transform-origin: right center; pointer-events: none; }
-  .rail a { pointer-events: auto; }
-}
-@media (prefers-reduced-motion: reduce) { .rail a { transition: none; } }
 
 footer { padding: 2rem 0; font-size: .9rem; }
 
@@ -93,7 +81,7 @@ footer { padding: 2rem 0; font-size: .9rem; }
   body { gap: 2rem; }
   header { padding-top: 1rem; }
   .mark { width: 2rem; height: 2rem; }
-  .home span { display: none; }
+  nav { gap: 1.25rem; }
   .hero { gap: 1.25rem; }
   .hero-mark { width: 5rem; height: 5rem; }
   .hero h1 { font-size: 1.5rem; }
