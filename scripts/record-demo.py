@@ -34,6 +34,24 @@ entry = "let app = NSApplication.shared\n"
 assert source.count(entry) == 1, "Application entry point changed; update the driver"
 
 driver = r'''
+// Private members are only reachable from an extension in the same file, so this shim
+// hands the driver what it needs.
+extension VectorScrollApp {
+    func demoPrepare() { eventTapInstalled = true; configureMenu(); overlay.setSize(40) }
+    var demoStatusButton: NSStatusBarButton { statusItem.button! }
+    @objc func demoOpenMenu() { statusItem.button!.performClick(nil) }
+    func demoCloseMenu() { menu.cancelTracking() }
+    func demoShowSettings() { showSettings() }
+    var demoToggleButton: NSView { holdToLockItem }
+    func demoSelectToggle() { holdToLockItem.performClick(nil) }
+    var demoSlider: NSSlider { speedSlider }
+    func demoSetSpeed(_ value: Double) { speedSlider.doubleValue = value; changeScrollSpeed(speedSlider) }
+    var demoCloseButton: NSView? { settingsWindow.contentView!.subviews.compactMap { $0 as? SettingsButton }.first { $0.title == "Close settings" } }
+    func demoCloseSettings() { settingsWindow.performClose(nil) }
+    func demoPress(at point: CGPoint, target: CGPoint) { startScrolling(at: point, target: target); timer?.cancel(); timer = nil }
+    func demoRelease() { stopScrolling() }
+    func demoTick() { if isActive { emitScrollTick() } }
+}
 @MainActor
 final class Driver: NSObject {
     struct Phase {
@@ -66,20 +84,18 @@ final class Driver: NSObject {
         return cg(NSPoint(x: r.midX, y: r.midY))
     }
     func knob(_ value: Double) -> CGPoint {
-        let s = subject.speedSlider!
+        let s = subject.demoSlider
         let r = s.window!.convertToScreen(s.convert(s.bounds, to: nil))
         let t = (value - s.minValue) / (s.maxValue - s.minValue)
         return cg(NSPoint(x: r.minX + 8 + t * (r.width - 16), y: r.midY))
     }
     func statusItem() -> CGPoint {
-        let r = subject.statusItem.button!.window!.frame
+        let r = subject.demoStatusButton.window!.frame
         return cg(NSPoint(x: r.midX, y: r.midY))
     }
 
     func run() {
-        subject.eventTapInstalled = true
-        subject.configureMenu()
-        subject.overlay.setSize(40)
+        subject.demoPrepare()
         let list = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID) as! [[String: Any]]
         for w in list where (w[kCGWindowOwnerName as String] as? String) == "Safari" && (w[kCGWindowLayer as String] as? Int) == 0 {
             let b = w[kCGWindowBounds as String] as! [String: CGFloat]
@@ -91,24 +107,25 @@ final class Driver: NSObject {
         phases = [
             Phase(end: 80, target: statusItem, hold: false) {},
             Phase(end: 150, target: { [unowned self] in CGPoint(x: statusItem().x + 24, y: 25 + 22) }, hold: false) { [unowned self] in
-                subject.statusItem.button!.performClick(nil)   // Opens the menu. Tracking runs until cancelTracking below.
+                // Menu tracking blocks whoever opens it. A firing timer cannot fire again, so open it
+                // from a one-shot timer and let the tick timer keep running inside the tracking loop.
+                let open = Timer(timeInterval: 0, target: subject, selector: #selector(VectorScrollApp.demoOpenMenu), userInfo: nil, repeats: false)
+                RunLoop.main.add(open, forMode: .common)
             },
-            Phase(end: 165, target: still, hold: false) { [unowned self] in subject.menu.cancelTracking(); subject.showSettings() },
-            Phase(end: 250, target: { [unowned self] in center(subject.holdToLockItem) }, hold: false) {},
-            Phase(end: 275, target: still, hold: false) { [unowned self] in subject.holdToLockItem.performClick(nil) },
+            Phase(end: 165, target: still, hold: false) { [unowned self] in subject.demoCloseMenu(); subject.demoShowSettings() },
+            Phase(end: 250, target: { [unowned self] in center(subject.demoToggleButton) }, hold: false) {},
+            Phase(end: 275, target: still, hold: false) { [unowned self] in subject.demoSelectToggle() },
             Phase(end: 350, target: { [unowned self] in knob(100) }, hold: false) {},
             Phase(end: 440, target: { [unowned self] in
                 speed = min(150, speed + 0.6)
-                subject.speedSlider.doubleValue = speed
-                subject.changeScrollSpeed(subject.speedSlider)
+                subject.demoSetSpeed(speed)
                 return knob(speed)
             }, hold: false) {},
             Phase(end: 470, target: still, hold: false) {},
             Phase(end: 540, target: { [unowned self] in
-                let close = subject.settingsWindow.contentView!.subviews.compactMap { $0 as? SettingsButton }.first { $0.title == "Close settings" }
-                return close.map(center) ?? pointer
+                return subject.demoCloseButton.map(center) ?? pointer
             }, hold: false) {},
-            Phase(end: 560, target: still, hold: false) { [unowned self] in subject.settingsWindow.performClose(nil) },
+            Phase(end: 560, target: still, hold: false) { [unowned self] in subject.demoCloseSettings() },
             Phase(end: 640, target: { origin }, hold: false) {},
             Phase(end: 660, target: { origin }, hold: true) {},
             Phase(end: 840, target: { CGPoint(x: origin.x + 12, y: origin.y + 45) }, hold: true) {},
@@ -118,19 +135,16 @@ final class Driver: NSObject {
             Phase(end: 1260, target: still, hold: false) {},
             Phase(end: 1380, target: { [unowned self] in CGPoint(x: safari.maxX - 120, y: safari.maxY - 80) }, hold: false) {},
         ]
-        let timer = Timer(timeInterval: 0.001, target: self, selector: #selector(tick), userInfo: nil, repeats: true)
-        RunLoop.main.add(timer, forMode: .common)   // Keeps firing while the menu tracks.
+        // 40 ms between ticks gives Safari and the app windows time to paint. Common modes keep it firing while the menu tracks.
+        let timer = Timer(timeInterval: 0.04, target: self, selector: #selector(tick), userInfo: nil, repeats: true)
+        RunLoop.main.add(timer, forMode: .common)
     }
 
     var wasDown = false
     var lastStart = 0
-    var ticking = false
 
     @objc func tick(_ timer: Timer) {
-        if ticking { return }
-        ticking = true
-        defer { ticking = false }
-        if phase >= phases.count { timer.invalidate(); subject.stopScrolling(); exit(0) }
+        if phase >= phases.count { timer.invalidate(); subject.demoRelease(); exit(0) }
         let p = phases[phase]
         if n == lastStart {
             from = pointer
@@ -147,15 +161,12 @@ final class Driver: NSObject {
         if p.hold != wasDown {
             wasDown = p.hold
             if p.hold {
-                subject.startScrolling(at: CGPoint(x: pointer.x, y: screen.height - pointer.y), target: pointer)
-                subject.timer?.cancel()
-                subject.timer = nil
+                subject.demoPress(at: CGPoint(x: pointer.x, y: screen.height - pointer.y), target: pointer)
             } else {
-                subject.stopScrolling()
+                subject.demoRelease()
             }
         }
-        if subject.isActive { subject.emitScrollTick() }
-        RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.04))
+        subject.demoTick()
         capture()
         if n % 60 == 0 { print("frame \(n)") }
         n += 1
