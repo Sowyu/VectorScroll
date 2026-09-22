@@ -252,7 +252,9 @@ extension VectorScrollApp {
                 assert(hit.contains(.trackableArea), "Entire drawn button must be clickable")
             }
         }
-        mouseClick(subject.hideIconItem, at: NSPoint(x: 8, y: subject.hideIconItem.bounds.midY))
+        // AppKit 26 changed checkbox glyph metrics. Click the visible label,
+        // which is a native activation target across supported system versions.
+        mouseClick(subject.hideIconItem, at: NSPoint(x: 80, y: subject.hideIconItem.bounds.midY))
         assert(subject.hideIconItem.state == .on && subject.statusItem != nil, "Checkbox must use native click tracking")
         mouseClick(subject.holdScrollItem, at: NSPoint(x: 8, y: 8))
         assert(!subject.holdToLockMode && subject.holdScrollItem.state == .on)
