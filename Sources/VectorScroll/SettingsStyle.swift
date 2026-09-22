@@ -130,7 +130,13 @@ private final class SettingsButtonCell: NSButtonCell {
 final class SettingsButton: NSButton {
     var symbolName: String { didSet { needsDisplay = true } }
     var displayTitle: String? { didSet { needsDisplay = true } }
-    var detail: String? { didSet { needsDisplay = true } }
+    var detail: String? {
+        didSet {
+            toolTip = detail
+            setAccessibilityHelp(detail)
+            needsDisplay = true
+        }
+    }
     private var hovered = false
     private var hoverArea: NSTrackingArea?
 

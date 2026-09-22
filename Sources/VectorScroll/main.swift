@@ -8,11 +8,12 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
     private let defaults = UserDefaults.standard
     private var updateItem: NSButton!
     private var downloadItem: NSButton!
+    private var updateStatusLabel: NSTextField!
+    private var updateProgress: NSProgressIndicator!
     private var availableUpdate: AppUpdate?
     private var updateTask: Task<Void, Never>?
     private var installTask: Task<Void, Never>?
     private var updateTimer: DispatchSourceTimer?
-    private var showUpdateResult = false
     private var statusItem: NSStatusItem!
     private var menu: NSMenu!
     private var permissionItem: NSButton!
@@ -24,6 +25,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
     private var launchAtStartupItem: NSButton!
     private var hideIconItem: NSButton!
     private var sizePicker: NSPopUpButton!
+    private let markerPreview = ScrollOverlayView(frame: .zero)
     private var settingsWindow: NSWindow!
     private var openSettingsButton: NSButton!
     private var openSettingsOnLaunch = true
@@ -140,6 +142,10 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         func button(_ title: String, _ symbol: String, _ action: Selector) -> NSButton {
             SettingsStyle.actionButton(title, symbol: symbol, target: self, action: action)
         }
+        func help(_ view: NSView, _ text: String) {
+            view.toolTip = text
+            view.setAccessibilityHelp(text)
+        }
         func checkbox(_ title: String, _ action: Selector) -> NSButton {
             let control = NSButton(checkboxWithTitle: title, target: self, action: action)
             control.font = .systemFont(ofSize: 13, weight: .medium)
@@ -155,15 +161,15 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
             view.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
         }
         func section(_ title: String, _ symbol: String) {
-            // 24 above the rule, 16 below, 12 under the heading. Same on every section.
-            if let previous = stack.arrangedSubviews.last { stack.setCustomSpacing(24, after: previous) }
+            // Keep groups distinct without pushing common controls below the window.
+            if let previous = stack.arrangedSubviews.last { stack.setCustomSpacing(16, after: previous) }
             let divider = NSBox()
             divider.boxType = .custom
             divider.fillColor = SettingsStyle.border
             divider.borderWidth = 0
             divider.heightAnchor.constraint(equalToConstant: 1).isActive = true
             fullWidth(divider)
-            stack.setCustomSpacing(16, after: divider)
+            stack.setCustomSpacing(12, after: divider)
             let icon = NSImageView(image: SettingsStyle.symbol(symbol)!)
             icon.widthAnchor.constraint(equalToConstant: 17).isActive = true
             icon.heightAnchor.constraint(equalToConstant: 17).isActive = true
@@ -171,20 +177,21 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
             heading.font = .systemFont(ofSize: 14, weight: .semibold)
             let headingRow = row(icon, heading)
             stack.addArrangedSubview(headingRow)
-            stack.setCustomSpacing(12, after: headingRow)
+            stack.setCustomSpacing(8, after: headingRow)
         }
         let appIcon = NSImageView(image: NSApp.applicationIconImage)
         appIcon.imageScaling = .scaleProportionallyUpOrDown
         appIcon.translatesAutoresizingMaskIntoConstraints = false
         NSLayoutConstraint.activate([
-            appIcon.widthAnchor.constraint(equalToConstant: 48),
-            appIcon.heightAnchor.constraint(equalToConstant: 48)
+            appIcon.widthAnchor.constraint(equalToConstant: 32),
+            appIcon.heightAnchor.constraint(equalToConstant: 32)
         ])
         let title = label("VectorScroll")
-        title.font = .systemFont(ofSize: 22, weight: .semibold)
+        title.font = .systemFont(ofSize: 17, weight: .semibold)
         let spacer = NSView()
         spacer.setContentHuggingPriority(.defaultLow, for: .horizontal)
         let guideButton = button("Setup Guide", "questionmark.circle", #selector(showOnboarding))
+        help(guideButton, "Review the permissions needed for middle-button scrolling.")
         guideButton.setContentHuggingPriority(.required, for: .horizontal)
         fullWidth(row(appIcon, title, spacer, guideButton))
 
@@ -216,6 +223,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         modesGlass.heightAnchor.constraint(equalToConstant: 80).isActive = true
         fullWidth(modesGlass)
         reverseItem = checkbox("Reverse direction", #selector(toggleReverseDirection))
+        help(reverseItem, "Reverse both scrolling axes without changing your macOS mouse settings.")
         fullWidth(reverseItem)
         speedSlider = NSSlider(value: Double(scrollSpeedPercent), minValue: 50, maxValue: 200,
                                target: self, action: #selector(changeScrollSpeed(_:)))
@@ -223,20 +231,23 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         speedSlider.tickMarkPosition = .below
         speedSlider.allowsTickMarkValuesOnly = true
         speedSlider.isContinuous = true
-        speedSlider.setAccessibilityLabel("Scroll speed in percent")
+        speedSlider.setAccessibilityLabel("Scroll speed")
+        help(speedSlider, "Adjust scrolling speed from 50% to 200%. 100% is the default.")
         speedSlider.widthAnchor.constraint(equalToConstant: 240).isActive = true
         speedLabel = label("")
         speedLabel.font = .monospacedDigitSystemFont(ofSize: 12, weight: .medium)
         let speedRow = row(label("Speed", secondary: true), speedSlider, speedLabel)
         stack.addArrangedSubview(speedRow)
         delayToggle = checkbox("Delay before scrolling starts", #selector(toggleHoldDelay))
+        help(delayToggle, "Require a brief hold so a normal middle-click can still open a link in a new tab.")
         delaySlider = NSSlider(value: Double(holdDelayMilliseconds), minValue: 50, maxValue: 1000,
                                target: self, action: #selector(changeHoldDelay(_:)))
         delaySlider.numberOfTickMarks = 20
         delaySlider.tickMarkPosition = .below
         delaySlider.allowsTickMarkValuesOnly = true
         delaySlider.isContinuous = true
-        delaySlider.setAccessibilityLabel("Hold duration in milliseconds")
+        delaySlider.setAccessibilityLabel("Hold duration")
+        help(delaySlider, "How long to hold the middle button before toggle scrolling starts.")
         delaySlider.widthAnchor.constraint(equalToConstant: 240).isActive = true
         delayLabel = label("")
         delayLabel.font = .monospacedDigitSystemFont(ofSize: 12, weight: .medium)
@@ -245,7 +256,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         delayItem.alignment = .leading
         delayItem.spacing = 4
         fullWidth(delayItem)
-        stack.setCustomSpacing(24, after: speedRow) // delayItem hides in hold mode
+        stack.setCustomSpacing(12, after: speedRow) // delayItem hides in hold mode
 
         section("Indicator", "scope")
         lightModeItem = NSButton(radioButtonWithTitle: "Light", target: self, action: #selector(selectLightMode))
@@ -258,18 +269,31 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         sizePicker.target = self
         sizePicker.action = #selector(selectMarkerSize(_:))
         sizePicker.setAccessibilityLabel("Indicator size")
-        stack.addArrangedSubview(row(lightModeItem, darkModeItem, label("Size", secondary: true), sizePicker))
+        help(lightModeItem, "Use a light scrolling indicator, best against dark content.")
+        help(darkModeItem, "Use a dark scrolling indicator, best against light content.")
+        help(sizePicker, "Change the scrolling indicator's diameter. The preview shows its actual size.")
+        let previewBox = NSView(frame: NSRect(x: 0, y: 0, width: 48, height: 48))
+        previewBox.widthAnchor.constraint(equalToConstant: 48).isActive = true
+        previewBox.heightAnchor.constraint(equalToConstant: 48).isActive = true
+        previewBox.addSubview(markerPreview)
+        markerPreview.setAccessibilityElement(true)
+        markerPreview.setAccessibilityRole(.image)
+        markerPreview.setAccessibilityLabel("Scrolling indicator preview")
+        help(markerPreview, "Actual-size preview of the scrolling indicator.")
+        let indicatorSpacer = NSView()
+        indicatorSpacer.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        fullWidth(row(lightModeItem, darkModeItem, label("Size", secondary: true), sizePicker, indicatorSpacer, previewBox))
 
         section("App", "slider.horizontal.3")
         openSettingsButton = checkbox("Open settings on launch", #selector(toggleOpenSettings))
         hideIconItem = checkbox("Show menu bar icon", #selector(toggleMenuBarIcon))
         launchAtStartupItem = checkbox("Launch at login", #selector(toggleLaunchAtStartup))
         launchAtStartupItem.allowsMixedState = true
+        help(openSettingsButton, "Show this window when VectorScroll starts. If both access options are off, the menu bar icon returns.")
+        help(hideIconItem, "Keep Settings and Quit in the menu bar. Hiding the icon enables Open settings on launch.")
         fullWidth(openSettingsButton)
-        stack.setCustomSpacing(0, after: openSettingsButton)
         fullWidth(hideIconItem)
-        stack.setCustomSpacing(0, after: hideIconItem)
-        fullWidth(label("One stays on so settings are always within reach.", secondary: true))
+        fullWidth(label("Keep one enabled to reopen settings.", secondary: true))
         fullWidth(launchAtStartupItem)
         permissionStatusLabel = label("", secondary: true)
         fullWidth(permissionStatusLabel)
@@ -281,7 +305,19 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         updateItem = button("Check for Updates…", "arrow.clockwise", #selector(checkUpdatesFromMenu))
         downloadItem = button("Install Update…", "arrow.down", #selector(installUpdate))
         downloadItem.isHidden = true
-        stack.addArrangedSubview(row(updateItem, downloadItem))
+        updateProgress = NSProgressIndicator()
+        updateProgress.style = .spinning
+        updateProgress.controlSize = .small
+        updateProgress.isIndeterminate = true
+        updateProgress.isDisplayedWhenStopped = false
+        updateProgress.isHidden = true
+        updateProgress.widthAnchor.constraint(equalToConstant: 16).isActive = true
+        updateProgress.heightAnchor.constraint(equalToConstant: 16).isActive = true
+        updateProgress.setAccessibilityLabel("Update in progress")
+        stack.addArrangedSubview(row(updateItem, downloadItem, updateProgress))
+        updateStatusLabel = label("", secondary: true)
+        updateStatusLabel.isHidden = true
+        fullWidth(updateStatusLabel)
 
         let content = settingsWindow.contentView!
         let backdrop = SettingsStyle.backdrop()
@@ -312,7 +348,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
             document.widthAnchor.constraint(equalTo: scroll.contentView.widthAnchor),
             stack.leadingAnchor.constraint(equalTo: document.leadingAnchor, constant: 32),
             stack.trailingAnchor.constraint(equalTo: document.trailingAnchor, constant: -32),
-            stack.topAnchor.constraint(equalTo: document.topAnchor, constant: 24),
+            stack.topAnchor.constraint(equalTo: document.topAnchor, constant: 16),
             stack.bottomAnchor.constraint(equalTo: document.bottomAnchor, constant: -24)
         ])
         updateMarkerMenuItem()
@@ -339,6 +375,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         reverseItem.state = reverseDirection ? .on : .off
         speedSlider.doubleValue = Double(scrollSpeedPercent)
         speedLabel.stringValue = "\(scrollSpeedPercent)%"
+        speedSlider.setAccessibilityValueDescription("\(scrollSpeedPercent) percent")
     }
 
     @objc private func checkUpdatesFromMenu() {
@@ -346,42 +383,38 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
     }
 
     private func checkForUpdates(manual: Bool) {
-        guard installTask == nil else { return }
-        showUpdateResult = showUpdateResult || manual
-        guard updateTask == nil else { return }
-        updateItem.title = "Checking for Updates…"
+        guard installTask == nil, updateTask == nil else { return }
+        setUpdateStatus("Checking for updates…", busy: true)
         updateTask = Task { [weak self] in
             do {
                 let update = try await AppUpdate.check()
                 guard let self, !Task.isCancelled else { return }
                 self.applyUpdate(update)
-                if self.showUpdateResult {
-                    self.stopScrolling()
-                    let alert = NSAlert()
-                    if let update {
-                        alert.messageText = "VectorScroll \(update.version) is available"
-                        alert.informativeText = "VectorScroll will download and verify the update, install it, and restart."
-                        alert.addButton(withTitle: "Install Update")
-                        alert.addButton(withTitle: "Later")
-                    } else {
-                        alert.messageText = "You're up to date"
-                        alert.informativeText = "VectorScroll \(AppUpdate.installedVersion) is installed."
-                        alert.addButton(withTitle: "OK")
-                    }
-                    NSApp.activate()
-                    if alert.runModal() == .alertFirstButtonReturn, update != nil {
-                        self.installUpdate()
-                    }
-                }
+                self.setUpdateStatus(update.map { "VectorScroll \($0.version) is available." }
+                    ?? "VectorScroll \(AppUpdate.installedVersion) is up to date.", busy: false)
             } catch {
                 guard let self, !Task.isCancelled else { return }
-                if self.showUpdateResult {
-                    self.showUpdateError(error.localizedDescription)
-                }
+                self.setUpdateStatus(manual ? "Couldn't check for updates. \(error.localizedDescription)" : "", busy: false)
+            }
+            if let self, manual {
+                NSAccessibility.post(element: self.updateStatusLabel!, notification: .announcementRequested,
+                                     userInfo: [.announcement: self.updateStatusLabel.stringValue,
+                                                .priority: NSAccessibilityPriorityLevel.medium.rawValue])
             }
             self?.updateTask = nil
-            self?.showUpdateResult = false
-            self?.updateItem.title = "Check for Updates…"
+        }
+    }
+
+    private func setUpdateStatus(_ status: String, busy: Bool) {
+        updateStatusLabel.stringValue = status
+        updateStatusLabel.isHidden = status.isEmpty
+        updateProgress.isHidden = !busy
+        updateItem.isEnabled = !busy
+        downloadItem.isEnabled = !busy
+        if busy {
+            updateProgress.startAnimation(nil)
+        } else {
+            updateProgress.stopAnimation(nil)
         }
     }
 
@@ -393,37 +426,34 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
     }
 
     @objc private func installUpdate() {
-        guard let update = availableUpdate, installTask == nil else { return }
+        guard let update = availableUpdate, installTask == nil, updateTask == nil else { return }
         let destination = Bundle.main.bundleURL.resolvingSymlinksInPath()
         guard let helper = Bundle.main.executableURL else { return }
         do { _ = try UpdateInstaller.validateDestination(destination) }
         catch { showUpdateError(error.localizedDescription); return }
         showSettings()
         defaults.set("", forKey: "updateInstallError")
-        updateItem.isEnabled = false
-        downloadItem.isEnabled = false
-        downloadItem.title = "Downloading…"
+        setUpdateStatus("Downloading VectorScroll \(update.version)…", busy: true)
         installTask = Task { [weak self] in
             do {
                 let data = try await UpdateInstaller.download(update)
                 guard let self, !Task.isCancelled else { return }
-                self.downloadItem.title = "Verifying…"
+                self.setUpdateStatus("Verifying the update…", busy: true)
                 let pid = ProcessInfo.processInfo.processIdentifier
                 let plan = try await Task.detached {
                     try UpdateInstaller.prepare(update, image: data, destination: destination,
                                                 helperSource: helper, parentPID: pid)
                 }.value
                 guard !Task.isCancelled else { return }
-                self.downloadItem.title = "Restarting…"
+                self.setUpdateStatus("Restarting VectorScroll…", busy: true)
                 try await Task.detached { try UpdateInstaller.launchHelper(plan) }.value
                 self.installTask = nil
                 NSApp.terminate(nil)
             } catch {
                 guard let self, !Task.isCancelled else { return }
                 self.installTask = nil
-                self.updateItem.isEnabled = true
-                self.downloadItem.isEnabled = true
                 self.applyUpdate(self.availableUpdate)
+                self.setUpdateStatus("Update failed.", busy: false)
                 self.showUpdateError(error.localizedDescription)
             }
         }
@@ -458,6 +488,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         delaySlider.isEnabled = holdDelayEnabled
         delaySlider.doubleValue = Double(holdDelayMilliseconds)
         delayLabel.stringValue = "\(holdDelayMilliseconds) ms"
+        delaySlider.setAccessibilityValueDescription("\(holdDelayMilliseconds) milliseconds")
         delayLabel.textColor = holdDelayEnabled ? .labelColor : .secondaryLabelColor
         delayItem.isHidden = !holdToLockMode
         (holdToLockItem as? SettingsButton)?.detail = holdDelayEnabled ? "Hold to start, click to stop" : "Click to start, click to stop"
@@ -616,6 +647,15 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
     private func updateMarkerMenuItem() {
         lightModeItem.state = overlay.isDarkMode ? .off : .on
         darkModeItem.state = overlay.isDarkMode ? .on : .off
+        updateMarkerPreview()
+    }
+
+    private func updateMarkerPreview() {
+        let size = overlay.size
+        markerPreview.frame = NSRect(x: (48 - size) / 2, y: (48 - size) / 2, width: size, height: size)
+        markerPreview.isDarkMode = overlay.isDarkMode
+        markerPreview.needsDisplay = true
+        markerPreview.setAccessibilityValue("\(overlay.isDarkMode ? "Dark" : "Light"), \(Int(size)) points")
     }
 
     private func updateScrollModeMenuItems() {
@@ -637,6 +677,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
 
     private func updateSizeMenuItems() {
         sizePicker.selectItem(withTag: Int(overlay.size))
+        updateMarkerPreview()
     }
 
     private func updateLaunchAtStartupItem() {

@@ -38,6 +38,14 @@ extension VectorScrollApp {
         print("PASS: minimal menu and native settings controls")
         assert(subject.updateItem.action == #selector(checkUpdatesFromMenu))
         assert(subject.downloadItem.isHidden)
+        assert(subject.updateStatusLabel.stringValue.isEmpty)
+        assert(subject.updateProgress.isHidden)
+        subject.setUpdateStatus("Checking for updates…", busy: true)
+        assert(!subject.updateProgress.isHidden)
+        assert(!subject.updateItem.isEnabled && !subject.downloadItem.isEnabled)
+        subject.setUpdateStatus("VectorScroll is up to date.", busy: false)
+        assert(subject.updateProgress.isHidden)
+        assert(subject.updateItem.isEnabled && subject.downloadItem.isEnabled)
         let downloadURL = URL(string: "https://github.com/Sowyu/VectorScroll/releases/download/9.0.0/VectorScroll.dmg")!
         subject.applyUpdate(AppUpdate(version: "9.0.0", downloadURL: downloadURL, sha256: String(repeating: "a", count: 64), downloadSize: 123))
         assert(!subject.downloadItem.isHidden)
@@ -52,10 +60,12 @@ extension VectorScrollApp {
         assert(subject.holdDelayMilliseconds == 750)
         assert(subject.holdToLockThreshold == 0.75)
         assert(subject.delayLabel.stringValue == "750 ms")
+        assert(subject.delaySlider.accessibilityValueDescription() == "750 milliseconds")
         assert(subject.scrollScale == 0.42 && !subject.reverseDirection)
         subject.speedSlider.doubleValue = 83
         subject.changeScrollSpeed(subject.speedSlider)
         assert(subject.scrollSpeedPercent == 80 && subject.speedLabel.stringValue == "80%")
+        assert(subject.speedSlider.accessibilityValueDescription() == "80 percent")
         assert(abs(subject.scrollScale - 0.336) < 0.0001)
         subject.reverseItem.state = .on
         subject.toggleReverseDirection()
@@ -68,6 +78,21 @@ extension VectorScrollApp {
         subject.stopScrolling()
         subject.eventTapInstalled = false
         print("PASS: speed slider rounding and scale, reverse direction persistence, deferred hold-mode engagement")
+        for dark in [false, true] {
+            if dark { subject.selectDarkMode() } else { subject.selectLightMode() }
+            for size in subject.markerSizes {
+                subject.sizePicker.selectItem(withTag: size)
+                subject.selectMarkerSize(subject.sizePicker)
+                assert(subject.markerPreview.isDarkMode == dark)
+                assert(subject.markerPreview.frame.size == NSSize(width: CGFloat(size), height: CGFloat(size)))
+                assert(subject.markerPreview.accessibilityValue() as? String == "\(dark ? "Dark" : "Light"), \(size) points")
+            }
+        }
+        subject.selectLightMode()
+        subject.sizePicker.selectItem(withTag: 32)
+        subject.selectMarkerSize(subject.sizePicker)
+        assert(subject.reverseItem.toolTip != nil && subject.speedSlider.accessibilityHelp() != nil)
+        print("PASS: live indicator preview at all sizes and appearances, spoken slider units, and contextual help")
         subject.defaults.removeObject(forKey: "onboardingCompleted")
         subject.showOnboarding()
         let guide = subject.onboarding!
@@ -129,6 +154,7 @@ extension VectorScrollApp {
         assert(subject.engageWorkItem == nil)
         assert(subject.holdToLockThreshold == 0)
         assert(!subject.delaySlider.isEnabled)
+        assert(subject.holdToLockItem.accessibilityHelp() == "Click to start, click to stop")
         assert(subject.holdToLockItem.title == "Keep scrolling until the next click")
         subject.eventTapInstalled = true
         subject.armHoldToLock(at: .zero, target: .zero)
@@ -330,6 +356,7 @@ extension VectorScrollApp {
         subject.updateSpeedControls()
         subject.applyLaunchAtStartupStatus(.notRegistered)
         subject.applyPermissionStatus(canListen: true, canAccess: true)
+        subject.setUpdateStatus("", busy: false)
         content.layoutSubtreeIfNeeded()
         scroll.contentView.scroll(to: NSPoint(x: 0, y: 0))
         scroll.reflectScrolledClipView(scroll.contentView)
@@ -338,6 +365,9 @@ extension VectorScrollApp {
         content.layoutSubtreeIfNeeded()
         savePreview(subject.settingsWindow, "settings-preview")
         savePreview(subject.settingsWindow, "settings-light-preview", appearance: .aqua)
+        subject.setUpdateStatus("Checking for updates…", busy: true)
+        savePreview(subject.settingsWindow, "settings-update-preview")
+        subject.setUpdateStatus("", busy: false)
         subject.defaults.removeObject(forKey: "onboardingCompleted")
         subject.showOnboarding()
         subject.onboarding!.refresh(canListen: false, canAccess: false)

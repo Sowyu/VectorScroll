@@ -141,6 +141,7 @@ jobs:
             .build/settings-preview.png
             .build/settings-delay-preview.png
             .build/settings-light-preview.png
+            .build/settings-update-preview.png
             .build/onboarding-preview.png
             .build/onboarding-light-preview.png
           if-no-files-found: error
