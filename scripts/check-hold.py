@@ -276,8 +276,11 @@ extension VectorScrollApp {
             }
             // NSButton consumes mouse-up in its native tracking loop. Send the
             // down through NSWindow rather than bypassing tracking with performClick.
-            NSApp.postEvent(event(.leftMouseUp, at: location), atStart: true)
-            subject.settingsWindow.sendEvent(event(.leftMouseDown, at: location))
+            let down = event(.leftMouseDown, at: location)
+            let up = event(.leftMouseUp, at: location)
+            print("CELL: \(button.cell!.hitTest(for: down, in: button.bounds, of: button).rawValue), enabled \(button.isEnabled)")
+            NSApp.postEvent(up, atStart: true)
+            NSApp.sendEvent(down)
             RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.1))
             // A disabled control does not enter tracking and leaves mouse-up queued.
             _ = NSApp.nextEvent(matching: .leftMouseUp, until: .distantPast, inMode: .default, dequeue: true)
@@ -401,7 +404,13 @@ app.applicationIconImage = NSImage(contentsOfFile: "docs/icon.png")
 @MainActor
 final class AuditAppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
-        DispatchQueue.main.async {
+        // RunLoop callbacks allow native controls to drain work on the main
+        // queue while their mouse tracking loop runs. DispatchQueue callbacks
+        // cannot re-enter that queue on macOS 26.
+        perform(#selector(runChecks), with: nil, afterDelay: 0)
+    }
+
+    @objc private func runChecks() {
             NSApp.activate()
             let promptRelease = VectorScrollApp.checkRelease(delay: 0.1)
             let delayedRelease = VectorScrollApp.checkRelease(delay: 0.3)
@@ -412,7 +421,6 @@ final class AuditAppDelegate: NSObject, NSApplicationDelegate {
                 try! "PASS".write(toFile: CommandLine.arguments[2], atomically: true, encoding: .utf8)
             }
             exit(passed ? 0 : 1)
-        }
     }
 }
 let auditDelegate = AuditAppDelegate()
