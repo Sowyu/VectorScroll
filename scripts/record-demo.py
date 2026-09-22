@@ -62,7 +62,7 @@ private final class Driver: NSObject {
     let frames: String
     let screen = NSScreen.screens[0].frame
     let cursor = NSCursor.arrow
-    let menuBar = Int(NSStatusBar.system.thickness) + 1
+    let menuBar = Int(NSScreen.screens[0].frame.maxY - NSScreen.screens[0].visibleFrame.maxY)
     var phases: [Phase] = []
     var n = 0
     var phase = 0
@@ -240,7 +240,17 @@ time.sleep(2)
 subprocess.run(["defaults", "write", "com.apple.Safari", "NSWindow Frame BrowserWindowFrame", "40 60 1180 960 0 0 1920 1080 "], check=True)
 subprocess.run(["open", "-a", "Safari", "https://github.com/Sowyu/VectorScroll"], check=True, timeout=60)
 log("safari opened")
-time.sleep(12)
+time.sleep(8)
+# Safari on the preview image can take a while to paint. Wait until the page area is not plain white.
+probe = build / "probe.png"
+for _ in range(20):
+    subprocess.run(["screencapture", "-x", "-R", "60,200,1000,600", str(probe)], check=True)
+    stats = subprocess.run(["ffmpeg", "-v", "info", "-i", str(probe), "-vf", "signalstats,metadata=print", "-f", "null", "-"], capture_output=True, text=True).stderr
+    yavg = next((float(l.split("=")[1]) for l in stats.splitlines() if "YAVG" in l), 0)
+    log("page brightness", yavg)
+    if 0 < yavg < 250:
+        break
+    time.sleep(3)
 subprocess.run([str(binary), str(frames)], check=True, timeout=600)
 log("frames captured", len(list(frames.iterdir())))
 subprocess.run(["osascript", "-e", 'tell application "Safari" to quit'], timeout=30)
