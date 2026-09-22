@@ -106,10 +106,12 @@ GitHub Actions runs the same checks on macOS, then builds and signs the universa
 
 `site/` is a static site: home, download, about and docs pages, one stylesheet, and the demo video. Serve the folder as is, for example with GitHub Pages pointed at `site/`.
 
-The demo video comes from the real app. `scripts/record-demo.py` builds the app with a small driver appended, opens Chrome on a real page, moves the real pointer, runs the production scroll path with the indicator, and records the screen with `screencapture`. The `demo` job in the macOS workflow runs it on `workflow_dispatch` and uploads `demo-video` with `demo.mp4`, `demo.webm` and `poster.jpg`. Copy those into `site/`.
+The demo video is rendered by `site/video/render.mjs`: headless Chromium loads a real page, a cursor and the indicator are drawn on top, and every frame is stepped by hand so the result is an exact 60 fps.
 
 ```sh
-python3 scripts/record-demo.py   # on a Mac with Chrome and ffmpeg, writes dist/demo/
+cd site/video
+npm i playwright-core
+node render.mjs /path/to/chrome   # writes ../demo.mp4, ../demo.webm, ../poster.jpg
 ```
 
 ## Layout
@@ -125,6 +127,5 @@ scripts/
   check-hold.py         settings and scrolling regression harness
   check-updates.swift   release parsing checks and a live GitHub request
   check-installer.swift installation and rollback checks
-  record-demo.py        records the website demo video from the real app
   make-icons.swift      renders the icon set
 ```

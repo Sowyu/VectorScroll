@@ -85,21 +85,3 @@ jobs:
             .build/onboarding-preview.png
           if-no-files-found: error
 
-  demo:
-    if: github.event_name == 'workflow_dispatch'
-    runs-on: macos-15
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          persist-credentials: false
-      - name: Install ffmpeg
-        run: brew install ffmpeg
-      - name: Record the real app scrolling Chrome
-        run: python3 -u scripts/record-demo.py
-        timeout-minutes: 12
-      - uses: actions/upload-artifact@v4
-        with:
-          name: demo-video
-          path: dist/demo
-          if-no-files-found: error
