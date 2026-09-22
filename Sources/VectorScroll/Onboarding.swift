@@ -25,10 +25,10 @@ final class Onboarding: NSObject, NSWindowDelegate {
     let secondary: SettingsButton
 
     override init() {
-        let setupWindow = SettingsWindow(contentRect: NSRect(x: 0, y: 0, width: 480, height: 292),
-                                         styleMask: [.titled, .closable], backing: .buffered, defer: false)
+        let setupWindow = SettingsWindow(contentRect: NSRect(x: 0, y: 0, width: 500, height: 320),
+                                         styleMask: [.titled, .closable, .miniaturizable], backing: .buffered, defer: false)
         setupWindow.title = "VectorScroll Setup"
-        setupWindow.backgroundColor = SettingsStyle.background
+        SettingsStyle.prepareWindow(setupWindow)
         setupWindow.isReleasedWhenClosed = false
         setupWindow.center()
         window = setupWindow
@@ -49,7 +49,6 @@ final class Onboarding: NSObject, NSWindowDelegate {
         super.init()
 
         window.delegate = self
-        window.standardWindowButton(.miniaturizeButton)?.isEnabled = false
         window.standardWindowButton(.zoomButton)?.isEnabled = false
 
         let stack = NSStackView(views: [stepLabel, title, body, status])
@@ -58,19 +57,26 @@ final class Onboarding: NSObject, NSWindowDelegate {
         stack.spacing = 12
         stack.setCustomSpacing(6, after: stepLabel)
         stack.translatesAutoresizingMaskIntoConstraints = false
-        let buttons = NSStackView(views: [primary, secondary])
+        let buttons = NSStackView(views: [secondary, primary])
         buttons.orientation = .horizontal
         buttons.spacing = 12
         buttons.translatesAutoresizingMaskIntoConstraints = false
         let content = window.contentView!
-        content.addSubview(stack)
-        content.addSubview(buttons)
+        let backdrop = SettingsStyle.backdrop()
+        backdrop.translatesAutoresizingMaskIntoConstraints = false
+        content.addSubview(backdrop)
+        backdrop.addSubview(stack)
+        backdrop.addSubview(buttons)
         NSLayoutConstraint.activate([
-            stack.leadingAnchor.constraint(equalTo: content.leadingAnchor, constant: 32),
-            stack.trailingAnchor.constraint(equalTo: content.trailingAnchor, constant: -32),
-            stack.topAnchor.constraint(equalTo: content.topAnchor, constant: 32),
-            buttons.leadingAnchor.constraint(equalTo: content.leadingAnchor, constant: 32),
-            buttons.bottomAnchor.constraint(equalTo: content.bottomAnchor, constant: -32)
+            backdrop.leadingAnchor.constraint(equalTo: content.leadingAnchor),
+            backdrop.trailingAnchor.constraint(equalTo: content.trailingAnchor),
+            backdrop.topAnchor.constraint(equalTo: content.topAnchor),
+            backdrop.bottomAnchor.constraint(equalTo: content.bottomAnchor),
+            stack.leadingAnchor.constraint(equalTo: backdrop.leadingAnchor, constant: 32),
+            stack.trailingAnchor.constraint(equalTo: backdrop.trailingAnchor, constant: -32),
+            stack.topAnchor.constraint(equalTo: backdrop.topAnchor, constant: 52),
+            buttons.trailingAnchor.constraint(equalTo: backdrop.trailingAnchor, constant: -32),
+            buttons.bottomAnchor.constraint(equalTo: backdrop.bottomAnchor, constant: -28)
         ])
         primary.target = self
         primary.action = #selector(primaryPressed)

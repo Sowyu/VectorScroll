@@ -6,6 +6,8 @@ Middle-button autoscrolling for macOS. Press the middle button, move the pointer
 
 Swift and AppKit only. No Electron, web views, or third-party dependencies. One universal binary runs on Intel and Apple Silicon Macs with macOS 14 or later.
 
+Version 1.8.0, build 15, uses native Liquid Glass controls on macOS 26. macOS 14 and 15 keep the standard AppKit appearance.
+
 <table>
   <tr>
     <td><img src="docs/settings-hold.png" alt="Settings window in hold-to-scroll mode" width="400"></td>
@@ -83,7 +85,7 @@ The updater rejects a different signing identity. When releases move from the cu
 
 ## Build and check
 
-Requires macOS and a Swift 6 toolchain. From the repository root:
+Requires macOS and a Swift 6 toolchain. Xcode 26 or later builds the native Liquid Glass path. Xcode 16 builds the macOS 14 and 15 fallback. From the repository root:
 
 ```sh
 swift build -c release
@@ -102,7 +104,7 @@ swiftc -swift-version 6 -warnings-as-errors -parse-as-library Sources/VectorScro
 
 `check-hold.py` drives the real settings window with synthetic mouse events, checks every control's hit region, and writes dark and light settings and onboarding previews under `.build/`. The screenshots above come from that run.
 
-GitHub Actions runs the same checks on macOS, builds the universal app, locks the signing keychain before independent app-signature verification, packages the DMG, and tests automatic installation, relaunch, and rollback. A Developer ID build unlocks the isolated keychain only long enough to sign the DMG, then locks it again. The current `CODESIGN_P12` and `CODESIGN_P12_PASSWORD` secrets provide a self-signed CI certificate, so those artifacts are not notarized distribution builds.
+GitHub Actions runs the release audit on macOS 26. It builds the universal app, checks native Liquid Glass, locks the signing keychain before independent app-signature verification, packages the DMG, and tests automatic installation, relaunch, and rollback. A smaller macOS 15 job compiles and runs the settings regression to keep the macOS 14-compatible fallback working. A Developer ID build unlocks the isolated keychain only long enough to sign the DMG, then locks it again. The current `CODESIGN_P12` and `CODESIGN_P12_PASSWORD` secrets provide a self-signed CI certificate, so release artifacts are not notarized.
 
 For a distribution build, store a Developer ID Application certificate in those two signing secrets. Notarization runs only when all three App Store Connect API key secrets are also present: `APPLE_NOTARY_KEY_ID`, `APPLE_NOTARY_ISSUER_ID`, and base64-encoded `APPLE_NOTARY_KEY_P8`. CI submits the DMG, staples the ticket, and runs Gatekeeper assessments. The workflow reports when credentials are missing and never labels a self-signed artifact as notarized.
 

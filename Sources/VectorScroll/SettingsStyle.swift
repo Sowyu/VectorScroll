@@ -2,7 +2,11 @@ import AppKit
 
 @MainActor
 enum SettingsStyle {
-    static let background = NSColor.windowBackgroundColor
+    static var background: NSColor {
+        NSWorkspace.shared.accessibilityDisplayShouldReduceTransparency
+            ? .windowBackgroundColor
+            : .windowBackgroundColor.withAlphaComponent(0.72)
+    }
     static let text = NSColor.labelColor
     static let secondary = NSColor.secondaryLabelColor
     static let border = NSColor.separatorColor
@@ -10,6 +14,55 @@ enum SettingsStyle {
     static func symbol(_ name: String, color: NSColor = secondary) -> NSImage? {
         NSImage(systemSymbolName: name, accessibilityDescription: nil)?
             .withSymbolConfiguration(.init(paletteColors: [color]))
+    }
+
+    static func prepareWindow(_ window: NSWindow) {
+        let reduceTransparency = NSWorkspace.shared.accessibilityDisplayShouldReduceTransparency
+        window.titlebarAppearsTransparent = true
+        window.titleVisibility = .visible
+        window.styleMask.insert(.fullSizeContentView)
+        window.isMovableByWindowBackground = true
+        window.isOpaque = reduceTransparency
+        window.backgroundColor = background
+    }
+
+    static func backdrop() -> NSVisualEffectView {
+        let reduceTransparency = NSWorkspace.shared.accessibilityDisplayShouldReduceTransparency
+        let view = NSVisualEffectView()
+        view.material = reduceTransparency ? .contentBackground : .underWindowBackground
+        view.blendingMode = reduceTransparency ? .withinWindow : .behindWindow
+        view.state = reduceTransparency ? .inactive : .active
+        return view
+    }
+
+    static func glassContainer(for content: NSView, cornerRadius: CGFloat = 12) -> NSView {
+        #if compiler(>=6.2)
+        if #available(macOS 26, *) {
+            let glass = NSGlassEffectView()
+            glass.style = .regular
+            glass.cornerRadius = cornerRadius
+            glass.contentView = content
+            return glass
+        }
+        #endif
+
+        let effect = NSVisualEffectView()
+        effect.material = .contentBackground
+        effect.blendingMode = .withinWindow
+        effect.state = NSWorkspace.shared.accessibilityDisplayShouldReduceTransparency ? .inactive : .active
+        effect.wantsLayer = true
+        effect.layer?.cornerRadius = cornerRadius
+        effect.layer?.borderWidth = 1
+        effect.layer?.borderColor = border.withAlphaComponent(0.55).cgColor
+        content.translatesAutoresizingMaskIntoConstraints = false
+        effect.addSubview(content)
+        NSLayoutConstraint.activate([
+            content.leadingAnchor.constraint(equalTo: effect.leadingAnchor),
+            content.trailingAnchor.constraint(equalTo: effect.trailingAnchor),
+            content.topAnchor.constraint(equalTo: effect.topAnchor),
+            content.bottomAnchor.constraint(equalTo: effect.bottomAnchor)
+        ])
+        return effect
     }
 }
 
@@ -78,7 +131,15 @@ final class SettingsButton: NSButton {
             focusRingType = .default
         } else {
             isBordered = true
+            #if compiler(>=6.2)
+            if #available(macOS 26, *) {
+                bezelStyle = .glass
+            } else {
+                bezelStyle = .rounded
+            }
+            #else
             bezelStyle = .rounded
+            #endif
             focusRingType = .default
             updateNativeImage()
         }
@@ -117,19 +178,17 @@ final class SettingsButton: NSButton {
         let selected = state == .on
         let pressed = cell?.isHighlighted == true
         let alpha: CGFloat = isEnabled ? 1 : 0.45
-        let foreground = (selected ? NSColor.alternateSelectedControlTextColor : NSColor.controlTextColor).withAlphaComponent(alpha)
-        let secondary = (selected ? NSColor.alternateSelectedControlTextColor : SettingsStyle.secondary).withAlphaComponent(alpha)
+        let foreground = NSColor.controlTextColor.withAlphaComponent(alpha)
+        let secondary = (selected ? NSColor.controlTextColor : SettingsStyle.secondary).withAlphaComponent(alpha)
         let box = NSBezierPath(roundedRect: bounds.insetBy(dx: 0.5, dy: 0.5), xRadius: 9, yRadius: 9)
-        let fill = selected ? NSColor.selectedContentBackgroundColor :
-            pressed ? NSColor.selectedControlColor :
-            hovered ? NSColor.unemphasizedSelectedContentBackgroundColor : NSColor.controlBackgroundColor
-        fill.withAlphaComponent(alpha).setFill()
+        let fill = selected ? NSColor.controlAccentColor.withAlphaComponent(0.16) :
+            pressed ? NSColor.selectedControlColor.withAlphaComponent(0.18) :
+            hovered ? NSColor.controlTextColor.withAlphaComponent(0.07) : NSColor.clear
+        fill.withAlphaComponent(fill.alphaComponent * alpha).setFill()
         box.fill()
-        if !selected {
-            SettingsStyle.border.setStroke()
-            box.lineWidth = 1
-            box.stroke()
-        }
+        (selected ? NSColor.controlAccentColor.withAlphaComponent(0.45) : SettingsStyle.border.withAlphaComponent(0.65)).setStroke()
+        box.lineWidth = 1
+        box.stroke()
         SettingsStyle.symbol(symbolName, color: secondary)?
             .draw(in: NSRect(x: 12, y: 13, width: 16, height: 16), from: .zero, operation: .sourceOver, fraction: 1, respectFlipped: true, hints: nil)
         let paragraph = NSMutableParagraphStyle()

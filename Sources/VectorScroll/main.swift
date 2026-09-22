@@ -115,12 +115,11 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
 
     private func configureSettingsWindow() {
         settingsWindow = SettingsWindow(contentRect: NSRect(x: 0, y: 0, width: 620, height: 720),
-                                  styleMask: [.titled, .closable], backing: .buffered, defer: false)
+                                  styleMask: [.titled, .closable, .miniaturizable, .resizable], backing: .buffered, defer: false)
         settingsWindow.title = "VectorScroll Settings"
-        settingsWindow.backgroundColor = SettingsStyle.background
+        SettingsStyle.prepareWindow(settingsWindow)
         settingsWindow.isReleasedWhenClosed = false
-        settingsWindow.standardWindowButton(.miniaturizeButton)?.isEnabled = false
-        settingsWindow.standardWindowButton(.zoomButton)?.isEnabled = false
+        settingsWindow.minSize = NSSize(width: 520, height: 500)
         if !settingsWindow.setFrameUsingName("VectorScrollSettingsV4") { settingsWindow.center() }
         settingsWindow.setFrameAutosaveName("VectorScrollSettingsV4")
 
@@ -199,7 +198,20 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         for card in [hold, click] { card.setContentCompressionResistancePriority(.defaultLow, for: .horizontal) }
         let modes = row(hold, click)
         modes.distribution = .fillEqually
-        fullWidth(modes)
+        modes.translatesAutoresizingMaskIntoConstraints = false
+        let modesPadding = NSView()
+        modesPadding.translatesAutoresizingMaskIntoConstraints = false
+        modesPadding.addSubview(modes)
+        NSLayoutConstraint.activate([
+            modes.leadingAnchor.constraint(equalTo: modesPadding.leadingAnchor, constant: 8),
+            modes.trailingAnchor.constraint(equalTo: modesPadding.trailingAnchor, constant: -8),
+            modes.topAnchor.constraint(equalTo: modesPadding.topAnchor, constant: 8),
+            modes.bottomAnchor.constraint(equalTo: modesPadding.bottomAnchor, constant: -8),
+            modes.heightAnchor.constraint(equalToConstant: 64)
+        ])
+        let modesGlass = SettingsStyle.glassContainer(for: modesPadding, cornerRadius: 12)
+        modesGlass.heightAnchor.constraint(equalToConstant: 80).isActive = true
+        fullWidth(modesGlass)
         reverseItem = checkbox("Reverse direction", "arrow.up.arrow.down", #selector(toggleReverseDirection))
         fullWidth(reverseItem)
         speedSlider = NSSlider(value: Double(scrollSpeedPercent), minValue: 50, maxValue: 200,
@@ -269,6 +281,9 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         stack.addArrangedSubview(row(updateItem, downloadItem))
 
         let content = settingsWindow.contentView!
+        let backdrop = SettingsStyle.backdrop()
+        backdrop.translatesAutoresizingMaskIntoConstraints = false
+        content.addSubview(backdrop)
         let scroll = NSScrollView()
         scroll.drawsBackground = false
         scroll.hasVerticalScroller = true
@@ -280,16 +295,20 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         scroll.documentView = document
         stack.translatesAutoresizingMaskIntoConstraints = false
         document.addSubview(stack)
-        content.addSubview(scroll)
+        backdrop.addSubview(scroll)
         NSLayoutConstraint.activate([
-            scroll.leadingAnchor.constraint(equalTo: content.leadingAnchor),
-            scroll.trailingAnchor.constraint(equalTo: content.trailingAnchor),
-            scroll.topAnchor.constraint(equalTo: content.topAnchor),
-            scroll.bottomAnchor.constraint(equalTo: content.bottomAnchor),
+            backdrop.leadingAnchor.constraint(equalTo: content.leadingAnchor),
+            backdrop.trailingAnchor.constraint(equalTo: content.trailingAnchor),
+            backdrop.topAnchor.constraint(equalTo: content.topAnchor),
+            backdrop.bottomAnchor.constraint(equalTo: content.bottomAnchor),
+            scroll.leadingAnchor.constraint(equalTo: backdrop.leadingAnchor),
+            scroll.trailingAnchor.constraint(equalTo: backdrop.trailingAnchor),
+            scroll.topAnchor.constraint(equalTo: backdrop.topAnchor),
+            scroll.bottomAnchor.constraint(equalTo: backdrop.bottomAnchor),
             document.widthAnchor.constraint(equalTo: scroll.contentView.widthAnchor),
             stack.leadingAnchor.constraint(equalTo: document.leadingAnchor, constant: 32),
             stack.trailingAnchor.constraint(equalTo: document.trailingAnchor, constant: -32),
-            stack.topAnchor.constraint(equalTo: document.topAnchor, constant: 24),
+            stack.topAnchor.constraint(equalTo: document.topAnchor, constant: 48),
             stack.bottomAnchor.constraint(equalTo: document.bottomAnchor, constant: -24)
         ])
         updateMarkerMenuItem()

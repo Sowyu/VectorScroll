@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   audit:
-    runs-on: macos-15
+    runs-on: macos-26
     timeout-minutes: 10
     env:
       GH_UPDATE_TEST_TOKEN: ${{ github.token }}
@@ -96,6 +96,7 @@ jobs:
           fi
       - name: Automatic installation and rollback
         run: |
+          sudo -n true
           swiftc -swift-version 6 -warnings-as-errors -parse-as-library Sources/VectorScroll/Updates.swift Sources/VectorScroll/UpdateInstaller.swift scripts/check-installer.swift -o .build/check-installer
           .build/check-installer
       - name: Notarize Developer ID build
@@ -129,7 +130,7 @@ jobs:
           fi
       - uses: actions/upload-artifact@v4
         with:
-          name: VectorScroll-1.7.0
+          name: VectorScroll-1.8.0
           path: dist/VectorScroll.dmg
           if-no-files-found: error
       - uses: actions/upload-artifact@v4
@@ -143,6 +144,19 @@ jobs:
             .build/onboarding-preview.png
             .build/onboarding-light-preview.png
           if-no-files-found: error
+
+  legacy-ui:
+    runs-on: macos-15
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          clean: false
+          persist-credentials: false
+      - name: Build macOS 14-compatible fallback
+        run: swift build -c release
+      - name: Hold-to-start fallback regression
+        run: python3 scripts/check-hold.py
 
   demo:
     if: github.event_name == 'workflow_dispatch'
