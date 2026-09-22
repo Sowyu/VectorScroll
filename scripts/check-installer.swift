@@ -43,13 +43,13 @@ struct CheckInstaller {
     }
 
     static func runFixture(_ label: String, _ executable: String, _ arguments: [String],
-                           timeout: TimeInterval = 20) throws {
+                           timeout: TimeInterval = 20, output: Any = FileHandle.nullDevice) throws {
         phase(label)
         let process = Process()
         let errors = Pipe()
         process.executableURL = URL(fileURLWithPath: executable)
         process.arguments = arguments
-        process.standardOutput = FileHandle.nullDevice
+        process.standardOutput = output
         process.standardError = errors
         try process.run()
         let deadline = Date().addingTimeInterval(timeout)
@@ -173,16 +173,28 @@ struct CheckInstaller {
         let root = files.temporaryDirectory.appendingPathComponent("VectorScroll install test's \(UUID().uuidString)")
         try files.createDirectory(at: root, withIntermediateDirectories: true)
         let keychain = root.appendingPathComponent("test-signing.keychain-db")
+        let searchList = Pipe()
+        try runFixture("read keychain search list", "/usr/bin/security", ["list-keychains", "-d", "user"], output: searchList)
+        let previousKeychains = String(data: searchList.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8)!
+            .split(separator: "\n").map { $0.trimmingCharacters(in: .whitespaces).trimmingCharacters(in: CharacterSet(charactersIn: "\"")) }
         try runFixture("create fixture keychain", "/usr/bin/security",
                        ["create-keychain", "-p", "test", keychain.path])
         try runFixture("unlock fixture keychain", "/usr/bin/security",
                        ["unlock-keychain", "-p", "test", keychain.path])
+        try runFixture("add fixture keychain to search list", "/usr/bin/security",
+                       ["list-keychains", "-d", "user", "-s", keychain.path] + previousKeychains)
+        defer {
+            try? runFixture("restore keychain search list", "/usr/bin/security",
+                            ["list-keychains", "-d", "user", "-s"] + previousKeychains)
+        }
         let releaseIdentity = "VectorScroll Release Test \(UUID().uuidString)"
         let foreignIdentity = "VectorScroll Foreign Test \(UUID().uuidString)"
         try makeIdentity(releaseIdentity, at: root, keychain: keychain)
         try makeIdentity(foreignIdentity, at: root, keychain: keychain)
         try runFixture("allow codesign key access", "/usr/bin/security",
                        ["set-key-partition-list", "-S", "apple-tool:,apple:", "-s", "-k", "test", keychain.path])
+        try runFixture("list fixture signing identities", "/usr/bin/security",
+                       ["find-identity", "-v", "-p", "codesigning", keychain.path], output: FileHandle.standardOutput)
         let sourceFolder = root.appendingPathComponent("image")
         let source = sourceFolder.appendingPathComponent("VectorScroll.app")
         let binaries = source.appendingPathComponent("Contents/MacOS")
