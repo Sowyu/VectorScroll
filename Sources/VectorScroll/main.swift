@@ -89,7 +89,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         updateTimer.setEventHandler { [weak self] in self?.checkForUpdates(manual: false) }
         self.updateTimer = updateTimer
         updateTimer.resume()
-        try? UpdateInstaller.acknowledgeLaunch()
+        _ = try? UpdateInstaller.acknowledgeLaunch()
     }
 
     private func configureMenu() {
