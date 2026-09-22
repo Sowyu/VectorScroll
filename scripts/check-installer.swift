@@ -38,6 +38,37 @@ struct CheckInstaller {
         do { try action(); fatalError("Expected installation to be rejected") } catch { }
     }
 
+    static func phase(_ message: String) {
+        FileHandle.standardOutput.write(Data("FIXTURE: \(message)\n".utf8))
+    }
+
+    static func runFixture(_ label: String, _ executable: String, _ arguments: [String],
+                           timeout: TimeInterval = 20) throws {
+        phase(label)
+        let process = Process()
+        let errors = Pipe()
+        process.executableURL = URL(fileURLWithPath: executable)
+        process.arguments = arguments
+        process.standardOutput = FileHandle.nullDevice
+        process.standardError = errors
+        try process.run()
+        let deadline = Date().addingTimeInterval(timeout)
+        while process.isRunning && Date() < deadline { Thread.sleep(forTimeInterval: 0.05) }
+        if process.isRunning {
+            process.terminate()
+            let stopDeadline = Date().addingTimeInterval(1)
+            while process.isRunning && Date() < stopDeadline { Thread.sleep(forTimeInterval: 0.05) }
+            if process.isRunning { _ = kill(process.processIdentifier, SIGKILL) }
+            process.waitUntilExit()
+            throw UpdateInstaller.Failure(message: "Fixture command timed out during \(label)")
+        }
+        process.waitUntilExit()
+        guard process.terminationStatus == 0 else {
+            let details = String(data: errors.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? "unknown error"
+            throw UpdateInstaller.Failure(message: "Fixture command failed during \(label): \(details)")
+        }
+    }
+
     static func makeIdentity(_ name: String, at root: URL, keychain: URL) throws {
         let folder = root.appendingPathComponent(name)
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
@@ -59,30 +90,23 @@ struct CheckInstaller {
         let key = folder.appendingPathComponent("key.pem")
         let certificate = folder.appendingPathComponent("certificate.pem")
         let archive = folder.appendingPathComponent("identity.p12")
-        try UpdateInstaller.run("/usr/bin/openssl", ["req", "-new", "-newkey", "rsa:2048", "-nodes", "-x509",
-                                                       "-days", "1", "-config", configuration.path,
-                                                       "-keyout", key.path, "-out", certificate.path])
-        try UpdateInstaller.run("/usr/bin/openssl", ["pkcs12", "-export", "-inkey", key.path, "-in", certificate.path,
-                                                       "-out", archive.path, "-passout", "pass:test"])
-        try UpdateInstaller.run("/usr/bin/security", ["import", archive.path, "-k", keychain.path, "-P", "test",
-                                                        "-T", "/usr/bin/codesign", "-T", "/usr/bin/security"])
-        try UpdateInstaller.run("/usr/bin/security", ["add-trusted-cert", "-r", "trustRoot", "-p", "codeSign",
-                                                        "-k", keychain.path, certificate.path])
+        try runFixture("generate \(name)", "/usr/bin/openssl",
+                       ["req", "-new", "-newkey", "rsa:2048", "-nodes", "-x509", "-days", "1",
+                        "-config", configuration.path, "-keyout", key.path, "-out", certificate.path])
+        try runFixture("package \(name)", "/usr/bin/openssl",
+                       ["pkcs12", "-export", "-inkey", key.path, "-in", certificate.path,
+                        "-out", archive.path, "-passout", "pass:test"])
+        try runFixture("import \(name)", "/usr/bin/security",
+                       ["import", archive.path, "-k", keychain.path, "-P", "test",
+                        "-T", "/usr/bin/codesign", "-T", "/usr/bin/security"])
+        try runFixture("trust \(name)", "/usr/bin/sudo",
+                       ["-n", "/usr/bin/security", "add-trusted-cert", "-d", "-r", "trustRoot",
+                        "-p", "codeSign", "-k", "/Library/Keychains/System.keychain", certificate.path])
     }
 
     static func sign(_ app: URL, as identity: String, keychain: URL) throws {
-        let process = Process()
-        let errors = Pipe()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/codesign")
-        process.arguments = ["--force", "--deep", "--sign", identity, "--keychain", keychain.path, app.path]
-        process.standardOutput = FileHandle.nullDevice
-        process.standardError = errors
-        try process.run()
-        process.waitUntilExit()
-        guard process.terminationStatus == 0 else {
-            let details = String(data: errors.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? "unknown error"
-            throw UpdateInstaller.Failure(message: "Fixture codesign failed for \(identity): \(details)")
-        }
+        try runFixture("sign \(app.lastPathComponent) as \(identity)", "/usr/bin/codesign",
+                       ["--force", "--deep", "--sign", identity, "--keychain", keychain.path, app.path])
     }
 
     static func atomicSwap(_ first: URL, _ second: URL) throws {
@@ -149,14 +173,16 @@ struct CheckInstaller {
         let root = files.temporaryDirectory.appendingPathComponent("VectorScroll install test's \(UUID().uuidString)")
         try files.createDirectory(at: root, withIntermediateDirectories: true)
         let keychain = root.appendingPathComponent("test-signing.keychain-db")
-        try UpdateInstaller.run("/usr/bin/security", ["create-keychain", "-p", "test", keychain.path])
-        try UpdateInstaller.run("/usr/bin/security", ["unlock-keychain", "-p", "test", keychain.path])
+        try runFixture("create fixture keychain", "/usr/bin/security",
+                       ["create-keychain", "-p", "test", keychain.path])
+        try runFixture("unlock fixture keychain", "/usr/bin/security",
+                       ["unlock-keychain", "-p", "test", keychain.path])
         let releaseIdentity = "VectorScroll Release Test \(UUID().uuidString)"
         let foreignIdentity = "VectorScroll Foreign Test \(UUID().uuidString)"
         try makeIdentity(releaseIdentity, at: root, keychain: keychain)
         try makeIdentity(foreignIdentity, at: root, keychain: keychain)
-        try UpdateInstaller.run("/usr/bin/security", ["set-key-partition-list", "-S", "apple-tool:,apple:",
-                                                        "-s", "-k", "test", keychain.path])
+        try runFixture("allow codesign key access", "/usr/bin/security",
+                       ["set-key-partition-list", "-S", "apple-tool:,apple:", "-s", "-k", "test", keychain.path])
         let sourceFolder = root.appendingPathComponent("image")
         let source = sourceFolder.appendingPathComponent("VectorScroll.app")
         let binaries = source.appendingPathComponent("Contents/MacOS")
@@ -178,7 +204,8 @@ struct CheckInstaller {
             Thread.sleep(forTimeInterval: 5)
         }
         """.write(to: stub, atomically: false, encoding: .utf8)
-        try UpdateInstaller.run("/usr/bin/xcrun", ["swiftc", stub.path, "-o", binaries.appendingPathComponent("VectorScroll").path])
+        try runFixture("compile fixture app", "/usr/bin/xcrun",
+                       ["swiftc", stub.path, "-o", binaries.appendingPathComponent("VectorScroll").path])
         var info: [String: Any] = ["CFBundleIdentifier": "local.vectorscroll.app", "CFBundleExecutable": "VectorScroll",
                                   "CFBundleName": "VectorScroll", "CFBundlePackageType": "APPL", "LSUIElement": true,
                                   "CFBundleShortVersionString": "2.0.0", "CFBundleVersion": "200", "LSMinimumSystemVersion": "14.0"]
@@ -190,7 +217,8 @@ struct CheckInstaller {
         try sign(foreign, as: foreignIdentity, keychain: keychain)
         let adHoc = root.appendingPathComponent("AdHoc.app")
         try files.copyItem(at: source, to: adHoc)
-        try UpdateInstaller.run("/usr/bin/codesign", ["--force", "--deep", "--sign", "-", adHoc.path])
+        try runFixture("ad-hoc sign rejection fixture", "/usr/bin/codesign",
+                       ["--force", "--deep", "--sign", "-", adHoc.path])
         let incompatible = root.appendingPathComponent("Incompatible.app")
         try files.copyItem(at: source, to: incompatible)
         var incompatibleInfo = info
@@ -206,8 +234,9 @@ struct CheckInstaller {
             .write(to: destination.appendingPathComponent("Contents/Info.plist"))
         try sign(destination, as: releaseIdentity, keychain: keychain)
         let imageURL = root.appendingPathComponent("Update.dmg")
-        try UpdateInstaller.run("/usr/bin/hdiutil", ["create", "-volname", "VectorScrollTest", "-srcfolder", sourceFolder.path,
-                                                    "-format", "UDZO", imageURL.path])
+        try runFixture("create fixture disk image", "/usr/bin/hdiutil",
+                       ["create", "-volname", "VectorScrollTest", "-srcfolder", sourceFolder.path,
+                        "-format", "UDZO", imageURL.path])
         let image = try Data(contentsOf: imageURL)
         let digest = SHA256.hash(data: image).map { String(format: "%02x", $0) }.joined()
         let update = AppUpdate(version: "2.0.0", downloadURL: URL(string: "https://github.com/Sowyu/VectorScroll/releases/download/2.0.0/VectorScroll.dmg")!,
@@ -232,6 +261,7 @@ struct CheckInstaller {
             fatalError("Expected oversized download to be rejected")
         } catch { }
 
+        phase("exercise installer rejection and rollback paths")
         let plan = try UpdateInstaller.prepare(update, image: image, destination: destination,
                                               helperSource: helper, parentPID: getpid())
         rejects {
@@ -264,6 +294,7 @@ struct CheckInstaller {
         let versionAfterHealthFailure = try UpdateInstaller.appVersion(destination)
         assert(versionAfterHealthFailure == "1.0.0")
 
+        phase("exercise abrupt termination at replacement boundaries")
         let staged = plan.deletingLastPathComponent().appendingPathComponent("VectorScroll.app")
         let beforeSwapSignal = root.appendingPathComponent("before swap reached")
         try stopAtBoundary("before-swap", plan: plan, signal: beforeSwapSignal)
@@ -289,6 +320,7 @@ struct CheckInstaller {
 
         // Run the shipped executable's helper against an inert signed fixture app.
         // The fixture writes a marker on launch instead of requesting input access.
+        phase("exercise production helper")
         let parent = Process()
         parent.executableURL = URL(fileURLWithPath: "/bin/sleep")
         parent.arguments = ["30"]
@@ -316,6 +348,7 @@ struct CheckInstaller {
         assert(status == "success" && installed == "2.0.0" && backup == "1.0.0")
         print("PASS: production helper waits for exit, installs, relaunches, preserves backup, and handles spaces/apostrophes in paths")
 
+        phase("exercise live release download")
         let configuration = URLSessionConfiguration.ephemeral
         if let token = ProcessInfo.processInfo.environment["GH_UPDATE_TEST_TOKEN"] {
             configuration.httpAdditionalHeaders = ["Authorization": "Bearer \(token)"]
