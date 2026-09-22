@@ -13,6 +13,7 @@ import plistlib
 import shutil
 import uuid
 import threading
+import os
 
 root = Path(__file__).resolve().parent.parent
 source = (root / "Sources/VectorScroll/main.swift").read_text()
@@ -225,7 +226,7 @@ extension VectorScrollApp {
         subject.updatePermissionMenuItem()
         print("PASS: native close control, Command-W close/reopen, and permission status transitions")
         assert(subject.holdScrollItem is SettingsButton)
-        assert(subject.openSettingsButton is SettingsButton)
+        assert(!(subject.openSettingsButton is SettingsButton), "Checkboxes must retain native AppKit rendering")
         func savePreview(_ window: NSWindow, _ name: String, appearance: NSAppearance.Name = .darkAqua) {
             // Scrolling to the top flashes the overlay scroller, so hide it for the capture.
             scroll.hasVerticalScroller = false
@@ -297,8 +298,7 @@ extension VectorScrollApp {
                 assert(hit.contains(.trackableArea), "Entire drawn button must be clickable")
             }
         }
-        // AppKit 26 changed checkbox glyph metrics. Click the visible label,
-        // which is a native activation target across supported system versions.
+        // The visible label is a native checkbox activation target.
         mouseClick(subject.hideIconItem, at: NSPoint(x: 80, y: subject.hideIconItem.bounds.midY))
         assert(subject.hideIconItem.state == .on && subject.statusItem != nil, "Checkbox must use native click tracking")
         mouseClick(subject.holdScrollItem, at: NSPoint(x: 8, y: 8))
@@ -330,6 +330,7 @@ extension VectorScrollApp {
         subject.reverseDirection = false
         subject.updateSpeedControls()
         subject.applyLaunchAtStartupStatus(.notRegistered)
+        subject.applyPermissionStatus(canListen: true, canAccess: true)
         content.layoutSubtreeIfNeeded()
         scroll.contentView.scroll(to: NSPoint(x: 0, y: 0))
         scroll.reflectScrolledClipView(scroll.contentView)
@@ -393,6 +394,16 @@ extension VectorScrollApp {
 }
 
 setvbuf(stdout, nil, _IONBF, 0)
+if CommandLine.arguments[1] == "--prepare-display" {
+    let display = CGMainDisplayID()
+    let modes = CGDisplayCopyAllDisplayModes(display, nil) as? [CGDisplayMode] ?? []
+    if let mode = modes.filter({ $0.width >= 1280 && $0.height >= 960 })
+        .min(by: { $0.width * $0.height < $1.width * $1.height }) {
+        let result = CGDisplaySetDisplayMode(display, mode, nil)
+        print("CI display: \(mode.width)x\(mode.height), result \(result.rawValue)")
+    }
+    exit(0)
+}
 if CommandLine.arguments[1] == "--click" {
     precondition(CGPreflightPostEventAccess(), "UI checks require Accessibility access")
     let point = CGPoint(x: Double(CommandLine.arguments[2])!, y: Double(CommandLine.arguments[3])!)
@@ -419,16 +430,16 @@ final class AuditAppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc private func runChecks() {
-            NSApp.activate()
-            let promptRelease = VectorScrollApp.checkRelease(delay: 0.1)
-            let delayedRelease = VectorScrollApp.checkRelease(delay: 0.3)
-            let recovery = VectorScrollApp.checkEventRecovery()
-            let settings = VectorScrollApp.checkDelaySettings()
-            let passed = promptRelease && delayedRelease && recovery && settings
-            if passed {
-                try! "PASS".write(toFile: CommandLine.arguments[2], atomically: true, encoding: .utf8)
-            }
-            exit(passed ? 0 : 1)
+        NSApp.activate()
+        let promptRelease = VectorScrollApp.checkRelease(delay: 0.1)
+        let delayedRelease = VectorScrollApp.checkRelease(delay: 0.3)
+        let recovery = VectorScrollApp.checkEventRecovery()
+        let settings = VectorScrollApp.checkDelaySettings()
+        let passed = promptRelease && delayedRelease && recovery && settings
+        if passed {
+            try! "PASS".write(toFile: CommandLine.arguments[2], atomically: true, encoding: .utf8)
+        }
+        exit(passed ? 0 : 1)
     }
 }
 let auditDelegate = AuditAppDelegate()
@@ -444,6 +455,9 @@ binary = output / "check-hold"
 subprocess.run(["swiftc", "-swift-version", "6", "-warnings-as-errors",
                 str(generated), str(root / "Sources/VectorScroll/SettingsStyle.swift"), str(root / "Sources/VectorScroll/Onboarding.swift"), str(root / "Sources/VectorScroll/Updates.swift"), str(root / "Sources/VectorScroll/UpdateInstaller.swift"), "-o", str(binary), "-framework", "AppKit",
                 "-framework", "ApplicationServices", "-framework", "ServiceManagement"], check=True)
+# Give screenshots room for the full default window on the disposable CI Mac.
+if os.environ.get("GITHUB_ACTIONS") == "true":
+    subprocess.run([str(binary), "--prepare-display"], check=True, timeout=10)
 # LaunchServices registers the probe as a real foreground app. macOS 26 will
 # not activate an unbundled command-line process for native control tracking.
 run_id = uuid.uuid4().hex

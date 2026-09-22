@@ -21,8 +21,8 @@ final class Onboarding: NSObject, NSWindowDelegate {
     private let title: NSTextField
     private let body: NSTextField
     private let status: NSTextField
-    let primary: SettingsButton
-    let secondary: SettingsButton
+    let primary: NSButton
+    let secondary: NSButton
 
     override init() {
         let setupWindow = SettingsWindow(contentRect: NSRect(x: 0, y: 0, width: 500, height: 320),
@@ -44,8 +44,8 @@ final class Onboarding: NSObject, NSWindowDelegate {
         title = label(22, weight: .semibold)
         body = label(14)
         status = label(12, weight: .medium, color: SettingsStyle.secondary)
-        primary = SettingsButton("", symbol: "arrow.right", target: nil, action: nil)
-        secondary = SettingsButton("", symbol: "xmark", target: nil, action: nil)
+        primary = SettingsStyle.actionButton("", symbol: "arrow.right", target: nil, action: nil)
+        secondary = SettingsStyle.actionButton("", symbol: "xmark", target: nil, action: nil)
         super.init()
 
         window.delegate = self
@@ -172,8 +172,8 @@ final class Onboarding: NSObject, NSWindowDelegate {
             primary.title = "Finish"
             secondary.title = "Open Settings"
         }
-        primary.symbolName = step == .done ? "checkmark" : (askedInputMonitoring && step == .inputMonitoring) || (askedAccessibility && step == .accessibility) ? "gearshape" : "arrow.right"
-        secondary.symbolName = step == .done ? "gearshape" : "xmark"
+        SettingsStyle.setSymbol(step == .done ? "checkmark" : (askedInputMonitoring && step == .inputMonitoring) || (askedAccessibility && step == .accessibility) ? "gearshape" : "arrow.right", on: primary)
+        SettingsStyle.setSymbol(step == .done ? "gearshape" : "xmark", on: secondary)
         secondary.keyEquivalent = step == .done ? "" : "\u{1b}"
         primary.needsDisplay = true
     }

@@ -137,11 +137,14 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
             stack.spacing = 12
             return stack
         }
-        func button(_ title: String, _ symbol: String, _ action: Selector) -> SettingsButton {
-            SettingsButton(title, symbol: symbol, target: self, action: action)
+        func button(_ title: String, _ symbol: String, _ action: Selector) -> NSButton {
+            SettingsStyle.actionButton(title, symbol: symbol, target: self, action: action)
         }
-        func checkbox(_ title: String, _ symbol: String, _ action: Selector) -> SettingsButton {
-            SettingsButton(title, symbol: symbol, kind: .toggle, target: self, action: action)
+        func checkbox(_ title: String, _ action: Selector) -> NSButton {
+            let control = NSButton(checkboxWithTitle: title, target: self, action: action)
+            control.font = .systemFont(ofSize: 13, weight: .medium)
+            control.focusRingType = .default
+            return control
         }
         let stack = NSStackView()
         stack.orientation = .vertical
@@ -186,11 +189,11 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         fullWidth(row(appIcon, title, spacer, guideButton))
 
         section("Scrolling", "computermouse")
-        let hold = SettingsButton("Scroll while holding the middle button", symbol: "hand.point.up.left", kind: .choice, target: self, action: #selector(selectHoldToScroll))
+        let hold = SettingsButton("Scroll while holding the middle button", symbol: "hand.point.up.left", target: self, action: #selector(selectHoldToScroll))
         hold.displayTitle = "Hold to scroll"
         hold.detail = "Release the middle button to stop"
         holdScrollItem = hold
-        let click = SettingsButton("Keep scrolling until the next click", symbol: "cursorarrow.click", kind: .choice, target: self, action: #selector(selectHoldToLock))
+        let click = SettingsButton("Keep scrolling until the next click", symbol: "cursorarrow.click", target: self, action: #selector(selectHoldToLock))
         click.displayTitle = "Toggle scrolling"
         holdToLockItem = click
         // Cards must not outrank the window's stay-put priority (500), or the
@@ -212,7 +215,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         let modesGlass = SettingsStyle.glassContainer(for: modesPadding, cornerRadius: 12)
         modesGlass.heightAnchor.constraint(equalToConstant: 80).isActive = true
         fullWidth(modesGlass)
-        reverseItem = checkbox("Reverse direction", "arrow.up.arrow.down", #selector(toggleReverseDirection))
+        reverseItem = checkbox("Reverse direction", #selector(toggleReverseDirection))
         fullWidth(reverseItem)
         speedSlider = NSSlider(value: Double(scrollSpeedPercent), minValue: 50, maxValue: 200,
                                target: self, action: #selector(changeScrollSpeed(_:)))
@@ -226,7 +229,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         speedLabel.font = .monospacedDigitSystemFont(ofSize: 12, weight: .medium)
         let speedRow = row(label("Speed", secondary: true), speedSlider, speedLabel)
         stack.addArrangedSubview(speedRow)
-        delayToggle = checkbox("Delay before scrolling starts", "timer", #selector(toggleHoldDelay))
+        delayToggle = checkbox("Delay before scrolling starts", #selector(toggleHoldDelay))
         delaySlider = NSSlider(value: Double(holdDelayMilliseconds), minValue: 50, maxValue: 1000,
                                target: self, action: #selector(changeHoldDelay(_:)))
         delaySlider.numberOfTickMarks = 20
@@ -258,9 +261,9 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         stack.addArrangedSubview(row(lightModeItem, darkModeItem, label("Size", secondary: true), sizePicker))
 
         section("App", "slider.horizontal.3")
-        openSettingsButton = checkbox("Open settings on launch", "macwindow", #selector(toggleOpenSettings))
-        hideIconItem = checkbox("Show menu bar icon", "menubar.rectangle", #selector(toggleMenuBarIcon))
-        launchAtStartupItem = checkbox("Launch at login", "power", #selector(toggleLaunchAtStartup))
+        openSettingsButton = checkbox("Open settings on launch", #selector(toggleOpenSettings))
+        hideIconItem = checkbox("Show menu bar icon", #selector(toggleMenuBarIcon))
+        launchAtStartupItem = checkbox("Launch at login", #selector(toggleLaunchAtStartup))
         launchAtStartupItem.allowsMixedState = true
         fullWidth(openSettingsButton)
         stack.setCustomSpacing(0, after: openSettingsButton)
