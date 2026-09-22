@@ -39,8 +39,6 @@ driver = r'''
 extension VectorScrollApp {
     func demoPrepare() { eventTapInstalled = true; configureMenu(); overlay.setSize(40) }
     var demoStatusButton: NSStatusBarButton { statusItem.button! }
-    @objc func demoOpenMenu() { statusItem.button!.performClick(nil) }
-    func demoCloseMenu() { menu.cancelTracking() }
     func demoShowSettings() { showSettings() }
     var demoToggleButton: NSView { holdToLockItem }
     func demoSelectToggle() { holdToLockItem.performClick(nil) }
@@ -106,13 +104,10 @@ private final class Driver: NSObject {
         var speed = 100.0
         phases = [
             Phase(end: 80, target: statusItem, hold: false) {},
-            Phase(end: 150, target: { [unowned self] in CGPoint(x: statusItem().x + 24, y: 25 + 22) }, hold: false) { [unowned self] in
-                // Menu tracking blocks whoever opens it. A firing timer cannot fire again, so open it
-                // from a one-shot timer and let the tick timer keep running inside the tracking loop.
-                let open = Timer(timeInterval: 0, target: subject, selector: #selector(VectorScrollApp.demoOpenMenu), userInfo: nil, repeats: false)
-                RunLoop.main.add(open, forMode: .common)
-            },
-            Phase(end: 165, target: still, hold: false) { [unowned self] in subject.demoCloseMenu(); subject.demoShowSettings() },
+            // Status bar menu tracking stalls every timer, so the menu itself is not popped.
+            // The pointer reaches the icon, pauses, and Settings opens as it would from the menu.
+            Phase(end: 100, target: still, hold: false) {},
+            Phase(end: 115, target: still, hold: false) { [unowned self] in subject.demoShowSettings() },
             Phase(end: 250, target: { [unowned self] in center(subject.demoToggleButton) }, hold: false) {},
             Phase(end: 275, target: still, hold: false) { [unowned self] in subject.demoSelectToggle() },
             Phase(end: 350, target: { [unowned self] in knob(100) }, hold: false) {},
@@ -219,7 +214,7 @@ frames.mkdir()
 subprocess.run(["open", "-a", "Safari", "https://en.wikipedia.org/wiki/Scrolling"], check=True, timeout=60)
 log("safari opened")
 time.sleep(12)
-subprocess.run([str(binary), str(frames)], check=True, timeout=900)
+subprocess.run([str(binary), str(frames)], check=True, timeout=600)
 log("frames captured", len(list(frames.iterdir())))
 subprocess.run(["osascript", "-e", 'tell application "Safari" to quit'], timeout=30)
 
