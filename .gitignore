@@ -2,3 +2,5 @@
 .swiftpm/
 dist/
 .DS_Store
+site/video/node_modules
+site/video/frames
