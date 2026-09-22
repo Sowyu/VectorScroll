@@ -39,7 +39,7 @@ driver = r'''
 extension VectorScrollApp {
     func demoPrepare() { eventTapInstalled = true; configureMenu(); overlay.setSize(40) }
     var demoStatusButton: NSStatusBarButton { statusItem.button! }
-    func demoShowSettings() { showSettings() }
+    func demoShowSettings() { showSettings(); settingsWindow.center(); settingsWindow.orderFrontRegardless() }
     var demoToggleButton: NSView { holdToLockItem }
     func demoSelectToggle() { holdToLockItem.performClick(nil) }
     var demoSlider: NSSlider { speedSlider }
@@ -213,6 +213,11 @@ shutil.rmtree(frames, ignore_errors=True)
 frames.mkdir()
 subprocess.run(["defaults", "write", "com.apple.dock", "autohide", "-bool", "true"], check=True)
 subprocess.run(["killall", "Dock"])
+# The runner desktop is plain black. Put a stock wallpaper behind the windows.
+wallpapers = sorted(Path("/System/Library/Desktop Pictures").glob("*.heic"))
+if wallpapers and shutil.which("desktoppr"):
+    r = subprocess.run(["desktoppr", str(wallpapers[0])], capture_output=True, text=True)
+    log("wallpaper", wallpapers[0].name, "ok" if r.returncode == 0 else r.stderr.strip())
 # The runner boots at 1024x768. Ask for a larger mode if the virtual display has one, so the
 # 620x820 Settings window does not fill the frame.
 modes = subprocess.run(["displayplacer", "list"], capture_output=True, text=True).stdout
