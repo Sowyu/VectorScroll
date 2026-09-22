@@ -221,11 +221,51 @@ extension VectorScrollApp {
         print("PASS: native close control, Command-W close/reopen, and permission status transitions")
         assert(subject.holdScrollItem is SettingsButton)
         assert(subject.openSettingsButton is SettingsButton)
+        func savePreview(_ window: NSWindow, _ name: String, appearance: NSAppearance.Name = .darkAqua) {
+            // Scrolling to the top flashes the overlay scroller, so hide it for the capture.
+            scroll.hasVerticalScroller = false
+            window.appearance = NSAppearance(named: appearance)
+            NSApp.activate()
+            window.makeKeyAndOrderFront(nil)
+            RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.2))
+            let frame = window.contentView!.superview!
+            frame.layoutSubtreeIfNeeded()
+            frame.needsDisplay = true
+            window.displayIfNeeded()
+            let output = URL(fileURLWithPath: ".build/\(name).png")
+            // Glass and vibrancy are composed by WindowServer, outside cacheDisplay.
+            let capture = Process()
+            capture.executableURL = URL(fileURLWithPath: "/usr/sbin/screencapture")
+            capture.arguments = ["-x", "-o", "-l", String(window.windowNumber), output.path]
+            var captured = false
+            do {
+                try capture.run()
+                let deadline = Date(timeIntervalSinceNow: 5)
+                while capture.isRunning && Date() < deadline {
+                    RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.02))
+                }
+                if capture.isRunning { capture.terminate() }
+                else { captured = capture.terminationStatus == 0 && FileManager.default.fileExists(atPath: output.path) }
+            } catch {
+                print("Window capture unavailable: \(error.localizedDescription)")
+            }
+            if !captured {
+                let bitmap = frame.bitmapImageRepForCachingDisplay(in: frame.bounds)!
+                frame.cacheDisplay(in: frame.bounds, to: bitmap)
+                try! bitmap.representation(using: .png, properties: [:])!.write(to: output)
+                print("Preview \(name) uses bitmap fallback; compositor effects are not captured")
+            }
+            scroll.hasVerticalScroller = true
+            window.appearance = nil
+        }
+        savePreview(subject.settingsWindow, "settings-preview")
         func mouseClick(_ button: NSButton, at point: NSPoint) {
             content.layoutSubtreeIfNeeded()
             button.scrollToVisible(button.bounds)
             content.layoutSubtreeIfNeeded()
             let location = button.convert(point, to: nil)
+            let hit = content.hitTest(content.convert(location, from: nil))
+            print("CLICK: \(button.title), bounds \(button.bounds), visible \(button.visibleRect), hit \(String(describing: hit)), state \(button.state.rawValue)")
             func event(_ type: NSEvent.EventType, at location: NSPoint) -> NSEvent {
                 NSEvent.mouseEvent(with: type, location: location, modifierFlags: [], timestamp: ProcessInfo.processInfo.systemUptime,
                                    windowNumber: subject.settingsWindow.windowNumber, context: nil, eventNumber: 1, clickCount: 1, pressure: type == .leftMouseDown ? 1 : 0)!
@@ -234,6 +274,7 @@ extension VectorScrollApp {
             // down through NSWindow rather than bypassing tracking with performClick.
             NSApp.postEvent(event(.leftMouseUp, at: location), atStart: true)
             subject.settingsWindow.sendEvent(event(.leftMouseDown, at: location))
+            RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.1))
             // A disabled control does not enter tracking and leaves mouse-up queued.
             _ = NSApp.nextEvent(matching: .leftMouseUp, until: .distantPast, inMode: .default, dequeue: true)
         }
@@ -288,43 +329,6 @@ extension VectorScrollApp {
         content.layoutSubtreeIfNeeded()
         scroll.contentView.scroll(to: NSPoint(x: 0, y: 0))
         scroll.reflectScrolledClipView(scroll.contentView)
-        func savePreview(_ window: NSWindow, _ name: String, appearance: NSAppearance.Name = .darkAqua) {
-            // Scrolling to the top flashes the overlay scroller, so hide it for the capture.
-            scroll.hasVerticalScroller = false
-            window.appearance = NSAppearance(named: appearance)
-            NSApp.activate()
-            window.makeKeyAndOrderFront(nil)
-            RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.2))
-            let frame = window.contentView!.superview!
-            frame.layoutSubtreeIfNeeded()
-            frame.needsDisplay = true
-            window.displayIfNeeded()
-            let output = URL(fileURLWithPath: ".build/\(name).png")
-            // Glass and vibrancy are composed by WindowServer, outside cacheDisplay.
-            let capture = Process()
-            capture.executableURL = URL(fileURLWithPath: "/usr/sbin/screencapture")
-            capture.arguments = ["-x", "-o", "-l", String(window.windowNumber), output.path]
-            var captured = false
-            do {
-                try capture.run()
-                let deadline = Date(timeIntervalSinceNow: 5)
-                while capture.isRunning && Date() < deadline {
-                    RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.02))
-                }
-                if capture.isRunning { capture.terminate() }
-                else { captured = capture.terminationStatus == 0 && FileManager.default.fileExists(atPath: output.path) }
-            } catch {
-                print("Window capture unavailable: \(error.localizedDescription)")
-            }
-            if !captured {
-                let bitmap = frame.bitmapImageRepForCachingDisplay(in: frame.bounds)!
-                frame.cacheDisplay(in: frame.bounds, to: bitmap)
-                try! bitmap.representation(using: .png, properties: [:])!.write(to: output)
-                print("Preview \(name) uses bitmap fallback; compositor effects are not captured")
-            }
-            scroll.hasVerticalScroller = true
-            window.appearance = nil
-        }
         savePreview(subject.settingsWindow, "settings-delay-preview")
         subject.selectHoldToScroll()
         content.layoutSubtreeIfNeeded()
