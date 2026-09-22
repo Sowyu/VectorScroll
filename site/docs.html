@@ -19,8 +19,8 @@
   <nav><a href="download.html">download</a><a href="about.html">about</a><a href="docs.html" aria-current="page">docs</a><a href="https://github.com/Sowyu/VectorScroll" class="pill">github</a></nav>
 </header>
 <main id="main" class="docs">
-  <nav class="toc" aria-label="On this page">
-    <a href="#start">Getting started</a><a href="#scrolling">Scrolling</a><a href="#indicator">Indicator</a><a href="#settings">Settings</a><a href="#updates">Updates</a><a href="#permissions">Permissions</a><a href="#trouble">Troubleshooting</a><a href="#build">Building from source</a>
+  <nav class="rail" aria-label="Sections">
+    <a href="#start" aria-label="Getting started"></a><a href="#scrolling" aria-label="Scrolling"></a><a href="#indicator" aria-label="Indicator"></a><a href="#settings" aria-label="Settings"></a><a href="#updates" aria-label="Updates"></a><a href="#permissions" aria-label="Permissions"></a><a href="#trouble" aria-label="Troubleshooting"></a><a href="#build" aria-label="Building from source"></a>
   </nav>
   <div class="doc">
     <h1>Docs</h1>
@@ -61,6 +61,19 @@
     <p>The bundle script builds both architectures, renders the icon set, and writes <code>dist/VectorScroll.app</code>. It signs ad hoc unless <code>CODESIGN_IDENTITY</code> names a certificate in your keychain. The <a href="https://github.com/Sowyu/VectorScroll#build-and-check">README</a> covers the test harness.</p>
   </div>
 </main>
+<script>
+  // Light each bar in the rail once its section has scrolled into the top third of the window.
+  const bars = [...document.querySelectorAll('.rail a')];
+  const heads = bars.map(a => document.querySelector(a.getAttribute('href')));
+  const paint = () => {
+    const line = innerHeight / 3;
+    let current = 0;
+    heads.forEach((h, i) => { if (h.getBoundingClientRect().top <= line) current = i; });
+    bars.forEach((a, i) => a.classList.toggle('on', i <= current));
+  };
+  addEventListener('scroll', paint, { passive: true });
+  paint();
+</script>
 <footer>made by <a href="https://github.com/Sowyu">Sowyu</a></footer>
 </body>
 </html>
