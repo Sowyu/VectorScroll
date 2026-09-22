@@ -53,7 +53,7 @@ extension VectorScrollApp {
     func demoTick() { if isActive { emitScrollTick() } }
 }
 @MainActor
-final class Driver: NSObject {
+private final class Driver: NSObject {
     struct Phase {
         let end: Int
         let target: () -> CGPoint
