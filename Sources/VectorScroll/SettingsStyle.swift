@@ -146,7 +146,10 @@ final class SettingsButton: NSButton {
     }
 
     required init?(coder: NSCoder) { fatalError("init(coder:) is unsupported") }
-    override var isFlipped: Bool { true }
+    // Only the custom choice cards draw in top-left coordinates. Native
+    // buttons keep AppKit's coordinate system so its view-based tracking on
+    // newer macOS releases matches the visible control.
+    override var isFlipped: Bool { kind == .choice ? true : super.isFlipped }
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { isEnabled }
     override var intrinsicContentSize: NSSize {
         guard kind == .choice else { return super.intrinsicContentSize }
