@@ -1,8 +1,9 @@
-"""Run the real hold/release handlers without posting input or requesting permissions.
+"""Check hold/release handlers and click controls in a foreground probe window.
 
 This inserts a same-file Swift extension into a generated copy of main.swift.
 Production source stays unchanged. The main queue deliberately does not drain
 between press and release, reproducing delayed delivery deterministically.
+UI checks post mouse clicks and require Accessibility access on the test Mac.
 Run on macOS with: python3 scripts/check-hold.py
 """
 
@@ -11,6 +12,7 @@ import subprocess
 import plistlib
 import shutil
 import uuid
+import threading
 
 root = Path(__file__).resolve().parent.parent
 source = (root / "Sources/VectorScroll/main.swift").read_text()
@@ -236,22 +238,17 @@ extension VectorScrollApp {
             frame.needsDisplay = true
             window.displayIfNeeded()
             let output = URL(fileURLWithPath: ".build/\(name).png")
-            // Glass and vibrancy are composed by WindowServer, outside cacheDisplay.
-            let capture = Process()
-            capture.executableURL = URL(fileURLWithPath: "/usr/sbin/screencapture")
-            capture.arguments = ["-x", "-o", "-l", String(window.windowNumber), output.path]
-            var captured = false
-            do {
-                try capture.run()
-                let deadline = Date(timeIntervalSinceNow: 5)
-                while capture.isRunning && Date() < deadline {
-                    RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.02))
-                }
-                if capture.isRunning { capture.terminate() }
-                else { captured = capture.terminationStatus == 0 && FileManager.default.fileExists(atPath: output.path) }
-            } catch {
-                print("Window capture unavailable: \(error.localizedDescription)")
+            // The runner captures outside the probe app so its Screen Recording
+            // permission covers WindowServer composition, including Liquid Glass.
+            let request = URL(fileURLWithPath: CommandLine.arguments[3])
+                .appendingPathComponent(UUID().uuidString)
+            let completion = request.appendingPathExtension("done")
+            try! "\(window.windowNumber)\n\(output.path)".write(to: request.appendingPathExtension("request"), atomically: true, encoding: .utf8)
+            let deadline = Date(timeIntervalSinceNow: 7)
+            while !FileManager.default.fileExists(atPath: completion.path) && Date() < deadline {
+                RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.02))
             }
+            let captured = (try? String(contentsOf: completion, encoding: .utf8)) == "0"
             if !captured {
                 let bitmap = frame.bitmapImageRepForCachingDisplay(in: frame.bounds)!
                 frame.cacheDisplay(in: frame.bounds, to: bitmap)
@@ -270,20 +267,20 @@ extension VectorScrollApp {
             let hit = content.hitTest(content.convert(location, from: nil))
             print("APP: running \(NSApp.isRunning), active \(NSApp.isActive), key \(subject.settingsWindow.isKeyWindow), main \(subject.settingsWindow.isMainWindow), movable \(button.mouseDownCanMoveWindow)")
             print("CLICK: \(button.title), bounds \(button.bounds), visible \(button.visibleRect), hit \(String(describing: hit)), state \(button.state.rawValue)")
-            func event(_ type: NSEvent.EventType, at location: NSPoint) -> NSEvent {
-                NSEvent.mouseEvent(with: type, location: location, modifierFlags: [], timestamp: ProcessInfo.processInfo.systemUptime,
-                                   windowNumber: subject.settingsWindow.windowNumber, context: nil, eventNumber: 1, clickCount: 1, pressure: type == .leftMouseDown ? 1 : 0)!
-            }
-            // NSButton consumes mouse-up in its native tracking loop. Send the
-            // down through NSWindow rather than bypassing tracking with performClick.
-            let down = event(.leftMouseDown, at: location)
-            let up = event(.leftMouseUp, at: location)
-            print("CELL: \(button.cell!.hitTest(for: down, in: button.bounds, of: button).rawValue), enabled \(button.isEnabled)")
-            NSApp.postEvent(up, atStart: true)
-            NSApp.sendEvent(down)
-            RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.1))
-            // A disabled control does not enter tracking and leaves mouse-up queued.
-            _ = NSApp.nextEvent(matching: .leftMouseUp, until: .distantPast, inMode: .default, dequeue: true)
+            let screenPoint = subject.settingsWindow.convertPoint(toScreen: location)
+            let pointer = CGPoint(x: screenPoint.x, y: NSScreen.screens[0].frame.maxY - screenPoint.y)
+            let request = URL(fileURLWithPath: CommandLine.arguments[3]).appendingPathComponent(UUID().uuidString)
+            let completion = request.appendingPathExtension("done")
+            try! "\(pointer.x)\n\(pointer.y)".write(to: request.appendingPathExtension("click"), atomically: true, encoding: .utf8)
+            let minimum = Date(timeIntervalSinceNow: 0.3)
+            let deadline = Date(timeIntervalSinceNow: 5)
+            repeat {
+                if let event = NSApp.nextEvent(matching: .any, until: Date(timeIntervalSinceNow: 0.02), inMode: .default, dequeue: true) {
+                    NSApp.sendEvent(event)
+                }
+                if Date() >= minimum && FileManager.default.fileExists(atPath: completion.path) { break }
+            } while Date() < deadline
+            assert((try? String(contentsOf: completion, encoding: .utf8)) == "0", "The runner must deliver a real pointer click")
         }
         // The custom cards promise a full-surface target. Standard controls use
         // their native glyph/title or bezel, tested through real mouse tracking.
@@ -396,6 +393,17 @@ extension VectorScrollApp {
 }
 
 setvbuf(stdout, nil, _IONBF, 0)
+if CommandLine.arguments[1] == "--click" {
+    precondition(CGPreflightPostEventAccess(), "UI checks require Accessibility access")
+    let point = CGPoint(x: Double(CommandLine.arguments[2])!, y: Double(CommandLine.arguments[3])!)
+    for type in [CGEventType.mouseMoved, .leftMouseDown, .leftMouseUp] {
+        let event = CGEvent(mouseEventSource: nil, mouseType: type, mouseCursorPosition: point, mouseButton: .left)!
+        event.setIntegerValueField(.mouseEventClickState, value: 1)
+        event.post(tap: .cgSessionEventTap)
+        usleep(50_000)
+    }
+    exit(0)
+}
 precondition(FileManager.default.changeCurrentDirectoryPath(CommandLine.arguments[1]))
 let app = NSApplication.shared
 app.setActivationPolicy(.regular)
@@ -453,10 +461,33 @@ shutil.copy2(binary, macos / "check-hold")
 result = output / f"{run_id}.passed"
 stdout = output / f"{run_id}.stdout"
 stderr = output / f"{run_id}.stderr"
+captures = output / f"{run_id}-captures"
+captures.mkdir()
+stop_capture = threading.Event()
+def capture_windows():
+    while not stop_capture.wait(0.05):
+        for request in list(captures.glob("*.request")) + list(captures.glob("*.click")):
+            completion = request.with_suffix(".done")
+            if completion.exists():
+                continue
+            first, second = request.read_text().splitlines()
+            command = ([str(binary), "--click", first, second] if request.suffix == ".click" else
+                       ["/usr/sbin/screencapture", "-x", "-o", "-l", first, second])
+            try:
+                capture = subprocess.run(command, timeout=5, capture_output=True)
+                if capture.returncode:
+                    print(capture.stderr.decode(errors="replace"), flush=True)
+                completion.write_text(str(capture.returncode))
+            except subprocess.TimeoutExpired:
+                completion.write_text("timeout")
+capture_thread = threading.Thread(target=capture_windows, daemon=True)
+capture_thread.start()
 try:
     subprocess.run(["open", "-n", "-W", "--stdout", str(stdout), "--stderr", str(stderr),
-                    str(bundle), "--args", str(root), str(result)], check=True, timeout=60, cwd=root)
+                    str(bundle), "--args", str(root), str(result), str(captures)], check=True, timeout=60, cwd=root)
 finally:
+    stop_capture.set()
+    capture_thread.join(timeout=6)
     for log in [stdout, stderr]:
         if log.exists():
             print(log.read_text(), end="", flush=True)
