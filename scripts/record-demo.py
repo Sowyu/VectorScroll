@@ -39,7 +39,7 @@ driver = r'''
 extension VectorScrollApp {
     func demoPrepare() { eventTapInstalled = true; configureMenu(); overlay.setSize(40) }
     var demoStatusButton: NSStatusBarButton { statusItem.button! }
-    func demoShowSettings() { showSettings(); settingsWindow.center(); settingsWindow.orderFrontRegardless() }
+    func demoShowSettings(at origin: NSPoint) { showSettings(); settingsWindow.setFrameOrigin(origin); settingsWindow.orderFrontRegardless() }
     var demoToggleButton: NSView { holdToLockItem }
     func demoSelectToggle() { holdToLockItem.performClick(nil) }
     var demoSlider: NSSlider { speedSlider }
@@ -99,7 +99,7 @@ private final class Driver: NSObject {
             let b = w[kCGWindowBounds as String] as! [String: CGFloat]
             if b["Width"]! > 400 { safari = CGRect(x: b["X"]!, y: b["Y"]!, width: b["Width"]!, height: b["Height"]!); break }
         }
-        let origin = CGPoint(x: safari.midX + safari.width * 0.06, y: safari.minY + safari.height * 0.5)
+        let origin = CGPoint(x: safari.midX, y: safari.minY + safari.height * 0.5)
         let still: () -> CGPoint = { [unowned self] in pointer }
         var speed = 100.0
         phases = [
@@ -107,7 +107,10 @@ private final class Driver: NSObject {
             // Status bar menu tracking stalls every timer, so the menu itself is not popped.
             // The pointer reaches the icon, pauses, and Settings opens as it would from the menu.
             Phase(end: 100, target: still, hold: false) {},
-            Phase(end: 115, target: still, hold: false) { [unowned self] in subject.demoShowSettings() },
+            Phase(end: 115, target: still, hold: false) { [unowned self] in
+                // Right of Safari, vertically centred on it. Stays open for the rest of the take.
+                subject.demoShowSettings(at: NSPoint(x: safari.maxX + 30, y: screen.height - safari.midY - 410))
+            },
             Phase(end: 250, target: { [unowned self] in center(subject.demoToggleButton) }, hold: false) {},
             Phase(end: 275, target: still, hold: false) { [unowned self] in subject.demoSelectToggle() },
             Phase(end: 350, target: { [unowned self] in knob(100) }, hold: false) {},
@@ -117,11 +120,7 @@ private final class Driver: NSObject {
                 return knob(speed)
             }, hold: false) {},
             Phase(end: 470, target: still, hold: false) {},
-            Phase(end: 540, target: { [unowned self] in
-                return subject.demoCloseButton.map(center) ?? pointer
-            }, hold: false) {},
-            Phase(end: 560, target: still, hold: false) { [unowned self] in subject.demoCloseSettings() },
-            Phase(end: 640, target: { origin }, hold: false) {},
+            Phase(end: 560, target: { origin }, hold: false) {},
             Phase(end: 660, target: { origin }, hold: true) {},
             Phase(end: 840, target: { CGPoint(x: origin.x + 12, y: origin.y + 45) }, hold: true) {},
             Phase(end: 960, target: { CGPoint(x: origin.x + 9, y: origin.y + 18) }, hold: true) {},
@@ -231,6 +230,8 @@ for res in ("1920x1080", "1680x1050", "1600x900", "1440x900"):
 else:
     log("display unchanged; modes:", " ".join(sorted({m for m in modes.split() if m.startswith("res:")})))
 time.sleep(2)
+# Safari on the left two thirds so the Settings window fits beside it.
+subprocess.run(["defaults", "write", "com.apple.Safari", "NSWindow Frame BrowserWindowFrame", "40 60 1180 960 0 0 1920 1080 "], check=True)
 subprocess.run(["open", "-a", "Safari", "https://github.com/Sowyu/VectorScroll"], check=True, timeout=60)
 log("safari opened")
 time.sleep(12)

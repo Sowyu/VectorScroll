@@ -32,7 +32,8 @@ a { color: inherit; text-decoration: underline; text-underline-offset: 3px; text
 a:hover { text-decoration-color: var(--accent); }
 :focus-visible { outline: 2px solid var(--accent-dark); outline-offset: 3px; border-radius: 4px; }
 hr { width: 100%; height: 1px; border: 0; margin: 0; background: color-mix(in oklab, var(--text) 20%, transparent); }
-img, video { max-width: 100%; height: auto; }
+img { max-width: 100%; height: auto; }
+video { height: auto; }
 pre, code { font-family: ui-monospace, Menlo, monospace; font-size: .9em; }
 pre { background: color-mix(in oklab, var(--text) 8%, transparent); border-radius: .5rem; padding: .75rem 1rem; overflow-x: auto; margin: 0 0 1rem; }
 code { background: color-mix(in oklab, var(--text) 8%, transparent); border-radius: .25rem; padding: .1em .35em; }
@@ -57,7 +58,7 @@ nav a:hover, nav a[aria-current] { text-decoration: underline; text-decoration-c
 
 main { width: 100%; flex-grow: 1; display: flex; flex-direction: column; gap: 3rem; }
 .cta { display: flex; gap: 1rem; align-items: center; }
-video { width: 100%; border-radius: .5rem; background: #000; box-shadow: 0 0 0 1px color-mix(in oklab, var(--text) 10%, transparent); }
+video { width: min(100vw - 32px, 1100px); margin-inline: calc((100% - min(100vw - 32px, 1100px)) / 2); border-radius: .5rem; background: #000; box-shadow: 0 0 0 1px color-mix(in oklab, var(--text) 10%, transparent); }
 .grid { width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 3rem; }
 .grid p { margin: 0; }
 
