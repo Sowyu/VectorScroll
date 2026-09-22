@@ -80,7 +80,10 @@ video { width: 100%; border-radius: .5rem; background: #000; box-shadow: 0 0 0 1
 .rail a:nth-child(5) { width: 46px; } .rail a:nth-child(6) { width: 38px; } .rail a:nth-child(7) { width: 54px; } .rail a:nth-child(8) { width: 30px; }
 .rail a.on { background: var(--text); }
 .rail a:hover { background: var(--accent); }
-@media (max-width: 900px) { .rail { display: none; } }
+@media (max-width: 900px) {
+  .rail { left: auto; right: 6px; align-items: flex-end; gap: 14px; scale: .6; transform-origin: right center; pointer-events: none; }
+  .rail a { pointer-events: auto; }
+}
 @media (prefers-reduced-motion: reduce) { .rail a { transition: none; } }
 
 footer { padding: 2rem 0; font-size: .9rem; }
