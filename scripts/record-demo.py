@@ -2,7 +2,7 @@
 
 Builds a copy of the app with a driver appended, like check-hold.py. The driver opens the
 menu bar menu, opens Settings, switches to toggle mode, drags the speed slider, closes the
-window, then scrolls a Safari page through the production scroll path with the indicator.
+window, then scrolls the GitHub README in Safari through the production scroll path with the indicator.
 Time is the frame index, not the clock: every frame moves the real pointer, advances the
 app one tick, and takes a still of the screen, so the result is an exact 60 fps however
 slowly the machine paints. screencapture -R leaves the cursor out, so the driver draws it.
@@ -211,7 +211,9 @@ log("compiled")
 frames = build / "frames"
 shutil.rmtree(frames, ignore_errors=True)
 frames.mkdir()
-subprocess.run(["open", "-a", "Safari", "https://en.wikipedia.org/wiki/Scrolling"], check=True, timeout=60)
+subprocess.run(["defaults", "write", "com.apple.dock", "autohide", "-bool", "true"], check=True)
+subprocess.run(["killall", "Dock"])
+subprocess.run(["open", "-a", "Safari", "https://github.com/Sowyu/VectorScroll"], check=True, timeout=60)
 log("safari opened")
 time.sleep(12)
 subprocess.run([str(binary), str(frames)], check=True, timeout=600)
