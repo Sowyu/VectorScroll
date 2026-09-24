@@ -57,24 +57,25 @@ nav a:hover, nav a[aria-current] { text-decoration: underline; text-decoration-c
 .compare h2 { margin-bottom: 1rem; }
 .scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 table { border-collapse: collapse; width: 100%; min-width: 620px; font-size: .95rem; }
-th, td { text-align: left; padding: .6rem .75rem .6rem 0; vertical-align: top; border-bottom: 1px solid color-mix(in oklab, var(--text) 15%, transparent); }
+th, td { text-align: left; padding: .6rem .6rem; vertical-align: top; border-bottom: 1px solid color-mix(in oklab, var(--text) 15%, transparent); }
 thead th { font-weight: 600; color: color-mix(in oklab, var(--text) 70%, transparent); font-size: .85rem; }
 tbody th { font-weight: 600; white-space: nowrap; }
 tbody tr:first-child { background: color-mix(in oklab, var(--accent) 18%, transparent); }
-tbody tr:first-child th, tbody tr:first-child td { padding-left: .5rem; }
 td .ico { margin-right: .25rem; }
 .note { font-size: .85rem; color: color-mix(in oklab, var(--text) 70%, transparent); margin-top: .75rem; }
 
 .hero { display: flex; gap: 2rem; align-items: center; }
 .hero-mark { width: 7rem; height: 7rem; flex: none; }
-.hero h3 { color: color-mix(in oklab, var(--text) 70%, transparent); margin: 0; }
+.sub { color: color-mix(in oklab, var(--text) 72%, transparent); font-size: 1.25rem; line-height: 1.4; margin: 0; }
 .hero h1 { margin-bottom: 10px; }
 
 main { width: 100%; flex-grow: 1; display: flex; flex-direction: column; gap: 3rem; }
 .cta { display: flex; flex-direction: column; gap: 1rem; align-items: flex-start; }
 video { width: min(100vw - 32px, 1100px); margin-inline: calc((100% - min(100vw - 32px, 1100px)) / 2); border-radius: .5rem; background: #000; box-shadow: 0 0 0 1px color-mix(in oklab, var(--text) 10%, transparent); }
-.grid { width: 100%; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 2rem; }
-.grid p { margin: 0; }
+.points { display: grid; gap: 1.75rem; }
+.points > div { display: grid; grid-template-columns: 9rem 1fr; gap: 0 1.5rem; align-items: baseline; }
+.points h2 { margin: 0; font-size: 1.25rem; white-space: nowrap; }
+.points p { margin: 0; }
 
 .doc { width: 100%; align-items: stretch; display: block; }
 .doc h1 { margin-bottom: 1.5rem; }
@@ -82,9 +83,7 @@ video { width: min(100vw - 32px, 1100px); margin-inline: calc((100% - min(100vw 
 .doc ol, .doc ul { padding-left: 1.4rem; margin: 0 0 1rem; }
 .doc li { margin-bottom: .4rem; }
 .doc img { border-radius: .5rem; margin: 0 0 1rem; box-shadow: 0 0 0 1px color-mix(in oklab, var(--text) 10%, transparent); }
-.dl { border: 1px solid color-mix(in oklab, var(--text) 20%, transparent); border-radius: .5rem; padding: 1.5rem; margin-bottom: 1rem; }
-.dl h2 { margin-top: 0; }
-.dl p { margin: 1rem 0 0; }
+.doc .sub { font-size: 1rem; margin-bottom: 1rem; }
 
 .docs { display: block; }
 .doc h2 { scroll-margin-top: 1.5rem; }
@@ -94,16 +93,28 @@ footer { padding: 2rem 0; font-size: .9rem; }
 
 @media (max-width: 640px) {
   body { gap: 2rem; }
-  header { padding-top: 1rem; }
+  header { flex-wrap: nowrap; padding-top: 1rem; gap: .75rem; }
+  .home { font-size: 1rem; gap: .5rem; }
   .mark { width: 2rem; height: 2rem; }
-  nav { gap: 1.25rem; }
-  .hero { gap: 1.25rem; }
-  .hero-mark { width: 5rem; height: 5rem; }
-  .hero h1 { font-size: 1.5rem; }
-  .hero h3 { font-size: 1.1rem; }
-  .cta { flex-wrap: wrap; }
-  .grid { grid-template-columns: 1fr; gap: 1rem; }
+  nav { gap: .9rem; }
+  .button.small { padding: .45rem .8rem; }
+  .hero-mark { display: none; }
+  .hero h1 { font-size: 1.6rem; }
+  .sub { font-size: 1.1rem; }
   .button { font-size: 1.1rem; }
-  nav { gap: 1rem; }
-  .grid div { margin-bottom: .5rem; }
+  .points > div { grid-template-columns: 1fr; }
+  .points h2 { margin-bottom: .25rem; }
+  /* Comparison: one block per app, each cell labelled. */
+  .scroll { overflow: visible; }
+  table, tbody, tr, th, td { display: block; min-width: 0; width: 100%; }
+  table { min-width: 0; }
+  thead { display: none; }
+  tbody tr { padding: .75rem .75rem; border-bottom: 1px solid color-mix(in oklab, var(--text) 15%, transparent); }
+  tbody th, tbody td { border: 0; padding: .15rem 0; }
+  tbody th { font-size: 1.1rem; margin-bottom: .25rem; }
+  td { display: grid; grid-template-columns: 8.5rem 1fr; gap: .5rem; }
+  td::before { content: attr(data-label); color: color-mix(in oklab, var(--text) 70%, transparent); font-size: .85rem; }
+}
+@media (max-width: 360px) {
+  .home span { display: none; }
 }
