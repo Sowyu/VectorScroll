@@ -349,6 +349,30 @@ enum UpdateInstaller {
         }
     }
 
+    static func trashStaleUpdateFolders(keeping current: URL, in directory: URL,
+                                        trash: (URL) throws -> Void = { try FileManager.default.trashItem(at: $0, resultingItemURL: nil) }) -> Int {
+        let files = FileManager.default
+        let keys: Set<URLResourceKey> = [.isDirectoryKey, .isSymbolicLinkKey]
+        guard let entries = try? files.contentsOfDirectory(at: directory, includingPropertiesForKeys: Array(keys)) else {
+            return 0
+        }
+        let prefix = ".VectorScroll-update-"
+        var trashed = 0
+        for entry in entries {
+            guard entry.lastPathComponent.hasPrefix(prefix),
+                  UUID(uuidString: String(entry.lastPathComponent.dropFirst(prefix.count))) != nil,
+                  entry.standardizedFileURL != current.standardizedFileURL else { continue }
+            do {
+                let values = try entry.resourceValues(forKeys: keys)
+                guard values.isDirectory == true, values.isSymbolicLink == false,
+                      files.fileExists(atPath: entry.appendingPathComponent("plan.json").path) else { continue }
+                try trash(entry)
+                trashed += 1
+            } catch { }
+        }
+        return trashed
+    }
+
     static func runHelper(_ planURL: URL) -> Int32 {
         do {
             let plan = try readPlan(planURL)
@@ -363,6 +387,7 @@ enum UpdateInstaller {
             guard kill(plan.parentPID, 0) != 0 else { throw Failure(message: "VectorScroll did not quit in time. Please try again.") }
             try replace(planURL)
             try Data("success".utf8).write(to: work.appendingPathComponent("result"), options: .withoutOverwriting)
+            _ = trashStaleUpdateFolders(keeping: work, in: destination.deletingLastPathComponent())
             return 0
         } catch {
             let preferences = UserDefaults(suiteName: "local.vectorscroll.app")!
