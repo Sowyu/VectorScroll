@@ -81,7 +81,6 @@
 "Open Login Items to allow VectorScroll." = "打开“登录项”以允许 VectorScroll。";
 "Open Settings" = "打开“设置”";
 "Open System Settings" = "打开“系统设置”";
-"Open VectorScroll from Applications to enable this." = "请从“应用程序”中打开 VectorScroll 以启用此功能。";
 "Open settings on launch" = "启动时打开设置";
 "Quit VectorScroll" = "退出 VectorScroll";
 "Ready to scroll" = "已可滚动";
@@ -96,7 +95,6 @@
 "Reverse vertical" = "反转垂直方向";
 "Review VectorScroll in Login Items." = "请在“登录项”中查看 VectorScroll。";
 "Review the permissions needed for middle-button scrolling." = "查看中键滚动所需的权限。";
-"Run the installed VectorScroll app from Applications." = "请从“应用程序”运行已安装的 VectorScroll。";
 "Scroll speed" = "滚动速度";
 "Scroll while holding the middle button" = "按住中键时滚动";
 "Scrolling" = "滚动";

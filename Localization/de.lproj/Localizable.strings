@@ -81,7 +81,6 @@
 "Open Login Items to allow VectorScroll." = "Öffne die Anmeldeobjekte, um VectorScroll zu erlauben.";
 "Open Settings" = "Einstellungen öffnen";
 "Open System Settings" = "Systemeinstellungen öffnen";
-"Open VectorScroll from Applications to enable this." = "Öffne VectorScroll aus dem Ordner „Programme“, um das zu aktivieren.";
 "Open settings on launch" = "Einstellungen beim Start öffnen";
 "Quit VectorScroll" = "VectorScroll beenden";
 "Ready to scroll" = "Bereit zum Scrollen";
@@ -96,7 +95,6 @@
 "Reverse vertical" = "Vertikal umkehren";
 "Review VectorScroll in Login Items." = "Prüfe VectorScroll in den Anmeldeobjekten.";
 "Review the permissions needed for middle-button scrolling." = "Prüfe die Berechtigungen, die für das Scrollen mit der mittleren Taste nötig sind.";
-"Run the installed VectorScroll app from Applications." = "Starte das installierte VectorScroll aus dem Ordner „Programme“.";
 "Scroll speed" = "Scrollgeschwindigkeit";
 "Scroll while holding the middle button" = "Scrollen bei gedrückter mittlerer Taste";
 "Scrolling" = "Scrollen";

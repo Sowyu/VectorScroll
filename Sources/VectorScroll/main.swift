@@ -707,12 +707,11 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
             switch SMAppService.mainApp.status {
             case .enabled:
                 try SMAppService.mainApp.unregister()
-            case .notRegistered:
+            // macOS reports notFound until the app has been registered once, wherever it lives.
+            case .notRegistered, .notFound:
                 try SMAppService.mainApp.register()
             case .requiresApproval:
                 SMAppService.openSystemSettingsLoginItems()
-            case .notFound:
-                break
             @unknown default:
                 SMAppService.openSystemSettingsLoginItems()
             }
@@ -832,19 +831,13 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         switch status {
         case .enabled:
             launchAtStartupItem.state = .on
-        case .notRegistered:
+        case .notRegistered, .notFound:
             launchAtStartupItem.state = .off
         case .requiresApproval:
             launchAtStartupItem.state = .off
             launchAtStartupStatusLabel.stringValue = L("Approval is required in Login Items.")
             launchAtStartupStatusLabel.isHidden = false
             launchAtStartupItem.toolTip = L("Open Login Items to allow VectorScroll.")
-        case .notFound:
-            launchAtStartupItem.state = .off
-            launchAtStartupItem.isEnabled = false
-            launchAtStartupStatusLabel.stringValue = L("Open VectorScroll from Applications to enable this.")
-            launchAtStartupStatusLabel.isHidden = false
-            launchAtStartupItem.toolTip = L("Run the installed VectorScroll app from Applications.")
         @unknown default:
             launchAtStartupItem.state = .off
             launchAtStartupStatusLabel.stringValue = L("Review VectorScroll in Login Items.")

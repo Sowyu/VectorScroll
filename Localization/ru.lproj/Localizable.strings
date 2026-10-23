@@ -81,7 +81,6 @@
 "Open Login Items to allow VectorScroll." = "Откройте «Объекты входа», чтобы разрешить VectorScroll.";
 "Open Settings" = "Открыть настройки";
 "Open System Settings" = "Открыть Системные настройки";
-"Open VectorScroll from Applications to enable this." = "Откройте VectorScroll из папки «Приложения», чтобы включить это.";
 "Open settings on launch" = "Открывать настройки при запуске";
 "Quit VectorScroll" = "Завершить VectorScroll";
 "Ready to scroll" = "Готово к прокрутке";
@@ -96,7 +95,6 @@
 "Reverse vertical" = "Инвертировать по вертикали";
 "Review VectorScroll in Login Items." = "Проверьте VectorScroll в «Объектах входа».";
 "Review the permissions needed for middle-button scrolling." = "Проверьте разрешения, нужные для прокрутки средней кнопкой.";
-"Run the installed VectorScroll app from Applications." = "Запустите установленное приложение VectorScroll из папки «Приложения».";
 "Scroll speed" = "Скорость прокрутки";
 "Scroll while holding the middle button" = "Прокрутка при удержании средней кнопки";
 "Scrolling" = "Прокрутка";
