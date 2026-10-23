@@ -639,11 +639,14 @@ extension VectorScrollApp {
         let drag = mouse(.otherMouseDragged)
         assert(subject.handleEvent(type: .otherMouseDown, event: down) == nil)
         assert(subject.isActive && !subject.engaged)
-        assert(subject.handleEvent(type: .otherMouseDragged, event: drag) == nil)
+        // Drags pass through, because holding them back stops macOS updating its pointer position,
+        // and the held pointer comes from the drags themselves.
+        assert(subject.handleEvent(type: .otherMouseDragged, event: drag)?.takeUnretainedValue() === drag)
+        assert(subject.heldPointer == drag.unflippedLocation)
         assert(subject.handleEvent(type: .otherMouseUp, event: up) == nil)
-        assert(!subject.isActive && subject.swallowedButtonUps.isEmpty && subject.heldMiddleClick == nil)
+        assert(!subject.isActive && subject.swallowedButtonUps.isEmpty && subject.heldMiddleClick == nil && subject.heldPointer == nil)
         assert(replays == [down.location], "Plain clicks must replay at the original press point")
-        print("PASS: hold-mode down, drag, and up swallowed; plain click replayed once at the press point")
+        print("PASS: hold-mode down and up swallowed, drags passed through and tracked; plain click replayed once at the press point")
 
         // An excluded app gets the middle button untouched: no scrolling, no swallowing, no replay.
         subject.appIsExcluded = { _ in true }
@@ -668,7 +671,7 @@ extension VectorScrollApp {
         replays.removeAll()
         assert(subject.handleEvent(type: .otherMouseDown, event: down) == nil)
         subject.engaged = true // Simulate the timer engaging after leaving the dead zone, without AX/UI work.
-        assert(subject.handleEvent(type: .otherMouseDragged, event: drag) == nil)
+        assert(subject.handleEvent(type: .otherMouseDragged, event: drag)?.takeUnretainedValue() === drag)
         assert(subject.handleEvent(type: .otherMouseUp, event: up) == nil)
         assert(!subject.isActive && replays.isEmpty)
         assert(subject.handleEvent(type: .otherMouseUp, event: up)?.takeUnretainedValue() === up)
@@ -833,7 +836,8 @@ extension VectorScrollApp {
         assert(!subject.isActive && replays.isEmpty)
         // Observe a brief drag out and back between timer ticks.
         assert(subject.handleEvent(type: .otherMouseDown, event: down) == nil)
-        assert(subject.handleEvent(type: .otherMouseDragged, event: mouse(.otherMouseDragged, at: CGPoint(x: 200, y: 300))) == nil)
+        let farDrag = mouse(.otherMouseDragged, at: CGPoint(x: 200, y: 300))
+        assert(subject.handleEvent(type: .otherMouseDragged, event: farDrag)?.takeUnretainedValue() === farDrag)
         assert(subject.engaged)
         assert(subject.handleEvent(type: .otherMouseUp, event: up) == nil)
         assert(!subject.isActive && replays.isEmpty)

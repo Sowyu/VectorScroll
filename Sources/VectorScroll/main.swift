@@ -56,6 +56,9 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
     private var heldMiddleClick: CGPoint?
     // Set once the pointer leaves the dead zone. Hold or click uses it to tell a drag from a click.
     private var leftDeadZone = false
+    // Pointer position from the latest middle-button drag. With a real mouse, NSEvent.mouseLocation
+    // stops following the pointer while the button is held, so the drags themselves are the source.
+    private var heldPointer: CGPoint?
     private var swallowedButtonUps: Set<Int64> = []
     private var excludedMiddleClick = false
     private var scrollingGeneration: UInt64 = 0
@@ -1026,6 +1029,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
                 let replay = tapState == .filtering && scrollMode != .both
                     && (scrollMode == .toggle ? !isActive : !engaged) && !moved
                 heldMiddleClick = nil
+                heldPointer = nil
                 switch scrollMode {
                 case .toggle:
                     cancelArmedHoldToLock()
@@ -1045,18 +1049,21 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         }
 
         if type == .otherMouseDragged, button == 2, heldMiddleClick != nil || swallowedButtonUps.contains(button) {
+            if heldMiddleClick != nil { heldPointer = event.unflippedLocation }
             if let point = heldMiddleClick, isActive,
                abs(event.location.x - point.x) > deadZone || abs(event.location.y - point.y) > deadZone {
                 leftDeadZone = true
                 engage()
             }
-            return filteredEvent
+            // Drags pass through. Holding them back keeps macOS from updating its pointer position.
+            return Unmanaged.passUnretained(event)
         }
 
         if isActive { return Unmanaged.passUnretained(event) }
 
         if type == .otherMouseDown, button == 2 {
             heldMiddleClick = event.location
+            heldPointer = nil
             if tapState == .filtering { swallowedButtonUps.insert(button) }
             if holdToLockMode {
                 armHoldToLock(at: event.unflippedLocation, target: event.location)
@@ -1128,6 +1135,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         cancelArmedHoldToLock()
         // Discard replay eligibility, but still swallow any matching releases.
         heldMiddleClick = nil
+        heldPointer = nil
         scrollingGeneration &+= 1
         scrollRemainder = .zero
         guard isActive else { return }
@@ -1153,7 +1161,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
     private func emitScrollTick() {
         guard let anchor else { return }
 
-        let pointer = NSEvent.mouseLocation
+        let pointer = heldMiddleClick != nil ? heldPointer ?? NSEvent.mouseLocation : NSEvent.mouseLocation
         let offset = CGPoint(x: pointer.x - anchor.x, y: pointer.y - anchor.y)
         let adjusted = CGPoint(
             x: applyDeadZone(offset.x),
