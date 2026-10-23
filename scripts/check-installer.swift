@@ -164,11 +164,55 @@ struct CheckInstaller {
         }
     }
 
+    static func checkStaleUpdateFolders() throws {
+        let files = FileManager.default
+        let root = files.temporaryDirectory.appendingPathComponent("VectorScroll cleanup test \(UUID().uuidString)")
+        try files.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? files.removeItem(at: root) }
+
+        func folder(_ name: String, plan: Bool = true) throws -> URL {
+            let url = root.appendingPathComponent(name)
+            try files.createDirectory(at: url, withIntermediateDirectories: false)
+            if plan { try Data("{}".utf8).write(to: url.appendingPathComponent("plan.json")) }
+            return url
+        }
+
+        let stale = try (0..<3).map { _ in try folder(".VectorScroll-update-\(UUID().uuidString)") }
+        let current = try folder(".VectorScroll-update-\(UUID().uuidString)")
+        _ = try folder(".VectorScroll-update-\(UUID().uuidString)", plan: false)
+        _ = try folder(".VectorScroll-update-not-a-uuid")
+        try files.createSymbolicLink(at: root.appendingPathComponent(".VectorScroll-update-\(UUID().uuidString)"),
+                                     withDestinationURL: stale[0])
+        try Data().write(to: root.appendingPathComponent(".VectorScroll-update-\(UUID().uuidString)"))
+        _ = try folder("Foo.app")
+
+        let expected = Set(stale.map { $0.standardizedFileURL })
+        var selected: [URL] = []
+        let count = UpdateInstaller.trashStaleUpdateFolders(keeping: current.appendingPathComponent("."), in: root) {
+            selected.append($0.standardizedFileURL)
+        }
+        assert(count == 3 && selected.count == 3 && Set(selected) == expected)
+
+        var attempted: [URL] = []
+        let partialCount = UpdateInstaller.trashStaleUpdateFolders(keeping: current, in: root) {
+            attempted.append($0.standardizedFileURL)
+            if attempted.count == 1 { throw UpdateInstaller.Failure(message: "Simulated Trash failure") }
+        }
+        assert(partialCount == 2 && attempted.count == 3 && Set(attempted) == expected)
+        let missingCount = UpdateInstaller.trashStaleUpdateFolders(keeping: current, in: root.appendingPathComponent("missing")) {
+            _ in fatalError("Must not trash anything when the directory cannot be listed")
+        }
+        assert(missingCount == 0)
+        print("PASS: stale update cleanup selects only three valid folders, keeps current, skips symlinks, and continues after Trash errors")
+    }
+
     static func main() async throws {
         if CommandLine.arguments.dropFirst().first == "--replacement-boundary" {
             try runReplacementBoundaryChild()
             return
         }
+        try checkStaleUpdateFolders()
+        if CommandLine.arguments.dropFirst().first == "--cleanup-only" { return }
         let files = FileManager.default
         let root = files.temporaryDirectory.appendingPathComponent("VectorScroll install test's \(UUID().uuidString)")
         try files.createDirectory(at: root, withIntermediateDirectories: true)

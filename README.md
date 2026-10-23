@@ -66,7 +66,7 @@ open -a VectorScroll
 
 - Checks GitHub on launch and every 24 hours. Background checks never show dialogs and need no GitHub account.
 - **Check for Updates…** then **Install Update** downloads the DMG, verifies its SHA-256 against the GitHub release digest, checks the bundle identifier, version, processor support, and exact signing identity against the installed app, then swaps the app in place. It keeps the update only if the relaunched app returns a one-time health token. Settings are kept.
-- The previous version stays in a hidden `.VectorScroll-update-…` folder next to the app as `Previous.app`. A failed swap or relaunch restores it. The updater never deletes anything.
+- The previous version stays in a hidden `.VectorScroll-update-…` folder next to the app as `Previous.app`. A failed swap or relaunch restores it. After a successful update, older update folders are moved to the Trash, and the most recent previous version stays for rollback.
 - Requires the app to live in a writable folder, normally Applications. Running from the mounted DMG is refused with an explanation.
 
 ### Permissions survive updates
