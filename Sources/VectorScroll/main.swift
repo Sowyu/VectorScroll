@@ -5,7 +5,7 @@
 @MainActor
 private final class VectorScrollApp: NSObject, NSApplicationDelegate {
     private static let restorableDefaultsKeys: [String] = [
-        "holdToLockMode", "holdDelayEnabled", "holdDelayMilliseconds", "scrollSpeedPercent",
+        "scrollMode", "holdToLockMode", "holdDelayEnabled", "holdDelayMilliseconds", "scrollSpeedPercent",
         "reverseVertical", "reverseHorizontal", "reverseDirection", "raiseWindowOnScroll",
         "darkMode", "markerSize"
     ]
@@ -26,6 +26,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
     private var indicatorAppearance: NSSegmentedControl!
     private var holdScrollItem: NSButton!
     private var holdToLockItem: NSButton!
+    private var holdOrClickItem: NSButton!
     private var holdToLockDetailLabel: NSTextField!
     private var launchAtStartupItem: NSSwitch!
     private var launchAtStartupStatusLabel: NSTextField!
@@ -41,8 +42,16 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
     private var permissionStatusTimer: DispatchSourceTimer?
     private var anchor: CGPoint?
     private var isActive = false
-    private var eventTapInstalled = false
-    private var holdToLockMode = false
+    private enum TapState { case none, filtering, listenOnly }
+    private var tapState: TapState = .none
+    private enum ScrollMode: String { case hold, toggle, both }
+    private var scrollMode: ScrollMode = .hold
+    // Compatibility for the existing toggle-mode checks.
+    private var holdToLockMode: Bool {
+        get { scrollMode == .toggle }
+        set { scrollMode = newValue ? .toggle : .hold }
+    }
+    private let accessibilityQueue = DispatchQueue(label: "local.vectorscroll.accessibility", qos: .userInitiated)
     private var engageWorkItem: DispatchWorkItem?
     private var heldMiddleClick: CGPoint?
     private var swallowedButtonUps: Set<Int64> = []
@@ -52,7 +61,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         CGEventSource.buttonState(.combinedSessionState, button: .center)
     }
     private static let replayEventMarker: Int64 = 0x56534352434C494B
-    private var postClick: (CGPoint) -> Void = { point in
+    private var postClick: (CGPoint) -> Void = { (point: CGPoint) -> Void in
         for type in [CGEventType.otherMouseDown, .otherMouseUp] {
             guard let event = CGEvent(mouseEventSource: nil, mouseType: type,
                                       mouseCursorPosition: point, mouseButton: .center) else { continue }
@@ -94,6 +103,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
     private var hasAccessibilityAccess: Bool { CGPreflightPostEventAccess() && AXIsProcessTrusted() }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        terminateOtherCopies()
         NSApp.setActivationPolicy(.accessory)
         restoreSettings()
         configureMenu()
@@ -131,6 +141,19 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         self.updateTimer = updateTimer
         updateTimer.resume()
         _ = try? UpdateInstaller.acknowledgeLaunch()
+    }
+
+    private func terminateOtherCopies() {
+        // The updater must be able to launch its health-check copy independently.
+        guard !CommandLine.arguments.contains("--vector-scroll-update-health"),
+              let bundleID = Bundle.main.bundleIdentifier else { return }
+        let ownPID = ProcessInfo.processInfo.processIdentifier
+        let others = NSRunningApplication.runningApplications(withBundleIdentifier: bundleID)
+            .filter { (application: NSRunningApplication) -> Bool in application.processIdentifier != ownPID }
+        for application in others { application.terminate() }
+        DispatchQueue.main.asyncAfter(deadline: .now() + .seconds(2)) {
+            for application in others where !application.isTerminated { application.forceTerminate() }
+        }
     }
 
     private func configureMenu() {
@@ -229,10 +252,14 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         let click = NSButton(radioButtonWithTitle: L("Toggle scrolling"), target: self, action: #selector(selectHoldToLock))
         click.setAccessibilityLabel(L("Keep scrolling until the next click"))
         holdToLockItem = click
+        let both = NSButton(radioButtonWithTitle: L("Hold or click"), target: self, action: #selector(selectBoth))
+        both.setAccessibilityHelp(L("Hold and drag, or click to keep scrolling"))
+        holdOrClickItem = both
         holdToLockDetailLabel = label("", secondary: true)
         fullWidth(group(
             modeRow(hold, detail: label(L("Release the middle button to stop"), secondary: true)),
-            modeRow(click, detail: holdToLockDetailLabel)
+            modeRow(click, detail: holdToLockDetailLabel),
+            modeRow(both, detail: label(L("Hold and drag, or click to keep scrolling"), secondary: true))
         ))
         reverseVerticalItem = toggle(L("Reverse vertical"), #selector(toggleReverseVertical))
         help(reverseVerticalItem, L("Drag down to scroll up instead of down."))
@@ -643,14 +670,21 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
     @objc private func selectHoldToScroll() {
         stopScrolling()
         holdToLockMode = false
-        defaults.set(false, forKey: "holdToLockMode")
+        defaults.set(scrollMode.rawValue, forKey: "scrollMode")
         updateScrollModeMenuItems()
     }
 
     @objc private func selectHoldToLock() {
         stopScrolling()
         holdToLockMode = true
-        defaults.set(true, forKey: "holdToLockMode")
+        defaults.set(scrollMode.rawValue, forKey: "scrollMode")
+        updateScrollModeMenuItems()
+    }
+
+    @objc private func selectBoth() {
+        stopScrolling()
+        scrollMode = .both
+        defaults.set(scrollMode.rawValue, forKey: "scrollMode")
         updateScrollModeMenuItems()
     }
 
@@ -738,8 +772,9 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
     }
 
     private func updateScrollModeMenuItems() {
-        holdScrollItem.state = holdToLockMode ? .off : .on
-        holdToLockItem.state = holdToLockMode ? .on : .off
+        holdScrollItem.state = scrollMode == .hold ? .on : .off
+        holdToLockItem.state = scrollMode == .toggle ? .on : .off
+        holdOrClickItem.state = scrollMode == .both ? .on : .off
         updateDelayMenu()
     }
 
@@ -748,19 +783,30 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
     }
 
     private func applyPermissionStatus(canListen: Bool, canAccess: Bool) {
-        if canListen && canAccess {
-            permissionStatusLabel.stringValue = L("Ready to scroll")
-        } else if !canListen && !canAccess {
-            permissionStatusLabel.stringValue = L("Input Monitoring and Accessibility are required")
-        } else if !canListen {
-            permissionStatusLabel.stringValue = L("Input Monitoring is required")
-        } else {
-            permissionStatusLabel.stringValue = L("Accessibility is required")
-        }
+        let enabled = eventTap.map { (tap: CFMachPort) -> Bool in CGEvent.tapIsEnabled(tap: tap) } ?? false
+        permissionStatusLabel.stringValue = Self.permissionStatusText(
+            canListen: canListen, canAccess: canAccess, tapState: tapState, tapEnabled: enabled)
         permissionItem.isHidden = canListen && canAccess
         permissionItem.title = canListen ? L("Accessibility Settings…") : L("Input Monitoring Settings…")
         (permissionItem.superview as? SettingsActionBar)?.refresh()
         onboarding?.refresh(canListen: canListen, canAccess: canAccess)
+    }
+
+    private static func permissionStatusText(canListen: Bool, canAccess: Bool,
+                                             tapState: TapState, tapEnabled: Bool) -> String {
+        if !canListen && !canAccess {
+            return L("Input Monitoring and Accessibility are required")
+        } else if !canListen {
+            return L("Input Monitoring is required")
+        } else if !canAccess {
+            return L("Accessibility is required")
+        } else if tapEnabled, tapState == .filtering {
+            return L("Ready to scroll")
+        } else if tapEnabled, tapState == .listenOnly {
+            return L("Ready to scroll. macOS didn't allow holding back clicks, so middle-clicks also reach apps.")
+        } else {
+            return L("VectorScroll can't watch the mouse. Quit and reopen it. If that doesn't help, remove it from Accessibility and Input Monitoring in System Settings and add it again.")
+        }
     }
 
     private func updateSizeMenuItems() {
@@ -819,8 +865,11 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         if markerSizes.contains(savedSize) {
             overlay.setSize(CGFloat(savedSize))
         }
-        if let stored = defaults.object(forKey: "holdToLockMode") as? Bool {
-            holdToLockMode = stored
+        if let stored = defaults.string(forKey: "scrollMode") {
+            scrollMode = ScrollMode(rawValue: stored) ?? .hold
+        } else {
+            scrollMode = defaults.bool(forKey: "holdToLockMode") ? .toggle : .hold
+            defaults.set(scrollMode.rawValue, forKey: "scrollMode")
         }
         if defaults.object(forKey: "reverseVertical") == nil,
            defaults.object(forKey: "reverseHorizontal") == nil,
@@ -838,25 +887,19 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
     }
 
     private func installEventTap() {
-        updatePermissionMenuItem()
+        defer { updatePermissionMenuItem() }
         guard CGPreflightListenEventAccess(), hasAccessibilityAccess else {
-            // Permission can be revoked while running. Retire the old tap before
-            // retrying, instead of overwriting a still-registered run-loop source.
-            stopScrolling()
-            swallowedButtonUps.removeAll()
-            excludedMiddleClick = false
-            if let runLoopSource {
-                CFRunLoopRemoveSource(CFRunLoopGetMain(), runLoopSource, .commonModes)
-                self.runLoopSource = nil
-            }
-            if let eventTap {
-                CFMachPortInvalidate(eventTap)
-                self.eventTap = nil
-            }
-            eventTapInstalled = false
+            tearDownEventTap()
             return
         }
-        if eventTapInstalled { return }
+        if let eventTap {
+            if CGEvent.tapIsEnabled(tap: eventTap) { return }
+            // A disabled notification can be lost. Poll and recover independently.
+            clearMouseState()
+            CGEvent.tapEnable(tap: eventTap, enable: true)
+            if CGEvent.tapIsEnabled(tap: eventTap) { return }
+            tearDownEventTap()
+        }
 
         let events: [CGEventType] = [
             .leftMouseDown,
@@ -868,11 +911,11 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
             .otherMouseDragged
         ]
 
-        let mask = events.reduce(CGEventMask(0)) { partial, type in
+        let mask = events.reduce(CGEventMask(0)) { (partial: CGEventMask, type: CGEventType) -> CGEventMask in
             partial | (CGEventMask(1) << CGEventMask(type.rawValue))
         }
 
-        let callback: CGEventTapCallBack = { _, type, event, refcon in
+        let callback: CGEventTapCallBack = { (_, type: CGEventType, event: CGEvent, refcon: UnsafeMutableRawPointer?) -> Unmanaged<CGEvent>? in
             guard let refcon else { return Unmanaged.passUnretained(event) }
             let app = Unmanaged<VectorScrollApp>.fromOpaque(refcon).takeUnretainedValue()
             return MainActor.assumeIsolated {
@@ -880,26 +923,51 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
             }
         }
 
-        eventTap = CGEvent.tapCreate(
-            tap: .cgSessionEventTap,
-            place: .headInsertEventTap,
-            options: .defaultTap,
-            eventsOfInterest: mask,
-            callback: callback,
-            userInfo: Unmanaged.passUnretained(self).toOpaque()
-        )
-
+        for (options, state) in [(CGEventTapOptions.defaultTap, TapState.filtering), (.listenOnly, .listenOnly)] {
+            if let tap = CGEvent.tapCreate(
+                tap: .cgSessionEventTap,
+                place: .headInsertEventTap,
+                options: options,
+                eventsOfInterest: mask,
+                callback: callback,
+                userInfo: Unmanaged.passUnretained(self).toOpaque()
+            ) {
+                eventTap = tap
+                tapState = state
+                break
+            }
+        }
         guard let eventTap else {
-            eventTapInstalled = false
+            tapState = .none
             return
         }
 
-        eventTapInstalled = true
-        runLoopSource = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, eventTap, 0)
-        if let runLoopSource {
-            CFRunLoopAddSource(CFRunLoopGetMain(), runLoopSource, .commonModes)
+        guard let source = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, eventTap, 0) else {
+            tearDownEventTap()
+            return
         }
+        runLoopSource = source
+        CFRunLoopAddSource(CFRunLoopGetMain(), source, .commonModes)
         CGEvent.tapEnable(tap: eventTap, enable: true)
+    }
+
+    private func clearMouseState() {
+        stopScrolling()
+        swallowedButtonUps.removeAll()
+        excludedMiddleClick = false
+    }
+
+    private func tearDownEventTap() {
+        clearMouseState()
+        if let runLoopSource {
+            CFRunLoopRemoveSource(CFRunLoopGetMain(), runLoopSource, .commonModes)
+            self.runLoopSource = nil
+        }
+        if let eventTap {
+            CFMachPortInvalidate(eventTap)
+            self.eventTap = nil
+        }
+        tapState = .none
     }
 
     private func startPermissionStatusTimer() {
@@ -920,16 +988,22 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         }
         if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
             // The release may have happened while input delivery was disabled.
-            stopScrolling()
-            swallowedButtonUps.removeAll()
-            excludedMiddleClick = false
+            clearMouseState()
             if let eventTap {
                 CGEvent.tapEnable(tap: eventTap, enable: true)
             }
             return Unmanaged.passUnretained(event)
         }
 
+        // Listen-only taps observe the same gestures, but cannot consume events.
+        let filteredEvent: Unmanaged<CGEvent>? = tapState == .filtering ? nil : Unmanaged.passUnretained(event)
         let button = event.getIntegerValueField(.mouseEventButtonNumber)
+        let toggled = scrollMode == .toggle || (scrollMode == .both && heldMiddleClick == nil)
+        if isActive, toggled, type == .leftMouseDown || type == .rightMouseDown || type == .otherMouseDown {
+            stopScrolling()
+            if tapState == .filtering { swallowedButtonUps.insert(button) }
+            return filteredEvent
+        }
         if type == .otherMouseDown, button == 2, appIsExcluded(event.location) {
             excludedMiddleClick = true
             return Unmanaged.passUnretained(event)
@@ -940,45 +1014,52 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         }
 
         if type == .leftMouseUp || type == .rightMouseUp || type == .otherMouseUp {
-            guard swallowedButtonUps.remove(button) != nil else { return Unmanaged.passUnretained(event) }
+            let swallowed = swallowedButtonUps.remove(button) != nil
+            guard swallowed || (button == 2 && heldMiddleClick != nil) else { return Unmanaged.passUnretained(event) }
             if button == 2, let point = heldMiddleClick {
                 // A release outside the dead zone was a drag, not a click. This also caps
                 // how far posting the replay can move the pointer.
                 let moved = abs(event.location.x - point.x) > deadZone || abs(event.location.y - point.y) > deadZone
-                let replay = (holdToLockMode ? !isActive : !engaged) && !moved
+                let replay = tapState == .filtering && scrollMode != .both
+                    && (scrollMode == .toggle ? !isActive : !engaged) && !moved
                 heldMiddleClick = nil
-                if holdToLockMode {
+                switch scrollMode {
+                case .toggle:
                     cancelArmedHoldToLock()
-                } else {
+                case .hold:
                     stopScrolling()
+                case .both:
+                    if isActive && !engaged && !moved {
+                        // No held click now means this session stops on the next down.
+                        engage()
+                    } else {
+                        stopScrolling()
+                    }
                 }
                 if replay { postClick(point) }
             }
-            return nil
+            return filteredEvent
         }
 
-        if type == .otherMouseDragged, button == 2, swallowedButtonUps.contains(button) {
-            return nil
-        }
-
-        if isActive {
-            if holdToLockMode, type == .leftMouseDown || type == .rightMouseDown || type == .otherMouseDown {
-                stopScrolling()
-                swallowedButtonUps.insert(button)
-                return nil
+        if type == .otherMouseDragged, button == 2, heldMiddleClick != nil || swallowedButtonUps.contains(button) {
+            if let point = heldMiddleClick, isActive,
+               abs(event.location.x - point.x) > deadZone || abs(event.location.y - point.y) > deadZone {
+                engage()
             }
-            return Unmanaged.passUnretained(event)
+            return filteredEvent
         }
+
+        if isActive { return Unmanaged.passUnretained(event) }
 
         if type == .otherMouseDown, button == 2 {
             heldMiddleClick = event.location
-            swallowedButtonUps.insert(button)
+            if tapState == .filtering { swallowedButtonUps.insert(button) }
             if holdToLockMode {
                 armHoldToLock(at: event.unflippedLocation, target: event.location)
             } else {
                 startScrolling(at: event.unflippedLocation, target: event.location)
             }
-            return nil
+            return filteredEvent
         }
 
         return Unmanaged.passUnretained(event)
@@ -1009,7 +1090,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
     }
 
     private func startScrolling(at point: CGPoint, target: CGPoint) {
-        guard eventTapInstalled else { return }
+        guard tapState != .none else { return }
         scrollRemainder = .zero
         anchor = point
         isActive = true
@@ -1021,7 +1102,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         scrollingGeneration &+= 1
         let generation = scrollingGeneration
         if holdToLockMode {
-            // AX targeting must run after returning from the filtering tap.
+            // Show toggle feedback after returning from the tap callback.
             DispatchQueue.main.async { [weak self] in
                 guard let self, self.isActive, self.scrollingGeneration == generation else { return }
                 self.engage()
@@ -1057,10 +1138,11 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
     private func engage() {
         guard !engaged, let anchor else { return }
         engaged = true
-        if raiseWindowOnScroll, let target = pendingTarget, AXIsProcessTrusted(), let element = element(at: target) {
-            focusTarget(element)
-        }
         overlay.show(at: anchor)
+        if raiseWindowOnScroll, let target = pendingTarget {
+            // Only the Sendable point crosses queues. AX objects stay on this queue.
+            accessibilityQueue.async { Self.focusTarget(at: target) }
+        }
     }
 
     private func emitScrollTick() {
@@ -1116,7 +1198,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         min(max(value, -maxDeltaPerTick), maxDeltaPerTick)
     }
 
-    private func element(at point: CGPoint) -> AXUIElement? {
+    nonisolated private static func element(at point: CGPoint) -> AXUIElement? {
         let system = AXUIElementCreateSystemWide()
         AXUIElementSetMessagingTimeout(system, 0.25)
         var element: AXUIElement?
@@ -1124,25 +1206,28 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         return error == .success ? element : nil
     }
 
-    private func parent(of element: AXUIElement) -> AXUIElement? {
+    nonisolated private static func parent(of element: AXUIElement) -> AXUIElement? {
+        AXUIElementSetMessagingTimeout(element, 0.25)
         var value: CFTypeRef?
         guard AXUIElementCopyAttributeValue(element, "AXParent" as CFString, &value) == .success else { return nil }
         guard let value, CFGetTypeID(value) == AXUIElementGetTypeID() else { return nil }
         return (value as! AXUIElement)
     }
 
-    private func pid(of element: AXUIElement) -> pid_t? {
+    nonisolated private static func pid(of element: AXUIElement) -> pid_t? {
+        AXUIElementSetMessagingTimeout(element, 0.25)
         var pid = pid_t()
         guard AXUIElementGetPid(element, &pid) == .success else { return nil }
         return pid
     }
 
-    private func focusTarget(_ element: AXUIElement) {
-        guard let pid = pid(of: element) else { return }
+    nonisolated private static func focusTarget(at point: CGPoint) {
+        guard AXIsProcessTrusted(), let element = element(at: point), let pid = pid(of: element) else { return }
         NSRunningApplication(processIdentifier: pid)?.activate()
         var current: AXUIElement? = element
         for _ in 0..<10 {
             guard let candidate = current else { return }
+            AXUIElementSetMessagingTimeout(candidate, 0.25)
             if AXUIElementPerformAction(candidate, "AXRaise" as CFString) == .success {
                 return
             }
