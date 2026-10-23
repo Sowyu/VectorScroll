@@ -6,7 +6,7 @@ Middle-button autoscrolling for macOS. Press the middle button, move the pointer
 
 Swift and AppKit only. No Electron, web views, or third-party dependencies. One universal binary runs on Intel and Apple Silicon Macs with macOS 14 or later.
 
-Version 1.9.1, build 19, uses native Liquid Glass controls on macOS 26. macOS 14 and 15 keep the standard AppKit appearance.
+Version 1.10.0, build 20, uses native Liquid Glass controls on macOS 26. macOS 14 and 15 keep the standard AppKit appearance.
 
 <table>
   <tr>
@@ -43,15 +43,9 @@ Later releases can be installed from Check for Updates inside the app. A signing
 - **Scrolls the window under the pointer.** Accessibility lets VectorScroll post generated scroll events. **Bring window to front** also activates that window's app when scrolling starts. Turn it off to scroll background windows without switching apps.
 - **On-screen indicator.** A circle with four arrows marks the start point. Choose light or dark, and 28, 32, 40, or 48 pt. Settings show a live preview at the chosen size.
 
-### Mouse buttons
-
-- **Back and forward.** Side buttons go back and forward in every app, including Safari, Finder, and Preview, which ignore them on their own. Off by default.
-- **Choose the buttons.** Press Set… and then the side button you want. Picking the button the other direction uses swaps them.
-- VectorScroll sends ⌘[ and ⌘] and keeps the button press from reaching the app, so browsers that already handle side buttons go back only once.
-
 ### Excluded apps
 
-- Add apps where VectorScroll stays out of the way. Middle-button scrolling and side buttons are off while the pointer is over them, so Blender, Figma, and CAD tools can still pan with the middle button.
+- Add apps where VectorScroll stays out of the way. Middle-button scrolling is off while the pointer is over them, so Blender, Figma, and CAD tools can still pan with the middle button.
 
 ### Settings window
 
@@ -59,7 +53,7 @@ Later releases can be installed from Check for Updates inside the app. A signing
 - Every change saves immediately. No Apply button.
 - **Open settings on launch** and **Show menu bar icon** control how you reach the app. One of them always stays on, so the window is never unreachable.
 - **Launch at login** registers with the system login items.
-- **Restore Defaults** resets scrolling, indicator, and mouse button settings. Login, menu bar, and excluded apps stay as they are.
+- **Restore Defaults** resets scrolling and indicator settings. Login, menu bar, and excluded apps stay as they are.
 - Opening VectorScroll again from Applications, Spotlight, or `open -a VectorScroll` always shows Settings.
 - **Language.** The globe button next to the version number switches between English, Deutsch, Español, Français, Italiano, Português (Brasil), Русский, 日本語, 한국어, 简体中文, and 繁體中文, then restarts the app. System Language follows macOS.
 - **Setup guide** on first launch. One permission per page, plain-language reasons, live status, and no system prompt until you press the button for it. Reopen it from Settings.

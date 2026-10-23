@@ -26,12 +26,7 @@
 "App" = "App";
 "Appearance" = "Apariencia";
 "Approval is required in Login Items." = "Se necesita aprobación en Ítems de inicio.";
-/* Mouse side-button navigation action. */
-"Back" = "Atrás";
-"Back and forward buttons" = "Botones de atrás y adelante";
 "Bring window to front" = "Traer ventana al frente";
-/* Mouse button number, counting from one. */
-"Button %ld" = "Botón %ld";
 "Cancel" = "Cancelar";
 "Change the scrolling indicator's diameter. The preview shows its actual size." = "Cambia el diámetro del indicador de desplazamiento. La vista previa muestra su tamaño real.";
 "Check for Updates…" = "Buscar actualizaciones…";
@@ -50,8 +45,6 @@
 "Drag right to scroll left instead of right." = "Arrastra a la derecha para desplazarte a la izquierda en lugar de a la derecha.";
 "Excluded apps" = "Apps excluidas";
 "Finish" = "Finalizar";
-/* Mouse side-button navigation action. */
-"Forward" = "Adelante";
 "GitHub reported an invalid update size." = "GitHub indicó un tamaño de actualización no válido.";
 "Hold duration" = "Duración de pulsación";
 "Hold the middle button over any window and move the pointer. Change the mode, speed, direction, and indicator in Settings." = "Mantén pulsado el botón central sobre cualquier ventana y mueve el puntero. Cambia el modo, la velocidad, la dirección y el indicador en Ajustes.";
@@ -81,8 +74,7 @@
 "Launch at login could not be changed" = "No se pudo cambiar la apertura al iniciar sesión";
 /* Light appearance of the scrolling indicator. */
 "Light" = "Claro";
-"Middle-button scrolling and side buttons are off in these apps. Useful for apps that pan with the middle button, like Blender or Figma." = "El desplazamiento con el botón central y los botones laterales están desactivados en estas apps. Útil para apps que se desplazan con el botón central, como Blender o Figma.";
-"Mouse buttons" = "Botones del ratón";
+"Middle-button scrolling is off in these apps. Useful for apps that pan with the middle button, like Blender or Figma." = "El desplazamiento con el botón central está desactivado en estas apps. Útil para apps que se desplazan con el botón central, como Blender o Figma.";
 "No excluded apps" = "Sin apps excluidas";
 "OK" = "OK";
 "Open Login Items" = "Abrir Ítems de inicio";
@@ -91,7 +83,6 @@
 "Open System Settings" = "Abrir Ajustes del Sistema";
 "Open VectorScroll from Applications to enable this." = "Abre VectorScroll desde Aplicaciones para activar esto.";
 "Open settings on launch" = "Abrir ajustes al iniciar";
-"Press a side button…" = "Pulsa un botón lateral…";
 "Quit VectorScroll" = "Salir de VectorScroll";
 "Ready to scroll" = "Listo para desplazar";
 "Release the middle button to stop" = "Suelta el botón central para parar";
@@ -110,14 +101,11 @@
 "Scroll while holding the middle button" = "Desplazar mientras se mantiene el botón central";
 "Scrolling" = "Desplazamiento";
 "Scrolling indicator preview" = "Vista previa del indicador de desplazamiento";
-"Sends ⌘[ and ⌘]. Apps that use those shortcuts for something else can be excluded below." = "Envía ⌘[ y ⌘]. Las apps que usan esos atajos para otra cosa pueden excluirse abajo.";
 "Set up permissions" = "Configurar permisos";
 "Settings…" = "Ajustes…";
 "Setup" = "Configuración";
 "Setup Guide" = "Guía de configuración";
 "Setup complete" = "Configuración completa";
-/* Begin capturing a mouse side button. */
-"Set…" = "Definir…";
 "Show menu bar icon" = "Mostrar icono en la barra de menús";
 "Show this window when VectorScroll starts. If both access options are off, the menu bar icon returns." = "Muestra esta ventana cuando se inicia VectorScroll. Si las dos opciones de acceso están desactivadas, vuelve el icono de la barra de menús.";
 /* Scrolling indicator diameter. */

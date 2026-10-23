@@ -90,7 +90,7 @@ private final class ExcludedAppsRows: NSStackView {
         let actions = NSStackView(views: [spacer, add])
         addArrangedSubview(actions)
         actions.widthAnchor.constraint(equalTo: widthAnchor).isActive = true
-        let footnote = SettingsStyle.footnote(L("Middle-button scrolling and side buttons are off in these apps. Useful for apps that pan with the middle button, like Blender or Figma."))
+        let footnote = SettingsStyle.footnote(L("Middle-button scrolling is off in these apps. Useful for apps that pan with the middle button, like Blender or Figma."))
         addArrangedSubview(footnote)
         footnote.widthAnchor.constraint(equalTo: widthAnchor).isActive = true
     }

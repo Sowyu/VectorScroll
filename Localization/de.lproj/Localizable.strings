@@ -26,12 +26,7 @@
 "App" = "Programm";
 "Appearance" = "Erscheinungsbild";
 "Approval is required in Login Items." = "In den Anmeldeobjekten ist eine Freigabe erforderlich.";
-/* Mouse side-button navigation action. */
-"Back" = "Zurück";
-"Back and forward buttons" = "Zurück- und Vorwärts-Tasten";
 "Bring window to front" = "Fenster in den Vordergrund";
-/* Mouse button number, counting from one. */
-"Button %ld" = "Taste %ld";
 "Cancel" = "Abbrechen";
 "Change the scrolling indicator's diameter. The preview shows its actual size." = "Ändere den Durchmesser des Scroll-Indikators. Die Vorschau zeigt die tatsächliche Größe.";
 "Check for Updates…" = "Nach Updates suchen …";
@@ -50,8 +45,6 @@
 "Drag right to scroll left instead of right." = "Nach rechts ziehen, um nach links statt nach rechts zu scrollen.";
 "Excluded apps" = "Ausgeschlossene Programme";
 "Finish" = "Fertig";
-/* Mouse side-button navigation action. */
-"Forward" = "Vorwärts";
 "GitHub reported an invalid update size." = "GitHub hat eine ungültige Update-Größe gemeldet.";
 "Hold duration" = "Haltedauer";
 "Hold the middle button over any window and move the pointer. Change the mode, speed, direction, and indicator in Settings." = "Halte die mittlere Maustaste über einem beliebigen Fenster gedrückt und bewege den Zeiger. Modus, Geschwindigkeit, Richtung und Indikator änderst du in den Einstellungen.";
@@ -81,8 +74,7 @@
 "Launch at login could not be changed" = "Öffnen beim Anmelden konnte nicht geändert werden";
 /* Light appearance of the scrolling indicator. */
 "Light" = "Hell";
-"Middle-button scrolling and side buttons are off in these apps. Useful for apps that pan with the middle button, like Blender or Figma." = "Das Scrollen mit der mittleren Taste und die Seitentasten sind in diesen Programmen aus. Nützlich für Programme, die mit der mittleren Taste schwenken, etwa Blender oder Figma.";
-"Mouse buttons" = "Maustasten";
+"Middle-button scrolling is off in these apps. Useful for apps that pan with the middle button, like Blender or Figma." = "Das Scrollen mit der mittleren Taste ist in diesen Programmen aus. Nützlich für Programme, die mit der mittleren Taste schwenken, etwa Blender oder Figma.";
 "No excluded apps" = "Keine ausgeschlossenen Programme";
 "OK" = "OK";
 "Open Login Items" = "Anmeldeobjekte öffnen";
@@ -91,7 +83,6 @@
 "Open System Settings" = "Systemeinstellungen öffnen";
 "Open VectorScroll from Applications to enable this." = "Öffne VectorScroll aus dem Ordner „Programme“, um das zu aktivieren.";
 "Open settings on launch" = "Einstellungen beim Start öffnen";
-"Press a side button…" = "Seitentaste drücken …";
 "Quit VectorScroll" = "VectorScroll beenden";
 "Ready to scroll" = "Bereit zum Scrollen";
 "Release the middle button to stop" = "Mittlere Taste loslassen zum Beenden";
@@ -110,14 +101,11 @@
 "Scroll while holding the middle button" = "Scrollen bei gedrückter mittlerer Taste";
 "Scrolling" = "Scrollen";
 "Scrolling indicator preview" = "Vorschau des Scroll-Indikators";
-"Sends ⌘[ and ⌘]. Apps that use those shortcuts for something else can be excluded below." = "Sendet ⌘[ und ⌘]. Programme, die diese Kurzbefehle anders nutzen, kannst du unten ausschließen.";
 "Set up permissions" = "Berechtigungen einrichten";
 "Settings…" = "Einstellungen …";
 "Setup" = "Einrichtung";
 "Setup Guide" = "Einrichtungsassistent";
 "Setup complete" = "Einrichtung abgeschlossen";
-/* Begin capturing a mouse side button. */
-"Set…" = "Festlegen …";
 "Show menu bar icon" = "Menüleistensymbol anzeigen";
 "Show this window when VectorScroll starts. If both access options are off, the menu bar icon returns." = "Zeigt dieses Fenster beim Start von VectorScroll an. Sind beide Zugriffsoptionen aus, erscheint das Symbol in der Menüleiste wieder.";
 /* Scrolling indicator diameter. */

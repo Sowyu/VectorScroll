@@ -26,12 +26,7 @@
 "App" = "App";
 "Appearance" = "Apparence";
 "Approval is required in Login Items." = "Une approbation est requise dans Ouverture.";
-/* Mouse side-button navigation action. */
-"Back" = "Précédent";
-"Back and forward buttons" = "Boutons précédent et suivant";
 "Bring window to front" = "Placer la fenêtre au premier plan";
-/* Mouse button number, counting from one. */
-"Button %ld" = "Bouton %ld";
 "Cancel" = "Annuler";
 "Change the scrolling indicator's diameter. The preview shows its actual size." = "Modifiez le diamètre de l’indicateur de défilement. L’aperçu en montre la taille réelle.";
 "Check for Updates…" = "Rechercher des mises à jour…";
@@ -50,8 +45,6 @@
 "Drag right to scroll left instead of right." = "Faites glisser vers la droite pour défiler vers la gauche au lieu de la droite.";
 "Excluded apps" = "Apps exclues";
 "Finish" = "Terminer";
-/* Mouse side-button navigation action. */
-"Forward" = "Suivant";
 "GitHub reported an invalid update size." = "GitHub a signalé une taille de mise à jour non valide.";
 "Hold duration" = "Durée de maintien";
 "Hold the middle button over any window and move the pointer. Change the mode, speed, direction, and indicator in Settings." = "Maintenez le bouton central sur n’importe quelle fenêtre et déplacez le pointeur. Modifiez le mode, la vitesse, la direction et l’indicateur dans les réglages.";
@@ -81,8 +74,7 @@
 "Launch at login could not be changed" = "Impossible de modifier l’ouverture à la connexion";
 /* Light appearance of the scrolling indicator. */
 "Light" = "Clair";
-"Middle-button scrolling and side buttons are off in these apps. Useful for apps that pan with the middle button, like Blender or Figma." = "Le défilement avec le bouton central et les boutons latéraux sont désactivés dans ces apps. Utile pour les apps qui se déplacent avec le bouton central, comme Blender ou Figma.";
-"Mouse buttons" = "Boutons de la souris";
+"Middle-button scrolling is off in these apps. Useful for apps that pan with the middle button, like Blender or Figma." = "Le défilement avec le bouton central est désactivé dans ces apps. Utile pour les apps qui se déplacent avec le bouton central, comme Blender ou Figma.";
 "No excluded apps" = "Aucune app exclue";
 "OK" = "OK";
 "Open Login Items" = "Ouvrir « Ouverture »";
@@ -91,7 +83,6 @@
 "Open System Settings" = "Ouvrir Réglages Système";
 "Open VectorScroll from Applications to enable this." = "Ouvrez VectorScroll depuis Applications pour l’activer.";
 "Open settings on launch" = "Ouvrir les réglages au lancement";
-"Press a side button…" = "Appuyez sur un bouton latéral…";
 "Quit VectorScroll" = "Quitter VectorScroll";
 "Ready to scroll" = "Prêt à défiler";
 "Release the middle button to stop" = "Relâchez le bouton central pour arrêter";
@@ -110,14 +101,11 @@
 "Scroll while holding the middle button" = "Défiler en maintenant le bouton central";
 "Scrolling" = "Défilement";
 "Scrolling indicator preview" = "Aperçu de l’indicateur de défilement";
-"Sends ⌘[ and ⌘]. Apps that use those shortcuts for something else can be excluded below." = "Envoie ⌘[ et ⌘]. Les apps qui utilisent ces raccourcis autrement peuvent être exclues ci-dessous.";
 "Set up permissions" = "Configurer les autorisations";
 "Settings…" = "Réglages…";
 "Setup" = "Configuration";
 "Setup Guide" = "Guide de configuration";
 "Setup complete" = "Configuration terminée";
-/* Begin capturing a mouse side button. */
-"Set…" = "Définir…";
 "Show menu bar icon" = "Afficher l’icône dans la barre des menus";
 "Show this window when VectorScroll starts. If both access options are off, the menu bar icon returns." = "Affiche cette fenêtre au lancement de VectorScroll. Si les deux options d’accès sont désactivées, l’icône de la barre des menus réapparaît.";
 /* Scrolling indicator diameter. */

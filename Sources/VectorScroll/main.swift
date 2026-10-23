@@ -7,11 +7,10 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
     private static let restorableDefaultsKeys: [String] = [
         "holdToLockMode", "holdDelayEnabled", "holdDelayMilliseconds", "scrollSpeedPercent",
         "reverseVertical", "reverseHorizontal", "reverseDirection", "raiseWindowOnScroll",
-        "darkMode", "markerSize", "sideButtonsEnabled", "backButton", "forwardButton"
+        "darkMode", "markerSize"
     ]
     private let markerSizes = [28, 32, 40, 48]
     private let defaults = UserDefaults.standard
-    private let sideButtons = SideButtons()
     private var updateItem: NSButton!
     private var downloadItem: NSButton!
     private var updateStatusLabel: NSTextField!
@@ -132,7 +131,6 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         self.updateTimer = updateTimer
         updateTimer.resume()
         _ = try? UpdateInstaller.acknowledgeLaunch()
-        sideButtons.refresh()
     }
 
     private func configureMenu() {
@@ -314,8 +312,6 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         let sizeRow = settingsRow(L("Size"), control: sizeAndPreview, detail: L("Actual-size preview"))
         fullWidth(group(appearanceRow, sizeRow))
 
-        fullWidth(sectionHeading(L("Mouse buttons")))
-        fullWidth(sideButtons.makeSettingsSection())
         fullWidth(sectionHeading(L("Excluded apps")))
         fullWidth(ExcludedApps.makeSettingsSection())
 
@@ -433,9 +429,6 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         updateSpeedControls()
         updateMarkerMenuItem()
         updateSizeMenuItems()
-        sideButtons.cancelCapture()
-        sideButtons.refresh()
-        sideButtons.updateLabels()
     }
 
     @objc private func changeScrollSpeed(_ sender: NSSlider) {
@@ -916,7 +909,6 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         timer.setEventHandler { [weak self] in
             self?.installEventTap()
             self?.updateLaunchAtStartupItem()
-            self?.sideButtons.refresh()
         }
         permissionStatusTimer = timer
         timer.resume()
@@ -938,7 +930,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         }
 
         let button = event.getIntegerValueField(.mouseEventButtonNumber)
-        if type == .otherMouseDown, button == 2, appIsExcluded(at: event.location) {
+        if type == .otherMouseDown, button == 2, appIsExcluded(event.location) {
             excludedMiddleClick = true
             return Unmanaged.passUnretained(event)
         }
@@ -992,7 +984,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         return Unmanaged.passUnretained(event)
     }
 
-    private func appIsExcluded(at point: CGPoint) -> Bool { ExcludedApps.isExcluded(at: point) }
+    private var appIsExcluded: @MainActor (CGPoint) -> Bool = { ExcludedApps.isExcluded(at: $0) }
 
     private func armHoldToLock(at point: CGPoint, target: CGPoint) {
         cancelArmedHoldToLock()

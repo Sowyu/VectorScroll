@@ -26,12 +26,7 @@
 "App" = "App";
 "Appearance" = "Aparência";
 "Approval is required in Login Items." = "É necessária aprovação em Itens de Login.";
-/* Mouse side-button navigation action. */
-"Back" = "Voltar";
-"Back and forward buttons" = "Botões de voltar e avançar";
 "Bring window to front" = "Trazer janela para a frente";
-/* Mouse button number, counting from one. */
-"Button %ld" = "Botão %ld";
 "Cancel" = "Cancelar";
 "Change the scrolling indicator's diameter. The preview shows its actual size." = "Altere o diâmetro do indicador de rolagem. A pré-visualização mostra o tamanho real.";
 "Check for Updates…" = "Buscar Atualizações…";
@@ -50,8 +45,6 @@
 "Drag right to scroll left instead of right." = "Arraste para a direita para rolar para a esquerda em vez de para a direita.";
 "Excluded apps" = "Apps excluídos";
 "Finish" = "Concluir";
-/* Mouse side-button navigation action. */
-"Forward" = "Avançar";
 "GitHub reported an invalid update size." = "O GitHub informou um tamanho de atualização inválido.";
 "Hold duration" = "Duração do toque";
 "Hold the middle button over any window and move the pointer. Change the mode, speed, direction, and indicator in Settings." = "Segure o botão do meio sobre qualquer janela e mova o ponteiro. Mude o modo, a velocidade, a direção e o indicador nos Ajustes.";
@@ -81,8 +74,7 @@
 "Launch at login could not be changed" = "Não foi possível mudar a abertura ao iniciar sessão";
 /* Light appearance of the scrolling indicator. */
 "Light" = "Claro";
-"Middle-button scrolling and side buttons are off in these apps. Useful for apps that pan with the middle button, like Blender or Figma." = "A rolagem com o botão do meio e os botões laterais ficam desativados nestes apps. Útil para apps que se movem com o botão do meio, como Blender ou Figma.";
-"Mouse buttons" = "Botões do mouse";
+"Middle-button scrolling is off in these apps. Useful for apps that pan with the middle button, like Blender or Figma." = "A rolagem com o botão do meio fica desativada nestes apps. Útil para apps que se movem com o botão do meio, como Blender ou Figma.";
 "No excluded apps" = "Nenhum app excluído";
 "OK" = "OK";
 "Open Login Items" = "Abrir Itens de Login";
@@ -91,7 +83,6 @@
 "Open System Settings" = "Abrir Ajustes do Sistema";
 "Open VectorScroll from Applications to enable this." = "Abra o VectorScroll a partir de Aplicativos para ativar isto.";
 "Open settings on launch" = "Abrir ajustes ao iniciar";
-"Press a side button…" = "Pressione um botão lateral…";
 "Quit VectorScroll" = "Encerrar o VectorScroll";
 "Ready to scroll" = "Pronto para rolar";
 "Release the middle button to stop" = "Solte o botão do meio para parar";
@@ -110,14 +101,11 @@
 "Scroll while holding the middle button" = "Rolar segurando o botão do meio";
 "Scrolling" = "Rolagem";
 "Scrolling indicator preview" = "Pré-visualização do indicador de rolagem";
-"Sends ⌘[ and ⌘]. Apps that use those shortcuts for something else can be excluded below." = "Envia ⌘[ e ⌘]. Apps que usam esses atalhos para outra coisa podem ser excluídos abaixo.";
 "Set up permissions" = "Configurar permissões";
 "Settings…" = "Ajustes…";
 "Setup" = "Configuração";
 "Setup Guide" = "Guia de Configuração";
 "Setup complete" = "Configuração concluída";
-/* Begin capturing a mouse side button. */
-"Set…" = "Definir…";
 "Show menu bar icon" = "Mostrar ícone na barra de menus";
 "Show this window when VectorScroll starts. If both access options are off, the menu bar icon returns." = "Mostra esta janela quando o VectorScroll inicia. Se as duas opções de acesso estiverem desativadas, o ícone da barra de menus volta.";
 /* Scrolling indicator diameter. */

@@ -49,6 +49,8 @@ enum SettingsStyle {
 
     static func row(title: NSTextField, control: NSView, description: NSTextField? = nil, icon: NSImageView? = nil) -> NSView {
         let text = column([title] + (description.map { [$0] } ?? []))
+        // Keep the text at its natural height so centering puts it beside the control, not at the top of a stretched column.
+        text.setHuggingPriority(.required, for: .vertical)
         if let stack = control as? NSStackView {
             stack.setHuggingPriority(.required, for: .horizontal)
             for view in stack.arrangedSubviews {

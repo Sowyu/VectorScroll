@@ -26,12 +26,7 @@
 "App" = "Приложение";
 "Appearance" = "Оформление";
 "Approval is required in Login Items." = "Требуется подтверждение в «Объектах входа».";
-/* Mouse side-button navigation action. */
-"Back" = "Назад";
-"Back and forward buttons" = "Кнопки «Назад» и «Вперёд»";
 "Bring window to front" = "Выводить окно на передний план";
-/* Mouse button number, counting from one. */
-"Button %ld" = "Кнопка %ld";
 "Cancel" = "Отменить";
 "Change the scrolling indicator's diameter. The preview shows its actual size." = "Изменение диаметра индикатора прокрутки. В предпросмотре показан его реальный размер.";
 "Check for Updates…" = "Проверить обновления…";
@@ -50,8 +45,6 @@
 "Drag right to scroll left instead of right." = "Перетаскивание вправо прокручивает влево, а не вправо.";
 "Excluded apps" = "Исключённые приложения";
 "Finish" = "Готово";
-/* Mouse side-button navigation action. */
-"Forward" = "Вперёд";
 "GitHub reported an invalid update size." = "GitHub сообщил неверный размер обновления.";
 "Hold duration" = "Длительность удержания";
 "Hold the middle button over any window and move the pointer. Change the mode, speed, direction, and indicator in Settings." = "Удерживайте среднюю кнопку над любым окном и двигайте указатель. Режим, скорость, направление и индикатор меняются в настройках.";
@@ -81,8 +74,7 @@
 "Launch at login could not be changed" = "Не удалось изменить автозапуск при входе";
 /* Light appearance of the scrolling indicator. */
 "Light" = "Светлый";
-"Middle-button scrolling and side buttons are off in these apps. Useful for apps that pan with the middle button, like Blender or Figma." = "В этих приложениях прокрутка средней кнопкой и боковые кнопки отключены. Полезно для приложений, где средняя кнопка двигает вид, например Blender или Figma.";
-"Mouse buttons" = "Кнопки мыши";
+"Middle-button scrolling is off in these apps. Useful for apps that pan with the middle button, like Blender or Figma." = "В этих приложениях прокрутка средней кнопкой отключена. Полезно для приложений, где средняя кнопка двигает вид, например Blender или Figma.";
 "No excluded apps" = "Нет исключённых приложений";
 "OK" = "OK";
 "Open Login Items" = "Открыть «Объекты входа»";
@@ -91,7 +83,6 @@
 "Open System Settings" = "Открыть Системные настройки";
 "Open VectorScroll from Applications to enable this." = "Откройте VectorScroll из папки «Приложения», чтобы включить это.";
 "Open settings on launch" = "Открывать настройки при запуске";
-"Press a side button…" = "Нажмите боковую кнопку…";
 "Quit VectorScroll" = "Завершить VectorScroll";
 "Ready to scroll" = "Готово к прокрутке";
 "Release the middle button to stop" = "Отпустите кнопку для остановки";
@@ -110,14 +101,11 @@
 "Scroll while holding the middle button" = "Прокрутка при удержании средней кнопки";
 "Scrolling" = "Прокрутка";
 "Scrolling indicator preview" = "Предпросмотр индикатора прокрутки";
-"Sends ⌘[ and ⌘]. Apps that use those shortcuts for something else can be excluded below." = "Отправляет ⌘[ и ⌘]. Приложения, где эти сочетания используются иначе, можно исключить ниже.";
 "Set up permissions" = "Настроить разрешения";
 "Settings…" = "Настройки…";
 "Setup" = "Настройка";
 "Setup Guide" = "Помощник настройки";
 "Setup complete" = "Настройка завершена";
-/* Begin capturing a mouse side button. */
-"Set…" = "Задать…";
 "Show menu bar icon" = "Показывать значок в строке меню";
 "Show this window when VectorScroll starts. If both access options are off, the menu bar icon returns." = "Показывать это окно при запуске VectorScroll. Если оба варианта доступа выключены, значок в строке меню вернётся.";
 /* Scrolling indicator diameter. */
