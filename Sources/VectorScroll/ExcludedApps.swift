@@ -41,11 +41,7 @@ enum ExcludedApps {
     }
 
     static func makeSettingsSection(defaults: UserDefaults = .standard) -> NSView {
-        let rows = ExcludedAppsRows(defaults: defaults)
-        return MouseSettingsStyle.group([
-            rows,
-            MouseSettingsStyle.note(L("Middle-button scrolling and side buttons are off in these apps. Useful for apps that pan with the middle button, like Blender or Figma."))
-        ])
+        ExcludedAppsRows(defaults: defaults)
     }
 }
 
@@ -58,7 +54,7 @@ private final class ExcludedAppsRows: NSStackView {
         super.init(frame: .zero)
         orientation = .vertical
         alignment = .leading
-        spacing = 12
+        spacing = 6
         rebuild()
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) is unsupported") }
@@ -66,23 +62,37 @@ private final class ExcludedAppsRows: NSStackView {
     private func rebuild() {
         for view in arrangedSubviews { removeArrangedSubview(view); view.removeFromSuperview() }
         let ids = ExcludedApps.bundleIDs(in: defaults)
-        if ids.isEmpty { addArrangedSubview(MouseSettingsStyle.note(L("No excluded apps"))) }
+        var rows: [NSView] = []
+        if ids.isEmpty {
+            let empty = SettingsStyle.label(L("No excluded apps"))
+            empty.textColor = SettingsStyle.secondary
+            rows.append(SettingsStyle.paddedRow(empty))
+        }
         for id in ids {
             let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: id)
             let name = url.map { FileManager.default.displayName(atPath: $0.path) } ?? id
             let icon = NSImageView(image: url.map { NSWorkspace.shared.icon(forFile: $0.path) } ?? NSImage(named: NSImage.applicationIconName)!)
-            icon.widthAnchor.constraint(equalToConstant: 24).isActive = true
-            icon.heightAnchor.constraint(equalToConstant: 24).isActive = true
+            icon.widthAnchor.constraint(equalToConstant: 20).isActive = true
+            icon.heightAnchor.constraint(equalToConstant: 20).isActive = true
             icon.imageScaling = .scaleProportionallyUpOrDown
-            let remove = NSButton(image: NSImage(systemSymbolName: "minus.circle", accessibilityDescription: L("Remove %@", name))!, target: self, action: #selector(removeApp(_:)))
+            let remove = NSButton(image: NSImage(systemSymbolName: "minus.circle.fill", accessibilityDescription: L("Remove %@", name))!, target: self, action: #selector(removeApp(_:)))
             remove.identifier = NSUserInterfaceItemIdentifier(id)
             remove.isBordered = false
-            let row = NSStackView(views: [icon, MouseSettingsStyle.row(name, control: remove)])
-            row.spacing = 8
-            addArrangedSubview(row)
-            row.widthAnchor.constraint(equalTo: widthAnchor).isActive = true
+            remove.contentTintColor = SettingsStyle.secondary
+            rows.append(SettingsStyle.row(name, control: remove, icon: icon))
         }
-        addArrangedSubview(SettingsStyle.actionButton(L("Add App…"), symbol: "plus", target: self, action: #selector(addApps)))
+        let group = SettingsStyle.group(rows)
+        addArrangedSubview(group)
+        group.widthAnchor.constraint(equalTo: widthAnchor).isActive = true
+        let add = SettingsStyle.actionButton(L("Add App…"), symbol: "plus", target: self, action: #selector(addApps))
+        let spacer = NSView()
+        spacer.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        let actions = NSStackView(views: [spacer, add])
+        addArrangedSubview(actions)
+        actions.widthAnchor.constraint(equalTo: widthAnchor).isActive = true
+        let footnote = SettingsStyle.footnote(L("Middle-button scrolling and side buttons are off in these apps. Useful for apps that pan with the middle button, like Blender or Figma."))
+        addArrangedSubview(footnote)
+        footnote.widthAnchor.constraint(equalTo: widthAnchor).isActive = true
     }
 
     @objc private func removeApp(_ sender: NSButton) {

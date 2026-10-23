@@ -142,7 +142,7 @@ final class SideButtons: NSObject {
 
     func makeSettingsSection() -> NSView {
         let toggle = NSSwitch()
-        toggle.controlSize = .small
+        toggle.controlSize = .mini
         toggle.state = Self.settings(in: defaults).enabled ? .on : .off
         toggle.target = self
         toggle.action = #selector(changeEnabled(_:))
@@ -156,13 +156,18 @@ final class SideButtons: NSObject {
         let forwardButton = SettingsStyle.actionButton(L("Set…"), symbol: "computermouse", target: self, action: #selector(captureForward))
         let cancel = SettingsStyle.actionButton(L("Cancel"), symbol: "xmark", target: self, action: #selector(cancelMapping))
         cancelButton = cancel
-        let section = MouseSettingsStyle.group([
-            MouseSettingsStyle.row(L("Back and forward buttons"), control: toggle),
-            MouseSettingsStyle.row(L("Back"), control: NSStackView(views: [back, backButton])),
-            MouseSettingsStyle.row(L("Forward"), control: NSStackView(views: [forward, forwardButton])),
-            MouseSettingsStyle.row("", control: cancel),
-            MouseSettingsStyle.note(L("Sends ⌘[ and ⌘]. Apps that use those shortcuts for something else can be excluded below."))
-        ])
+        for label in [back, forward] {
+            label.font = .systemFont(ofSize: 13)
+            label.textColor = SettingsStyle.secondary
+        }
+        let section = SettingsStyle.column([
+            SettingsStyle.group([
+                SettingsStyle.row(L("Back and forward buttons"), control: toggle),
+                SettingsStyle.row(L("Back"), control: NSStackView(views: [back, backButton])),
+                SettingsStyle.row(L("Forward"), control: NSStackView(views: [forward, forwardButton, cancel]))
+            ]),
+            SettingsStyle.footnote(L("Sends ⌘[ and ⌘]. Apps that use those shortcuts for something else can be excluded below."))
+        ], spacing: 6)
         updateLabels()
         return section
     }
@@ -170,7 +175,7 @@ final class SideButtons: NSObject {
     func updateLabels() {
         let settings = Self.settings(in: defaults)
         enabledSwitch?.state = settings.enabled ? .on : .off
-        cancelButton?.superview?.isHidden = capture == nil
+        cancelButton?.isHidden = capture == nil
         backLabel?.stringValue = capture?.0 == .back ? L("Press a side button…") : L("Button %ld", settings.back + 1)
         forwardLabel?.stringValue = capture?.0 == .forward ? L("Press a side button…") : L("Button %ld", settings.forward + 1)
     }
@@ -181,34 +186,4 @@ final class SideButtons: NSObject {
     @objc private func captureBack() { beginCapture(for: .back) { _ in } }
     @objc private func captureForward() { beginCapture(for: .forward) { _ in } }
     @objc private func cancelMapping() { cancelCapture() }
-}
-
-@MainActor
-enum MouseSettingsStyle {
-    static func note(_ text: String) -> NSTextField {
-        let label = NSTextField(wrappingLabelWithString: text)
-        label.font = .systemFont(ofSize: 12)
-        label.textColor = SettingsStyle.secondary
-        label.preferredMaxLayoutWidth = 520
-        return label
-    }
-    static func row(_ title: String, control: NSView) -> NSView {
-        let label = NSTextField(wrappingLabelWithString: title)
-        label.font = .systemFont(ofSize: 13, weight: .medium)
-        let spacer = NSView()
-        spacer.setContentHuggingPriority(.defaultLow, for: .horizontal)
-        control.setContentHuggingPriority(.required, for: .horizontal)
-        let row = NSStackView(views: [label, spacer, control])
-        row.spacing = 12
-        row.alignment = .centerY
-        return row
-    }
-    static func group(_ views: [NSView]) -> NSView {
-        let content = NSStackView(views: views)
-        content.orientation = .vertical
-        content.alignment = .leading
-        content.spacing = 16
-        for view in views { view.widthAnchor.constraint(equalTo: content.widthAnchor).isActive = true }
-        return SettingsStyle.groupContainer(for: content)
-    }
 }
