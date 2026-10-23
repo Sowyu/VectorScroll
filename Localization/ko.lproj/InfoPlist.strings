@@ -1,0 +1,4 @@
+/* macOS permission prompt explanation. */
+"NSAccessibilityUsageDescription" = "VectorScroll은 손쉬운 사용 기능을 통해 커서 아래의 윈도우를 앞으로 가져오고, 사용자를 대신해 기본 스크롤 이벤트를 전송합니다.";
+/* macOS permission prompt explanation. */
+"NSInputMonitoringUsageDescription" = "VectorScroll은 벡터 스크롤을 시작하고 중지하기 위해 가운데 클릭 및 기타 마우스 버튼 입력을 감지합니다.";

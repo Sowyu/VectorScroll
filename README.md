@@ -61,6 +61,7 @@ Later releases can be installed from Check for Updates inside the app. A signing
 - **Launch at login** registers with the system login items.
 - **Restore Defaults** resets scrolling, indicator, and mouse button settings. Login, menu bar, and excluded apps stay as they are.
 - Opening VectorScroll again from Applications, Spotlight, or `open -a VectorScroll` always shows Settings.
+- **Language.** The globe button next to the version number switches between English, Deutsch, Español, Français, Italiano, Português (Brasil), Русский, 日本語, 한국어, 简体中文, and 繁體中文, then restarts the app. System Language follows macOS.
 - **Setup guide** on first launch. One permission per page, plain-language reasons, live status, and no system prompt until you press the button for it. Reopen it from Settings.
 - Permission status for Input Monitoring and Accessibility refreshes every second. A missing permission shows a button that opens the right System Settings pane. Permission prompts appear only after you press the matching button in the setup guide.
 - Settings use grouped rows, native switches, and a compact appearance picker. Hover help explains controls, and slider accessibility values include their units.

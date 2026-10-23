@@ -1,0 +1,172 @@
+/* Indicator preview accessibility value: appearance name, then diameter in points. */
+"%@, %ld points" = "%@，%ld 点";
+/* Accessibility announcement: setup step followed by its title. */
+"%@. %@" = "%@。%@";
+/* Hold delay accessibility value. */
+"%ld milliseconds" = "%ld 毫秒";
+/* Hold delay in milliseconds; compact visible label. */
+"%ld ms" = "%ld ms";
+/* Scroll speed accessibility value. */
+"%ld percent" = "百分之 %ld";
+/* Indicator diameter in points; size menu. */
+"%ld pt" = "%ld pt";
+/* Scroll speed percentage shown beside the slider. %% displays a literal percent sign. */
+"%ld%%" = "%ld%%";
+"Accessibility Settings…" = "辅助功能设置…";
+"Accessibility is required" = "需要辅助功能权限";
+"Accessibility lets VectorScroll bring the window under your pointer forward and send scroll events to it. Vector scrolling stays off until this permission is allowed." = "辅助功能可让 VectorScroll 将指针下方的窗口置于前台并向其发送滚动事件。在允许此权限之前，矢量滚动将保持关闭。";
+"Activate the app under the pointer when scrolling starts. Scrolling works either way." = "滚动开始时激活指针下方的 App。无论是否激活，滚动都可使用。";
+"Actual-size preview" = "实际大小预览";
+"Actual-size preview of the scrolling indicator." = "滚动指示器的实际大小预览。";
+"Add" = "添加";
+"Add App…" = "添加 App…";
+"Adjust scrolling speed from 20% to 300% in 10% steps. 100% is the default." = "以 10% 为步长，在 20% 到 300% 之间调整滚动速度。默认值为 100%。";
+"Allow Accessibility" = "允许辅助功能";
+"Allow Input Monitoring" = "允许输入监控";
+"App" = "App";
+"Appearance" = "外观";
+"Approval is required in Login Items." = "需要在“登录项”中批准。";
+/* Mouse side-button navigation action. */
+"Back" = "返回";
+"Back and forward buttons" = "后退和前进按钮";
+"Bring window to front" = "将窗口置于前台";
+/* Mouse button number, counting from one. */
+"Button %ld" = "按钮 %ld";
+"Cancel" = "取消";
+"Change the scrolling indicator's diameter. The preview shows its actual size." = "更改滚动指示器的直径。预览会显示其实际大小。";
+"Check for Updates…" = "检查更新…";
+"Checking for updates…" = "正在检查更新…";
+"Checks daily and installs only when you choose." = "每天检查一次，仅在你选择时才安装。";
+"Choose a light or dark scrolling indicator for contrast with the content beneath it." = "选择浅色或深色滚动指示器，使其与下方内容形成对比。";
+"Click to start, click to stop" = "单击开始，单击停止";
+/* %@ is the error description. */
+"Couldn't check for updates. %@" = "无法检查更新。%@";
+/* Dark appearance of the scrolling indicator. */
+"Dark" = "深色";
+"Delay before scrolling starts" = "滚动开始前的延迟";
+/* %@ is the version being downloaded. */
+"Downloading VectorScroll %@…" = "正在下载 VectorScroll %@…";
+"Drag down to scroll up instead of down." = "向下拖移时向上滚动，而不是向下。";
+"Drag right to scroll left instead of right." = "向右拖移时向左滚动，而不是向右。";
+"Excluded apps" = "已排除的 App";
+"Finish" = "完成";
+/* Mouse side-button navigation action. */
+"Forward" = "前进";
+"GitHub reported an invalid update size." = "GitHub 报告的更新大小无效。";
+"Hold duration" = "按住时长";
+"Hold the middle button over any window and move the pointer. Change the mode, speed, direction, and indicator in Settings." = "在任意窗口上按住中键并移动指针。可在“设置”中更改模式、速度、方向和指示器。";
+"Hold the middle mouse button and move the pointer to scroll any window. macOS needs two permissions first. This takes about a minute, and you can come back to it from Settings." = "按住鼠标中键并移动指针，即可滚动任意窗口。macOS 需要先授予两项权限。这大约需要一分钟，之后你也可以从“设置”返回此处。";
+"Hold to scroll" = "按住滚动";
+"Hold to start, click to stop" = "按住开始，单击停止";
+"How long to hold the middle button before toggle scrolling starts." = "按住中键多久后开始切换滚动。";
+"Indicator" = "指示器";
+"Indicator appearance" = "指示器外观";
+"Indicator size" = "指示器大小";
+"Input Monitoring Settings…" = "输入监控设置…";
+"Input Monitoring and Accessibility are required" = "需要输入监控和辅助功能权限";
+"Input Monitoring is required" = "需要输入监控权限";
+/* Install the available version named by %@. */
+"Install Update %@…" = "安装更新 %@…";
+"Install Update…" = "安装更新…";
+"Invalid update health check destination." = "更新健康检查的目标无效。";
+"Invalid update health check." = "更新健康检查无效。";
+"Invalid update plan." = "更新计划无效。";
+"Keep Settings and Quit in the menu bar. Hiding the icon enables Open settings on launch." = "在菜单栏中保留“设置”和“退出”。隐藏图标会启用“启动时打开设置”。";
+"Keep scrolling until the next click" = "持续滚动，直到下次单击";
+/* Tooltip and accessibility label for the globe language picker. */
+"Language" = "语言";
+"Language could not be changed" = "无法更改语言";
+"Later" = "稍后";
+"Launch at login" = "登录时启动";
+"Launch at login could not be changed" = "无法更改登录时启动设置";
+/* Light appearance of the scrolling indicator. */
+"Light" = "浅色";
+"Middle-button scrolling and side buttons are off in these apps. Useful for apps that pan with the middle button, like Blender or Figma." = "在这些 App 中，中键滚动和侧边按钮会关闭。适用于使用中键平移的 App，例如 Blender 或 Figma。";
+"Mouse buttons" = "鼠标按钮";
+"No excluded apps" = "没有已排除的 App";
+"OK" = "好";
+"Open Login Items" = "打开“登录项”";
+"Open Login Items to allow VectorScroll." = "打开“登录项”以允许 VectorScroll。";
+"Open Settings" = "打开“设置”";
+"Open System Settings" = "打开“系统设置”";
+"Open VectorScroll from Applications to enable this." = "请从“应用程序”中打开 VectorScroll 以启用此功能。";
+"Open settings on launch" = "启动时打开设置";
+"Press a side button…" = "请按下侧边按钮…";
+"Quit VectorScroll" = "退出 VectorScroll";
+"Ready to scroll" = "已可滚动";
+"Release the middle button to stop" = "松开中键即可停止";
+/* Remove the named app from exclusions. */
+"Remove %@" = "移除 %@";
+"Require a brief hold so a normal middle-click can still open a link in a new tab." = "需要短暂按住，这样普通的中键单击仍可在新标签页中打开链接。";
+"Required" = "必需";
+"Restarting VectorScroll…" = "正在重新启动 VectorScroll…";
+"Restore Defaults" = "恢复默认设置";
+"Reverse horizontal" = "反转水平方向";
+"Reverse vertical" = "反转垂直方向";
+"Review VectorScroll in Login Items." = "请在“登录项”中查看 VectorScroll。";
+"Review the permissions needed for middle-button scrolling." = "查看中键滚动所需的权限。";
+"Run the installed VectorScroll app from Applications." = "请从“应用程序”运行已安装的 VectorScroll。";
+"Scroll speed" = "滚动速度";
+"Scroll while holding the middle button" = "按住中键时滚动";
+"Scrolling" = "滚动";
+"Scrolling indicator preview" = "滚动指示器预览";
+"Sends ⌘[ and ⌘]. Apps that use those shortcuts for something else can be excluded below." = "发送 ⌘[ 和 ⌘]。将这些快捷键用于其他用途的 App 可在下方排除。";
+"Set up permissions" = "设置权限";
+"Settings…" = "设置…";
+"Setup" = "初始设置";
+"Setup Guide" = "设置指南";
+"Setup complete" = "设置完成";
+/* Begin capturing a mouse side button. */
+"Set…" = "指定…";
+"Show menu bar icon" = "显示菜单栏图标";
+"Show this window when VectorScroll starts. If both access options are off, the menu bar icon returns." = "VectorScroll 启动时显示此窗口。如果两个访问选项都已关闭，菜单栏图标将重新出现。";
+/* Scrolling indicator diameter. */
+"Size" = "大小";
+/* Current permission step and total permission steps. */
+"Step %ld of %ld" = "第 %ld 步，共 %ld 步";
+/* Use the macOS preferred language; first entry in the language menu. */
+"System Language" = "系统语言";
+"The app version could not be compared with the latest release." = "无法将 App 版本与最新版本进行比较。";
+"The downloaded app has an invalid executable." = "下载的 App 的可执行文件无效。";
+"The downloaded app has the wrong version." = "下载的 App 版本不正确。";
+"The installed app changed while updating. Please check for updates again." = "更新期间已安装的 App 发生了变化。请再次检查更新。";
+"The installed app is not signed by the VectorScroll release identity. Reinstall it manually before updating." = "已安装的 App 未使用 VectorScroll 发布身份签名。请先手动重新安装，然后再更新。";
+"The installed app's code signature is invalid. Reinstall VectorScroll manually before updating." = "已安装的 App 的代码签名无效。请先手动重新安装 VectorScroll，然后再更新。";
+"The installed app's signing identity could not be read." = "无法读取已安装 App 的签名身份。";
+"The latest release has no supported installer. Try again later." = "最新版本没有受支持的安装器。请稍后再试。";
+"The update could not atomically replace the installed app. Your previous app has been kept." = "更新无法以原子方式替换已安装的 App。已保留你之前的 App。";
+"The update did not match GitHub's SHA-256 checksum. Nothing was installed." = "更新与 GitHub 的 SHA-256 校验和不匹配。未安装任何内容。";
+"The update does not contain a valid VectorScroll app." = "更新中不包含有效的 VectorScroll App。";
+"The update download was incomplete. Please try again." = "更新下载不完整。请重试。";
+"The update download was larger than GitHub reported. Nothing was installed." = "更新下载大小超出 GitHub 报告的大小。未安装任何内容。";
+"The update has an invalid Info.plist." = "更新的 Info.plist 无效。";
+"The update has an invalid minimum macOS version." = "更新的最低 macOS 版本无效。";
+"The update has an unreadable code signature." = "无法读取更新的代码签名。";
+"The update helper could not start. The current app is still installed." = "无法启动更新辅助程序。当前 App 仍保持安装状态。";
+"The update was not signed by the same identity as the installed app." = "更新未使用与已安装 App 相同的身份签名。";
+"The updated app did not finish starting. The previous version was restored." = "更新后的 App 未能完成启动。已恢复之前的版本。";
+"This copy cannot update in its current location. Move VectorScroll from the DMG into a writable Applications folder, then try again." = "此副本无法在当前位置更新。请将 VectorScroll 从 DMG 移到可写入的“应用程序”文件夹，然后重试。";
+"This lets VectorScroll notice when you press the middle button. Nothing you type is read. macOS shows its own dialog once. If it does not appear, open System Settings, turn on VectorScroll under Input Monitoring, then come back here." = "这样 VectorScroll 就能察觉你按下中键。不会读取你输入的任何内容。macOS 会显示一次自己的对话框。如果没有出现，请打开“系统设置”，在“输入监控”下打开 VectorScroll，然后回到这里。";
+"This update does not support this Mac's processor." = "此更新不支持这台 Mac 的处理器。";
+"This update is not newer than the installed app." = "此更新不比已安装的 App 新。";
+"This update requires a newer version of macOS." = "此更新需要更高版本的 macOS。";
+"Toggle scrolling" = "切换滚动";
+"Update could not be completed" = "无法完成更新";
+"Update failed." = "更新失败。";
+"Update in progress" = "正在更新";
+"Vector Scroll" = "Vector Scroll";
+"VectorScroll" = "VectorScroll";
+/* %@ is the newly available version. */
+"VectorScroll %@ is available." = "VectorScroll %@ 现已可用。";
+/* %@ is the installed version. */
+"VectorScroll %@ is up to date." = "VectorScroll %@ 已是最新版本。";
+"VectorScroll Settings" = "VectorScroll 设置";
+"VectorScroll Setup" = "VectorScroll 初始设置";
+"VectorScroll did not quit in time. Please try again." = "VectorScroll 未能及时退出。请重试。";
+"Verifying the update…" = "正在验证更新…";
+/* Installed app version in the settings footer. */
+"Version %@" = "版本 %@";
+"Waiting for Accessibility. This page moves on by itself once it is allowed." = "正在等待辅助功能权限。允许后，此页面会自动跳转。";
+"Waiting for Input Monitoring. This page moves on by itself once it is allowed." = "正在等待输入监控权限。允许后，此页面会自动跳转。";
+"Welcome to VectorScroll" = "欢迎使用 VectorScroll";
+"You're set" = "一切就绪";

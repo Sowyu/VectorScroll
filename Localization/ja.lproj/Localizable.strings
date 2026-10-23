@@ -1,0 +1,172 @@
+/* Indicator preview accessibility value: appearance name, then diameter in points. */
+"%@, %ld points" = "%@、%ldポイント";
+/* Accessibility announcement: setup step followed by its title. */
+"%@. %@" = "%@。%@";
+/* Hold delay accessibility value. */
+"%ld milliseconds" = "%ldミリ秒";
+/* Hold delay in milliseconds; compact visible label. */
+"%ld ms" = "%ld ms";
+/* Scroll speed accessibility value. */
+"%ld percent" = "%ldパーセント";
+/* Indicator diameter in points; size menu. */
+"%ld pt" = "%ld pt";
+/* Scroll speed percentage shown beside the slider. %% displays a literal percent sign. */
+"%ld%%" = "%ld%%";
+"Accessibility Settings…" = "アクセシビリティ設定…";
+"Accessibility is required" = "アクセシビリティの許可が必要です";
+"Accessibility lets VectorScroll bring the window under your pointer forward and send scroll events to it. Vector scrolling stays off until this permission is allowed." = "アクセシビリティにより、VectorScrollはポインタの下にあるウインドウを前面に表示し、スクロールイベントを送信できます。この権限を許可するまで、ベクトルスクロールはオフのままです。";
+"Activate the app under the pointer when scrolling starts. Scrolling works either way." = "スクロール開始時にポインタの下のAppをアクティブにします。有効にしなくてもスクロールは機能します。";
+"Actual-size preview" = "実寸プレビュー";
+"Actual-size preview of the scrolling indicator." = "スクロールインジケータの実寸プレビューです。";
+"Add" = "追加";
+"Add App…" = "Appを追加…";
+"Adjust scrolling speed from 20% to 300% in 10% steps. 100% is the default." = "スクロール速度を20%から300%まで10%刻みで調整します。デフォルトは100%です。";
+"Allow Accessibility" = "アクセシビリティを許可";
+"Allow Input Monitoring" = "入力監視を許可";
+"App" = "App";
+"Appearance" = "外観";
+"Approval is required in Login Items." = "ログイン項目での承認が必要です。";
+/* Mouse side-button navigation action. */
+"Back" = "戻る";
+"Back and forward buttons" = "戻る/進むボタン";
+"Bring window to front" = "ウインドウを前面に表示";
+/* Mouse button number, counting from one. */
+"Button %ld" = "ボタン %ld";
+"Cancel" = "キャンセル";
+"Change the scrolling indicator's diameter. The preview shows its actual size." = "スクロールインジケータの直径を変更します。プレビューには実際のサイズが表示されます。";
+"Check for Updates…" = "アップデートを確認…";
+"Checking for updates…" = "アップデートを確認中…";
+"Checks daily and installs only when you choose." = "毎日確認し、選択したときだけインストールします。";
+"Choose a light or dark scrolling indicator for contrast with the content beneath it." = "下のコンテンツと見分けやすいよう、明るいまたは暗いスクロールインジケータを選択します。";
+"Click to start, click to stop" = "クリックで開始、クリックで停止";
+/* %@ is the error description. */
+"Couldn't check for updates. %@" = "アップデートを確認できませんでした。%@";
+/* Dark appearance of the scrolling indicator. */
+"Dark" = "ダーク";
+"Delay before scrolling starts" = "スクロール開始までの遅延";
+/* %@ is the version being downloaded. */
+"Downloading VectorScroll %@…" = "VectorScroll %@をダウンロード中…";
+"Drag down to scroll up instead of down." = "下にドラッグすると、下ではなく上にスクロールします。";
+"Drag right to scroll left instead of right." = "右にドラッグすると、右ではなく左にスクロールします。";
+"Excluded apps" = "除外するApp";
+"Finish" = "完了";
+/* Mouse side-button navigation action. */
+"Forward" = "進む";
+"GitHub reported an invalid update size." = "GitHubが無効なアップデートサイズを報告しました。";
+"Hold duration" = "長押し時間";
+"Hold the middle button over any window and move the pointer. Change the mode, speed, direction, and indicator in Settings." = "任意のウインドウの上で中ボタンを押しながらポインタを動かします。モード、速度、方向、インジケータは設定で変更できます。";
+"Hold the middle mouse button and move the pointer to scroll any window. macOS needs two permissions first. This takes about a minute, and you can come back to it from Settings." = "中マウスボタンを押しながらポインタを動かすと、どのウインドウもスクロールできます。先にmacOSで2つの権限が必要です。1分ほどかかり、あとで設定から戻ることもできます。";
+"Hold to scroll" = "押している間スクロール";
+"Hold to start, click to stop" = "長押しで開始、クリックで停止";
+"How long to hold the middle button before toggle scrolling starts." = "スクロールの切り替えを開始するまで、中ボタンを押し続ける時間です。";
+"Indicator" = "インジケータ";
+"Indicator appearance" = "インジケータの外観";
+"Indicator size" = "インジケータのサイズ";
+"Input Monitoring Settings…" = "入力監視設定…";
+"Input Monitoring and Accessibility are required" = "入力監視とアクセシビリティの許可が必要です";
+"Input Monitoring is required" = "入力監視の許可が必要です";
+/* Install the available version named by %@. */
+"Install Update %@…" = "アップデート%@をインストール…";
+"Install Update…" = "アップデートをインストール…";
+"Invalid update health check destination." = "アップデートのヘルスチェックの宛先が無効です。";
+"Invalid update health check." = "アップデートのヘルスチェックが無効です。";
+"Invalid update plan." = "アップデート計画が無効です。";
+"Keep Settings and Quit in the menu bar. Hiding the icon enables Open settings on launch." = "設定と終了をメニューバーに残します。アイコンを非表示にすると「起動時に設定を開く」がオンになります。";
+"Keep scrolling until the next click" = "次のクリックまでスクロールし続ける";
+/* Tooltip and accessibility label for the globe language picker. */
+"Language" = "言語";
+"Language could not be changed" = "言語を変更できませんでした";
+"Later" = "あとで";
+"Launch at login" = "ログイン時に起動";
+"Launch at login could not be changed" = "ログイン時の起動を変更できませんでした";
+/* Light appearance of the scrolling indicator. */
+"Light" = "ライト";
+"Middle-button scrolling and side buttons are off in these apps. Useful for apps that pan with the middle button, like Blender or Figma." = "これらのAppでは、中ボタンスクロールとサイドボタンがオフになります。BlenderやFigmaなど、中ボタンでパンするAppに便利です。";
+"Mouse buttons" = "マウスボタン";
+"No excluded apps" = "除外するAppはありません";
+"OK" = "OK";
+"Open Login Items" = "ログイン項目を開く";
+"Open Login Items to allow VectorScroll." = "ログイン項目を開いて、VectorScrollを許可してください。";
+"Open Settings" = "設定を開く";
+"Open System Settings" = "システム設定を開く";
+"Open VectorScroll from Applications to enable this." = "有効にするには、アプリケーションからVectorScrollを開いてください。";
+"Open settings on launch" = "起動時に設定を開く";
+"Press a side button…" = "サイドボタンを押してください…";
+"Quit VectorScroll" = "VectorScrollを終了";
+"Ready to scroll" = "スクロールの準備完了";
+"Release the middle button to stop" = "中ボタンを離すと停止";
+/* Remove the named app from exclusions. */
+"Remove %@" = "%@を削除";
+"Require a brief hold so a normal middle-click can still open a link in a new tab." = "通常の中クリックでリンクを新しいタブで開けるよう、短く押し続ける必要があります。";
+"Required" = "必須";
+"Restarting VectorScroll…" = "VectorScrollを再起動中…";
+"Restore Defaults" = "デフォルトに戻す";
+"Reverse horizontal" = "水平方向を反転";
+"Reverse vertical" = "垂直方向を反転";
+"Review VectorScroll in Login Items." = "ログイン項目でVectorScrollを確認してください。";
+"Review the permissions needed for middle-button scrolling." = "中ボタンスクロールに必要な権限を確認します。";
+"Run the installed VectorScroll app from Applications." = "アプリケーションにインストールされたVectorScrollを実行してください。";
+"Scroll speed" = "スクロール速度";
+"Scroll while holding the middle button" = "中ボタンを押しながらスクロール";
+"Scrolling" = "スクロール";
+"Scrolling indicator preview" = "スクロールインジケータのプレビュー";
+"Sends ⌘[ and ⌘]. Apps that use those shortcuts for something else can be excluded below." = "⌘[と⌘]を送信します。これらのショートカットを別の用途で使うAppは、下で除外できます。";
+"Set up permissions" = "権限を設定";
+"Settings…" = "設定…";
+"Setup" = "セットアップ";
+"Setup Guide" = "セットアップガイド";
+"Setup complete" = "セットアップ完了";
+/* Begin capturing a mouse side button. */
+"Set…" = "指定…";
+"Show menu bar icon" = "メニューバーアイコンを表示";
+"Show this window when VectorScroll starts. If both access options are off, the menu bar icon returns." = "VectorScrollの起動時にこのウインドウを表示します。2つのアクセスオプションがどちらもオフの場合は、メニューバーアイコンが再表示されます。";
+/* Scrolling indicator diameter. */
+"Size" = "サイズ";
+/* Current permission step and total permission steps. */
+"Step %ld of %ld" = "ステップ%ld/%ld";
+/* Use the macOS preferred language; first entry in the language menu. */
+"System Language" = "システム言語";
+"The app version could not be compared with the latest release." = "Appのバージョンを最新リリースと比較できませんでした。";
+"The downloaded app has an invalid executable." = "ダウンロードしたAppの実行ファイルが無効です。";
+"The downloaded app has the wrong version." = "ダウンロードしたAppのバージョンが正しくありません。";
+"The installed app changed while updating. Please check for updates again." = "アップデート中にインストール済みのAppが変更されました。もう一度アップデートを確認してください。";
+"The installed app is not signed by the VectorScroll release identity. Reinstall it manually before updating." = "インストール済みのAppがVectorScrollのリリースIDで署名されていません。アップデートの前に手動で再インストールしてください。";
+"The installed app's code signature is invalid. Reinstall VectorScroll manually before updating." = "インストール済みのAppのコード署名が無効です。アップデートの前にVectorScrollを手動で再インストールしてください。";
+"The installed app's signing identity could not be read." = "インストール済みのAppの署名IDを読み取れませんでした。";
+"The latest release has no supported installer. Try again later." = "最新リリースに対応するインストーラがありません。しばらくしてからもう一度お試しください。";
+"The update could not atomically replace the installed app. Your previous app has been kept." = "アップデートでインストール済みのAppをアトミックに置き換えられませんでした。以前のAppはそのまま残っています。";
+"The update did not match GitHub's SHA-256 checksum. Nothing was installed." = "アップデートがGitHubのSHA-256チェックサムと一致しませんでした。何もインストールされていません。";
+"The update does not contain a valid VectorScroll app." = "アップデートに有効なVectorScroll Appが含まれていません。";
+"The update download was incomplete. Please try again." = "アップデートのダウンロードが完了しませんでした。もう一度お試しください。";
+"The update download was larger than GitHub reported. Nothing was installed." = "アップデートのダウンロードがGitHubの報告より大きくなっています。何もインストールされていません。";
+"The update has an invalid Info.plist." = "アップデートのInfo.plistが無効です。";
+"The update has an invalid minimum macOS version." = "アップデートの最低macOSバージョンが無効です。";
+"The update has an unreadable code signature." = "アップデートのコード署名を読み取れません。";
+"The update helper could not start. The current app is still installed." = "アップデートヘルパを起動できませんでした。現在のAppはそのままインストールされています。";
+"The update was not signed by the same identity as the installed app." = "アップデートがインストール済みのAppと同じIDで署名されていません。";
+"The updated app did not finish starting. The previous version was restored." = "アップデートしたAppの起動が完了しませんでした。以前のバージョンを復元しました。";
+"This copy cannot update in its current location. Move VectorScroll from the DMG into a writable Applications folder, then try again." = "このコピーは現在の場所ではアップデートできません。VectorScrollをDMGから書き込み可能なアプリケーションフォルダに移動して、もう一度お試しください。";
+"This lets VectorScroll notice when you press the middle button. Nothing you type is read. macOS shows its own dialog once. If it does not appear, open System Settings, turn on VectorScroll under Input Monitoring, then come back here." = "VectorScrollが中ボタンの押下を検知できるようにします。入力した内容は読み取りません。macOSの確認ダイアログが一度だけ表示されます。表示されない場合は、システム設定を開き、入力監視でVectorScrollをオンにしてから、ここに戻ってください。";
+"This update does not support this Mac's processor." = "このアップデートはこのMacのプロセッサに対応していません。";
+"This update is not newer than the installed app." = "このアップデートはインストール済みのAppより新しくありません。";
+"This update requires a newer version of macOS." = "このアップデートには、より新しいバージョンのmacOSが必要です。";
+"Toggle scrolling" = "スクロールの切り替え";
+"Update could not be completed" = "アップデートを完了できませんでした";
+"Update failed." = "アップデートに失敗しました。";
+"Update in progress" = "アップデート中";
+"Vector Scroll" = "Vector Scroll";
+"VectorScroll" = "VectorScroll";
+/* %@ is the newly available version. */
+"VectorScroll %@ is available." = "VectorScroll %@が利用可能です。";
+/* %@ is the installed version. */
+"VectorScroll %@ is up to date." = "VectorScroll %@は最新です。";
+"VectorScroll Settings" = "VectorScroll設定";
+"VectorScroll Setup" = "VectorScrollセットアップ";
+"VectorScroll did not quit in time. Please try again." = "VectorScrollが時間内に終了しませんでした。もう一度お試しください。";
+"Verifying the update…" = "アップデートを検証中…";
+/* Installed app version in the settings footer. */
+"Version %@" = "バージョン%@";
+"Waiting for Accessibility. This page moves on by itself once it is allowed." = "アクセシビリティの許可を待っています。許可されると、このページは自動で次に進みます。";
+"Waiting for Input Monitoring. This page moves on by itself once it is allowed." = "入力監視の許可を待っています。許可されると、このページは自動で次に進みます。";
+"Welcome to VectorScroll" = "VectorScrollへようこそ";
+"You're set" = "準備完了";

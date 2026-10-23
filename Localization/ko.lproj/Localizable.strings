@@ -1,0 +1,172 @@
+/* Indicator preview accessibility value: appearance name, then diameter in points. */
+"%@, %ld points" = "%@, %ld포인트";
+/* Accessibility announcement: setup step followed by its title. */
+"%@. %@" = "%@. %@";
+/* Hold delay accessibility value. */
+"%ld milliseconds" = "%ld밀리초";
+/* Hold delay in milliseconds; compact visible label. */
+"%ld ms" = "%ld ms";
+/* Scroll speed accessibility value. */
+"%ld percent" = "%ld퍼센트";
+/* Indicator diameter in points; size menu. */
+"%ld pt" = "%ld pt";
+/* Scroll speed percentage shown beside the slider. %% displays a literal percent sign. */
+"%ld%%" = "%ld%%";
+"Accessibility Settings…" = "손쉬운 사용 설정…";
+"Accessibility is required" = "손쉬운 사용 권한이 필요합니다";
+"Accessibility lets VectorScroll bring the window under your pointer forward and send scroll events to it. Vector scrolling stays off until this permission is allowed." = "손쉬운 사용을 통해 VectorScroll이 포인터 아래의 윈도우를 앞으로 가져오고 스크롤 이벤트를 보낼 수 있습니다. 이 권한을 허용하기 전까지 벡터 스크롤은 꺼져 있습니다.";
+"Activate the app under the pointer when scrolling starts. Scrolling works either way." = "스크롤이 시작될 때 포인터 아래의 앱을 활성화합니다. 활성화하지 않아도 스크롤은 동작합니다.";
+"Actual-size preview" = "실제 크기 미리보기";
+"Actual-size preview of the scrolling indicator." = "스크롤 표시기의 실제 크기 미리보기입니다.";
+"Add" = "추가";
+"Add App…" = "앱 추가…";
+"Adjust scrolling speed from 20% to 300% in 10% steps. 100% is the default." = "스크롤 속도를 20%에서 300%까지 10% 단위로 조절합니다. 기본값은 100%입니다.";
+"Allow Accessibility" = "손쉬운 사용 허용";
+"Allow Input Monitoring" = "입력 모니터링 허용";
+"App" = "앱";
+"Appearance" = "화면 모양";
+"Approval is required in Login Items." = "로그인 항목에서 승인이 필요합니다.";
+/* Mouse side-button navigation action. */
+"Back" = "뒤로";
+"Back and forward buttons" = "뒤로 및 앞으로 버튼";
+"Bring window to front" = "윈도우를 맨 앞으로 가져오기";
+/* Mouse button number, counting from one. */
+"Button %ld" = "버튼 %ld";
+"Cancel" = "취소";
+"Change the scrolling indicator's diameter. The preview shows its actual size." = "스크롤 표시기의 지름을 변경합니다. 미리보기에 실제 크기가 표시됩니다.";
+"Check for Updates…" = "업데이트 확인…";
+"Checking for updates…" = "업데이트 확인 중…";
+"Checks daily and installs only when you choose." = "매일 확인하며, 사용자가 선택할 때만 설치합니다.";
+"Choose a light or dark scrolling indicator for contrast with the content beneath it." = "아래 콘텐츠와 대비되도록 밝거나 어두운 스크롤 표시기를 선택하세요.";
+"Click to start, click to stop" = "클릭하여 시작, 클릭하여 중지";
+/* %@ is the error description. */
+"Couldn't check for updates. %@" = "업데이트를 확인할 수 없습니다. %@";
+/* Dark appearance of the scrolling indicator. */
+"Dark" = "어둡게";
+"Delay before scrolling starts" = "스크롤 시작 전 지연 시간";
+/* %@ is the version being downloaded. */
+"Downloading VectorScroll %@…" = "VectorScroll %@ 다운로드 중…";
+"Drag down to scroll up instead of down." = "아래로 드래그하면 아래 대신 위로 스크롤합니다.";
+"Drag right to scroll left instead of right." = "오른쪽으로 드래그하면 오른쪽 대신 왼쪽으로 스크롤합니다.";
+"Excluded apps" = "제외된 앱";
+"Finish" = "완료";
+/* Mouse side-button navigation action. */
+"Forward" = "앞으로";
+"GitHub reported an invalid update size." = "GitHub에서 잘못된 업데이트 크기를 보고했습니다.";
+"Hold duration" = "누르는 시간";
+"Hold the middle button over any window and move the pointer. Change the mode, speed, direction, and indicator in Settings." = "윈도우 위에서 가운데 버튼을 누른 채 포인터를 움직이세요. 모드, 속도, 방향, 표시기는 설정에서 변경할 수 있습니다.";
+"Hold the middle mouse button and move the pointer to scroll any window. macOS needs two permissions first. This takes about a minute, and you can come back to it from Settings." = "가운데 마우스 버튼을 누른 채 포인터를 움직이면 어떤 윈도우든 스크롤할 수 있습니다. 먼저 macOS에서 두 가지 권한이 필요합니다. 약 1분 걸리며, 나중에 설정에서 다시 열 수 있습니다.";
+"Hold to scroll" = "누르는 동안 스크롤";
+"Hold to start, click to stop" = "길게 눌러 시작, 클릭하면 중지";
+"How long to hold the middle button before toggle scrolling starts." = "토글 스크롤이 시작되기 전에 가운데 버튼을 얼마나 오래 누를지 정합니다.";
+"Indicator" = "표시기";
+"Indicator appearance" = "표시기 모양";
+"Indicator size" = "표시기 크기";
+"Input Monitoring Settings…" = "입력 모니터링 설정…";
+"Input Monitoring and Accessibility are required" = "입력 모니터링 및 손쉬운 사용 권한이 필요합니다";
+"Input Monitoring is required" = "입력 모니터링 권한이 필요합니다";
+/* Install the available version named by %@. */
+"Install Update %@…" = "업데이트 %@ 설치…";
+"Install Update…" = "업데이트 설치…";
+"Invalid update health check destination." = "업데이트 상태 확인 대상이 잘못되었습니다.";
+"Invalid update health check." = "업데이트 상태 확인이 잘못되었습니다.";
+"Invalid update plan." = "업데이트 계획이 잘못되었습니다.";
+"Keep Settings and Quit in the menu bar. Hiding the icon enables Open settings on launch." = "설정과 종료를 메뉴 막대에 유지합니다. 아이콘을 숨기면 ‘실행 시 설정 열기’가 켜집니다.";
+"Keep scrolling until the next click" = "다음 클릭 때까지 계속 스크롤";
+/* Tooltip and accessibility label for the globe language picker. */
+"Language" = "언어";
+"Language could not be changed" = "언어를 변경할 수 없습니다";
+"Later" = "나중에";
+"Launch at login" = "로그인 시 실행";
+"Launch at login could not be changed" = "로그인 시 실행 설정을 변경할 수 없습니다";
+/* Light appearance of the scrolling indicator. */
+"Light" = "밝게";
+"Middle-button scrolling and side buttons are off in these apps. Useful for apps that pan with the middle button, like Blender or Figma." = "이 앱에서는 가운데 버튼 스크롤과 사이드 버튼이 꺼집니다. Blender나 Figma처럼 가운데 버튼으로 화면을 이동하는 앱에 유용합니다.";
+"Mouse buttons" = "마우스 버튼";
+"No excluded apps" = "제외된 앱 없음";
+"OK" = "확인";
+"Open Login Items" = "로그인 항목 열기";
+"Open Login Items to allow VectorScroll." = "로그인 항목을 열어 VectorScroll을 허용하세요.";
+"Open Settings" = "설정 열기";
+"Open System Settings" = "시스템 설정 열기";
+"Open VectorScroll from Applications to enable this." = "응용 프로그램에서 VectorScroll을 열어 활성화하세요.";
+"Open settings on launch" = "실행 시 설정 열기";
+"Press a side button…" = "사이드 버튼을 누르세요…";
+"Quit VectorScroll" = "VectorScroll 종료";
+"Ready to scroll" = "스크롤 준비 완료";
+"Release the middle button to stop" = "가운데 버튼을 놓으면 중지";
+/* Remove the named app from exclusions. */
+"Remove %@" = "%@ 제거";
+"Require a brief hold so a normal middle-click can still open a link in a new tab." = "일반 가운데 클릭으로 링크를 새 탭에서 열 수 있도록 잠깐 누르고 있어야 합니다.";
+"Required" = "필수";
+"Restarting VectorScroll…" = "VectorScroll 다시 시작 중…";
+"Restore Defaults" = "기본값 복원";
+"Reverse horizontal" = "가로 반전";
+"Reverse vertical" = "세로 반전";
+"Review VectorScroll in Login Items." = "로그인 항목에서 VectorScroll을 확인하세요.";
+"Review the permissions needed for middle-button scrolling." = "가운데 버튼 스크롤에 필요한 권한을 확인하세요.";
+"Run the installed VectorScroll app from Applications." = "응용 프로그램에서 설치된 VectorScroll 앱을 실행하세요.";
+"Scroll speed" = "스크롤 속도";
+"Scroll while holding the middle button" = "가운데 버튼을 누른 채 스크롤";
+"Scrolling" = "스크롤";
+"Scrolling indicator preview" = "스크롤 표시기 미리보기";
+"Sends ⌘[ and ⌘]. Apps that use those shortcuts for something else can be excluded below." = "⌘[ 및 ⌘]를 보냅니다. 해당 단축키를 다른 용도로 사용하는 앱은 아래에서 제외할 수 있습니다.";
+"Set up permissions" = "권한 설정";
+"Settings…" = "설정…";
+"Setup" = "초기 설정";
+"Setup Guide" = "설정 가이드";
+"Setup complete" = "설정 완료";
+/* Begin capturing a mouse side button. */
+"Set…" = "지정…";
+"Show menu bar icon" = "메뉴 막대 아이콘 보기";
+"Show this window when VectorScroll starts. If both access options are off, the menu bar icon returns." = "VectorScroll이 시작될 때 이 윈도우를 표시합니다. 두 접근 옵션이 모두 꺼져 있으면 메뉴 막대 아이콘이 다시 나타납니다.";
+/* Scrolling indicator diameter. */
+"Size" = "크기";
+/* Current permission step and total permission steps. */
+"Step %ld of %ld" = "%ld/%ld단계";
+/* Use the macOS preferred language; first entry in the language menu. */
+"System Language" = "시스템 언어";
+"The app version could not be compared with the latest release." = "앱 버전을 최신 릴리스와 비교할 수 없습니다.";
+"The downloaded app has an invalid executable." = "다운로드한 앱의 실행 파일이 올바르지 않습니다.";
+"The downloaded app has the wrong version." = "다운로드한 앱의 버전이 올바르지 않습니다.";
+"The installed app changed while updating. Please check for updates again." = "업데이트하는 동안 설치된 앱이 변경되었습니다. 업데이트를 다시 확인하세요.";
+"The installed app is not signed by the VectorScroll release identity. Reinstall it manually before updating." = "설치된 앱이 VectorScroll 릴리스 ID로 서명되지 않았습니다. 업데이트하기 전에 직접 다시 설치하세요.";
+"The installed app's code signature is invalid. Reinstall VectorScroll manually before updating." = "설치된 앱의 코드 서명이 올바르지 않습니다. 업데이트하기 전에 VectorScroll을 직접 다시 설치하세요.";
+"The installed app's signing identity could not be read." = "설치된 앱의 서명 ID를 읽을 수 없습니다.";
+"The latest release has no supported installer. Try again later." = "최신 릴리스에 지원되는 설치 프로그램이 없습니다. 나중에 다시 시도하세요.";
+"The update could not atomically replace the installed app. Your previous app has been kept." = "업데이트가 설치된 앱을 원자적으로 교체하지 못했습니다. 이전 앱은 그대로 유지되었습니다.";
+"The update did not match GitHub's SHA-256 checksum. Nothing was installed." = "업데이트가 GitHub의 SHA-256 체크섬과 일치하지 않습니다. 아무것도 설치되지 않았습니다.";
+"The update does not contain a valid VectorScroll app." = "업데이트에 올바른 VectorScroll 앱이 들어 있지 않습니다.";
+"The update download was incomplete. Please try again." = "업데이트 다운로드가 완료되지 않았습니다. 다시 시도하세요.";
+"The update download was larger than GitHub reported. Nothing was installed." = "업데이트 다운로드가 GitHub에서 보고한 것보다 큽니다. 아무것도 설치되지 않았습니다.";
+"The update has an invalid Info.plist." = "업데이트의 Info.plist가 올바르지 않습니다.";
+"The update has an invalid minimum macOS version." = "업데이트의 최소 macOS 버전이 올바르지 않습니다.";
+"The update has an unreadable code signature." = "업데이트의 코드 서명을 읽을 수 없습니다.";
+"The update helper could not start. The current app is still installed." = "업데이트 도우미를 시작할 수 없습니다. 현재 앱은 그대로 설치되어 있습니다.";
+"The update was not signed by the same identity as the installed app." = "업데이트가 설치된 앱과 같은 ID로 서명되지 않았습니다.";
+"The updated app did not finish starting. The previous version was restored." = "업데이트된 앱이 시작을 마치지 못했습니다. 이전 버전으로 복원했습니다.";
+"This copy cannot update in its current location. Move VectorScroll from the DMG into a writable Applications folder, then try again." = "이 사본은 현재 위치에서 업데이트할 수 없습니다. VectorScroll을 DMG에서 쓰기 가능한 응용 프로그램 폴더로 옮긴 후 다시 시도하세요.";
+"This lets VectorScroll notice when you press the middle button. Nothing you type is read. macOS shows its own dialog once. If it does not appear, open System Settings, turn on VectorScroll under Input Monitoring, then come back here." = "VectorScroll이 가운데 버튼을 누르는 것을 감지할 수 있게 합니다. 입력하는 내용은 읽지 않습니다. macOS가 자체 대화상자를 한 번 표시합니다. 표시되지 않으면 시스템 설정을 열고 입력 모니터링에서 VectorScroll을 켠 다음 여기로 돌아오세요.";
+"This update does not support this Mac's processor." = "이 업데이트는 이 Mac의 프로세서를 지원하지 않습니다.";
+"This update is not newer than the installed app." = "이 업데이트는 설치된 앱보다 최신이 아닙니다.";
+"This update requires a newer version of macOS." = "이 업데이트에는 더 최신 버전의 macOS가 필요합니다.";
+"Toggle scrolling" = "토글 스크롤";
+"Update could not be completed" = "업데이트를 완료할 수 없습니다";
+"Update failed." = "업데이트에 실패했습니다.";
+"Update in progress" = "업데이트 진행 중";
+"Vector Scroll" = "Vector Scroll";
+"VectorScroll" = "VectorScroll";
+/* %@ is the newly available version. */
+"VectorScroll %@ is available." = "VectorScroll %@ 버전을 사용할 수 있습니다.";
+/* %@ is the installed version. */
+"VectorScroll %@ is up to date." = "VectorScroll %@ 버전이 최신입니다.";
+"VectorScroll Settings" = "VectorScroll 설정";
+"VectorScroll Setup" = "VectorScroll 초기 설정";
+"VectorScroll did not quit in time. Please try again." = "VectorScroll이 제때 종료되지 않았습니다. 다시 시도하세요.";
+"Verifying the update…" = "업데이트 검증 중…";
+/* Installed app version in the settings footer. */
+"Version %@" = "버전 %@";
+"Waiting for Accessibility. This page moves on by itself once it is allowed." = "손쉬운 사용을 기다리는 중입니다. 허용되면 이 페이지가 자동으로 넘어갑니다.";
+"Waiting for Input Monitoring. This page moves on by itself once it is allowed." = "입력 모니터링을 기다리는 중입니다. 허용되면 이 페이지가 자동으로 넘어갑니다.";
+"Welcome to VectorScroll" = "VectorScroll에 오신 것을 환영합니다";
+"You're set" = "준비 완료";

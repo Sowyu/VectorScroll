@@ -1,0 +1,172 @@
+/* Indicator preview accessibility value: appearance name, then diameter in points. */
+"%@, %ld points" = "%@, %ld пт";
+/* Accessibility announcement: setup step followed by its title. */
+"%@. %@" = "%@. %@";
+/* Hold delay accessibility value. */
+"%ld milliseconds" = "%ld мс";
+/* Hold delay in milliseconds; compact visible label. */
+"%ld ms" = "%ld мс";
+/* Scroll speed accessibility value. */
+"%ld percent" = "Процентов: %ld";
+/* Indicator diameter in points; size menu. */
+"%ld pt" = "%ld пт";
+/* Scroll speed percentage shown beside the slider. %% displays a literal percent sign. */
+"%ld%%" = "%ld %%";
+"Accessibility Settings…" = "Настройки универсального доступа…";
+"Accessibility is required" = "Требуется универсальный доступ";
+"Accessibility lets VectorScroll bring the window under your pointer forward and send scroll events to it. Vector scrolling stays off until this permission is allowed." = "Универсальный доступ позволяет VectorScroll выводить на передний план окно под указателем и отправлять в него события прокрутки. Пока вы не разрешите это, векторная прокрутка остаётся выключенной.";
+"Activate the app under the pointer when scrolling starts. Scrolling works either way." = "Активировать приложение под указателем при начале прокрутки. Прокрутка работает и без этого.";
+"Actual-size preview" = "Предпросмотр в реальном размере";
+"Actual-size preview of the scrolling indicator." = "Предпросмотр индикатора прокрутки в реальном размере.";
+"Add" = "Добавить";
+"Add App…" = "Добавить приложение…";
+"Adjust scrolling speed from 20% to 300% in 10% steps. 100% is the default." = "Скорость прокрутки от 20 до 300 % с шагом 10 %. По умолчанию 100 %.";
+"Allow Accessibility" = "Разрешить универсальный доступ";
+"Allow Input Monitoring" = "Разрешить мониторинг ввода";
+"App" = "Приложение";
+"Appearance" = "Оформление";
+"Approval is required in Login Items." = "Требуется подтверждение в «Объектах входа».";
+/* Mouse side-button navigation action. */
+"Back" = "Назад";
+"Back and forward buttons" = "Кнопки «Назад» и «Вперёд»";
+"Bring window to front" = "Выводить окно на передний план";
+/* Mouse button number, counting from one. */
+"Button %ld" = "Кнопка %ld";
+"Cancel" = "Отменить";
+"Change the scrolling indicator's diameter. The preview shows its actual size." = "Изменение диаметра индикатора прокрутки. В предпросмотре показан его реальный размер.";
+"Check for Updates…" = "Проверить обновления…";
+"Checking for updates…" = "Проверка обновлений…";
+"Checks daily and installs only when you choose." = "Проверяет ежедневно, устанавливает только по вашему выбору.";
+"Choose a light or dark scrolling indicator for contrast with the content beneath it." = "Выберите светлый или тёмный индикатор прокрутки для контраста с содержимым под ним.";
+"Click to start, click to stop" = "Щелчок — старт, щелчок — стоп";
+/* %@ is the error description. */
+"Couldn't check for updates. %@" = "Не удалось проверить обновления. %@";
+/* Dark appearance of the scrolling indicator. */
+"Dark" = "Тёмный";
+"Delay before scrolling starts" = "Задержка перед началом прокрутки";
+/* %@ is the version being downloaded. */
+"Downloading VectorScroll %@…" = "Загрузка VectorScroll %@…";
+"Drag down to scroll up instead of down." = "Перетаскивание вниз прокручивает вверх, а не вниз.";
+"Drag right to scroll left instead of right." = "Перетаскивание вправо прокручивает влево, а не вправо.";
+"Excluded apps" = "Исключённые приложения";
+"Finish" = "Готово";
+/* Mouse side-button navigation action. */
+"Forward" = "Вперёд";
+"GitHub reported an invalid update size." = "GitHub сообщил неверный размер обновления.";
+"Hold duration" = "Длительность удержания";
+"Hold the middle button over any window and move the pointer. Change the mode, speed, direction, and indicator in Settings." = "Удерживайте среднюю кнопку над любым окном и двигайте указатель. Режим, скорость, направление и индикатор меняются в настройках.";
+"Hold the middle mouse button and move the pointer to scroll any window. macOS needs two permissions first. This takes about a minute, and you can come back to it from Settings." = "Удерживайте среднюю кнопку мыши и двигайте указатель, чтобы прокручивать любое окно. Сначала macOS потребует два разрешения. Это займёт около минуты, а вернуться к ним можно из настроек.";
+"Hold to scroll" = "Прокрутка при удержании";
+"Hold to start, click to stop" = "Удерживайте — старт, щелчок — стоп";
+"How long to hold the middle button before toggle scrolling starts." = "Как долго удерживать среднюю кнопку, прежде чем начнётся переключаемая прокрутка.";
+"Indicator" = "Индикатор";
+"Indicator appearance" = "Вид индикатора";
+"Indicator size" = "Размер индикатора";
+"Input Monitoring Settings…" = "Настройки мониторинга ввода…";
+"Input Monitoring and Accessibility are required" = "Требуются мониторинг ввода и универсальный доступ";
+"Input Monitoring is required" = "Требуется мониторинг ввода";
+/* Install the available version named by %@. */
+"Install Update %@…" = "Установить обновление %@…";
+"Install Update…" = "Установить обновление…";
+"Invalid update health check destination." = "Неверный адрес проверки работоспособности обновления.";
+"Invalid update health check." = "Неверная проверка работоспособности обновления.";
+"Invalid update plan." = "Неверный план обновления.";
+"Keep Settings and Quit in the menu bar. Hiding the icon enables Open settings on launch." = "Оставляет «Настройки» и «Завершить» в строке меню. Если скрыть значок, включится «Открывать настройки при запуске».";
+"Keep scrolling until the next click" = "Прокручивать до следующего щелчка";
+/* Tooltip and accessibility label for the globe language picker. */
+"Language" = "Язык";
+"Language could not be changed" = "Не удалось изменить язык";
+"Later" = "Позже";
+"Launch at login" = "Запускать при входе";
+"Launch at login could not be changed" = "Не удалось изменить автозапуск при входе";
+/* Light appearance of the scrolling indicator. */
+"Light" = "Светлый";
+"Middle-button scrolling and side buttons are off in these apps. Useful for apps that pan with the middle button, like Blender or Figma." = "В этих приложениях прокрутка средней кнопкой и боковые кнопки отключены. Полезно для приложений, где средняя кнопка двигает вид, например Blender или Figma.";
+"Mouse buttons" = "Кнопки мыши";
+"No excluded apps" = "Нет исключённых приложений";
+"OK" = "OK";
+"Open Login Items" = "Открыть «Объекты входа»";
+"Open Login Items to allow VectorScroll." = "Откройте «Объекты входа», чтобы разрешить VectorScroll.";
+"Open Settings" = "Открыть настройки";
+"Open System Settings" = "Открыть Системные настройки";
+"Open VectorScroll from Applications to enable this." = "Откройте VectorScroll из папки «Приложения», чтобы включить это.";
+"Open settings on launch" = "Открывать настройки при запуске";
+"Press a side button…" = "Нажмите боковую кнопку…";
+"Quit VectorScroll" = "Завершить VectorScroll";
+"Ready to scroll" = "Готово к прокрутке";
+"Release the middle button to stop" = "Отпустите кнопку для остановки";
+/* Remove the named app from exclusions. */
+"Remove %@" = "Удалить %@";
+"Require a brief hold so a normal middle-click can still open a link in a new tab." = "Нужно короткое удержание, чтобы обычный щелчок средней кнопкой по-прежнему открывал ссылку в новой вкладке.";
+"Required" = "Обязательно";
+"Restarting VectorScroll…" = "Перезапуск VectorScroll…";
+"Restore Defaults" = "Восстановить по умолчанию";
+"Reverse horizontal" = "Инвертировать по горизонтали";
+"Reverse vertical" = "Инвертировать по вертикали";
+"Review VectorScroll in Login Items." = "Проверьте VectorScroll в «Объектах входа».";
+"Review the permissions needed for middle-button scrolling." = "Проверьте разрешения, нужные для прокрутки средней кнопкой.";
+"Run the installed VectorScroll app from Applications." = "Запустите установленное приложение VectorScroll из папки «Приложения».";
+"Scroll speed" = "Скорость прокрутки";
+"Scroll while holding the middle button" = "Прокрутка при удержании средней кнопки";
+"Scrolling" = "Прокрутка";
+"Scrolling indicator preview" = "Предпросмотр индикатора прокрутки";
+"Sends ⌘[ and ⌘]. Apps that use those shortcuts for something else can be excluded below." = "Отправляет ⌘[ и ⌘]. Приложения, где эти сочетания используются иначе, можно исключить ниже.";
+"Set up permissions" = "Настроить разрешения";
+"Settings…" = "Настройки…";
+"Setup" = "Настройка";
+"Setup Guide" = "Помощник настройки";
+"Setup complete" = "Настройка завершена";
+/* Begin capturing a mouse side button. */
+"Set…" = "Задать…";
+"Show menu bar icon" = "Показывать значок в строке меню";
+"Show this window when VectorScroll starts. If both access options are off, the menu bar icon returns." = "Показывать это окно при запуске VectorScroll. Если оба варианта доступа выключены, значок в строке меню вернётся.";
+/* Scrolling indicator diameter. */
+"Size" = "Размер";
+/* Current permission step and total permission steps. */
+"Step %ld of %ld" = "Шаг %ld из %ld";
+/* Use the macOS preferred language; first entry in the language menu. */
+"System Language" = "Язык системы";
+"The app version could not be compared with the latest release." = "Не удалось сравнить версию приложения с последним релизом.";
+"The downloaded app has an invalid executable." = "У загруженного приложения неверный исполняемый файл.";
+"The downloaded app has the wrong version." = "У загруженного приложения неверная версия.";
+"The installed app changed while updating. Please check for updates again." = "Установленное приложение изменилось во время обновления. Проверьте обновления ещё раз.";
+"The installed app is not signed by the VectorScroll release identity. Reinstall it manually before updating." = "Установленное приложение не подписано идентификатором релизов VectorScroll. Переустановите его вручную перед обновлением.";
+"The installed app's code signature is invalid. Reinstall VectorScroll manually before updating." = "Подпись кода установленного приложения недействительна. Переустановите VectorScroll вручную перед обновлением.";
+"The installed app's signing identity could not be read." = "Не удалось прочитать идентификатор подписи установленного приложения.";
+"The latest release has no supported installer. Try again later." = "В последнем релизе нет поддерживаемого установщика. Повторите попытку позже.";
+"The update could not atomically replace the installed app. Your previous app has been kept." = "Обновление не смогло атомарно заменить установленное приложение. Прежнее приложение сохранено.";
+"The update did not match GitHub's SHA-256 checksum. Nothing was installed." = "Обновление не совпало с контрольной суммой SHA-256 от GitHub. Ничего не установлено.";
+"The update does not contain a valid VectorScroll app." = "В обновлении нет корректного приложения VectorScroll.";
+"The update download was incomplete. Please try again." = "Загрузка обновления не завершилась. Повторите попытку.";
+"The update download was larger than GitHub reported. Nothing was installed." = "Загруженное обновление больше, чем сообщил GitHub. Ничего не установлено.";
+"The update has an invalid Info.plist." = "В обновлении неверный файл Info.plist.";
+"The update has an invalid minimum macOS version." = "В обновлении указана неверная минимальная версия macOS.";
+"The update has an unreadable code signature." = "Не удалось прочитать подпись кода обновления.";
+"The update helper could not start. The current app is still installed." = "Не удалось запустить помощник обновления. Текущее приложение осталось установленным.";
+"The update was not signed by the same identity as the installed app." = "Обновление подписано не тем идентификатором, что установленное приложение.";
+"The updated app did not finish starting. The previous version was restored." = "Обновлённое приложение не успело запуститься. Предыдущая версия восстановлена.";
+"This copy cannot update in its current location. Move VectorScroll from the DMG into a writable Applications folder, then try again." = "Эту копию нельзя обновить в текущем расположении. Перенесите VectorScroll из образа DMG в папку «Приложения» с правом записи и повторите попытку.";
+"This lets VectorScroll notice when you press the middle button. Nothing you type is read. macOS shows its own dialog once. If it does not appear, open System Settings, turn on VectorScroll under Input Monitoring, then come back here." = "Это позволяет VectorScroll замечать нажатие средней кнопки. То, что вы печатаете, не читается. macOS один раз покажет собственное окно. Если оно не появится, откройте Системные настройки, включите VectorScroll в разделе «Мониторинг ввода» и вернитесь сюда.";
+"This update does not support this Mac's processor." = "Это обновление не поддерживает процессор этого Mac.";
+"This update is not newer than the installed app." = "Это обновление не новее установленного приложения.";
+"This update requires a newer version of macOS." = "Для этого обновления нужна более новая версия macOS.";
+"Toggle scrolling" = "Переключаемая прокрутка";
+"Update could not be completed" = "Не удалось завершить обновление";
+"Update failed." = "Не удалось обновить.";
+"Update in progress" = "Идёт обновление";
+"Vector Scroll" = "Vector Scroll";
+"VectorScroll" = "VectorScroll";
+/* %@ is the newly available version. */
+"VectorScroll %@ is available." = "Доступна версия VectorScroll %@.";
+/* %@ is the installed version. */
+"VectorScroll %@ is up to date." = "Установлена актуальная версия VectorScroll %@.";
+"VectorScroll Settings" = "Настройки VectorScroll";
+"VectorScroll Setup" = "Настройка VectorScroll";
+"VectorScroll did not quit in time. Please try again." = "VectorScroll не завершился вовремя. Повторите попытку.";
+"Verifying the update…" = "Проверка обновления…";
+/* Installed app version in the settings footer. */
+"Version %@" = "Версия %@";
+"Waiting for Accessibility. This page moves on by itself once it is allowed." = "Ожидание универсального доступа. Страница сменится сама, как только вы его разрешите.";
+"Waiting for Input Monitoring. This page moves on by itself once it is allowed." = "Ожидание мониторинга ввода. Страница сменится сама, как только вы его разрешите.";
+"Welcome to VectorScroll" = "Добро пожаловать в VectorScroll";
+"You're set" = "Всё готово";

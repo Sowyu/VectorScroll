@@ -1,0 +1,4 @@
+/* macOS permission prompt explanation. */
+"NSAccessibilityUsageDescription" = "VectorScroll 使用辅助功能将光标下方的窗口置于前台，并代表用户发送原生滚动事件。";
+/* macOS permission prompt explanation. */
+"NSInputMonitoringUsageDescription" = "VectorScroll 会监听中键和其他鼠标按钮，以开始和停止矢量滚动。";

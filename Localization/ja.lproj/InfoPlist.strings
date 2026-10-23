@@ -1,0 +1,4 @@
+/* macOS permission prompt explanation. */
+"NSAccessibilityUsageDescription" = "VectorScrollはアクセシビリティを使用して、カーソルの下にあるウインドウを前面に表示し、ユーザに代わって標準のスクロールイベントを送信します。";
+/* macOS permission prompt explanation. */
+"NSInputMonitoringUsageDescription" = "VectorScrollは、ベクトルスクロールを開始および停止するために、中クリックなどのマウスボタンの操作を検知します。";

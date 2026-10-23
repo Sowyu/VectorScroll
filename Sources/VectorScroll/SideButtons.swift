@@ -189,7 +189,7 @@ enum MouseSettingsStyle {
         let label = NSTextField(wrappingLabelWithString: text)
         label.font = .systemFont(ofSize: 12)
         label.textColor = SettingsStyle.secondary
-        label.preferredMaxLayoutWidth = 528
+        label.preferredMaxLayoutWidth = 520
         return label
     }
     static func row(_ title: String, control: NSView) -> NSView {

@@ -1,0 +1,4 @@
+/* macOS permission prompt explanation. */
+"NSAccessibilityUsageDescription" = "VectorScroll usa Accesibilidad para traer al frente la ventana situada bajo el cursor y enviar eventos de desplazamiento nativos en nombre del usuario.";
+/* macOS permission prompt explanation. */
+"NSInputMonitoringUsageDescription" = "VectorScroll detecta el clic central y otros botones del ratón para iniciar y detener el desplazamiento vectorial.";
