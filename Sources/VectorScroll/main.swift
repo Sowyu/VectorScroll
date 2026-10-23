@@ -4,6 +4,11 @@
 
 @MainActor
 private final class VectorScrollApp: NSObject, NSApplicationDelegate {
+    private static let restorableDefaultsKeys: [String] = [
+        "holdToLockMode", "holdDelayEnabled", "holdDelayMilliseconds", "scrollSpeedPercent",
+        "reverseVertical", "reverseHorizontal", "reverseDirection", "raiseWindowOnScroll",
+        "darkMode", "markerSize"
+    ]
     private let markerSizes = [28, 32, 40, 48]
     private let defaults = UserDefaults.standard
     private var updateItem: NSButton!
@@ -44,7 +49,9 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
     private let baseScrollScale: CGFloat = 0.42
     private var scrollSpeedPercent = 100
     private var scrollScale: CGFloat { baseScrollScale * CGFloat(scrollSpeedPercent) / 100 }
-    private var reverseDirection = false
+    private var reverseVertical = false
+    private var reverseHorizontal = false
+    private var raiseWindowOnScroll = true
     private var scrollRemainder = CGPoint.zero
     private var engaged = false
     private var pendingTarget: CGPoint?
@@ -56,7 +63,10 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         holdDelayEnabled ? Double(holdDelayMilliseconds) / 1000 : 0
     }
     private var delayItem: NSStackView!
-    private var reverseItem: NSSwitch!
+    private var reverseVerticalItem: NSSwitch!
+    private var reverseHorizontalItem: NSSwitch!
+    private var raiseWindowItem: NSSwitch!
+    private var restoreDefaultsButton: NSButton!
     private var onboarding: Onboarding?
     private var speedSlider: NSSlider!
     private var speedLabel: NSTextField!
@@ -247,16 +257,20 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         let modesGlass = SettingsStyle.glassContainer(for: modesPadding, cornerRadius: 12)
         modesGlass.heightAnchor.constraint(equalToConstant: 80).isActive = true
         fullWidth(modesGlass)
-        reverseItem = toggle("Reverse direction", #selector(toggleReverseDirection))
-        help(reverseItem, "Reverse both scrolling axes without changing your macOS mouse settings.")
-        speedSlider = NSSlider(value: Double(scrollSpeedPercent), minValue: 50, maxValue: 200,
+        reverseVerticalItem = toggle("Reverse vertical", #selector(toggleReverseVertical))
+        help(reverseVerticalItem, "Drag down to scroll up instead of down.")
+        reverseHorizontalItem = toggle("Reverse horizontal", #selector(toggleReverseHorizontal))
+        help(reverseHorizontalItem, "Drag right to scroll left instead of right.")
+        raiseWindowItem = toggle("Bring window to front", #selector(toggleRaiseWindow))
+        help(raiseWindowItem, "Activate the app under the pointer when scrolling starts. Scrolling works either way.")
+        speedSlider = NSSlider(value: Double(scrollSpeedPercent), minValue: 20, maxValue: 300,
                                target: self, action: #selector(changeScrollSpeed(_:)))
-        speedSlider.numberOfTickMarks = 16
+        speedSlider.numberOfTickMarks = 29
         speedSlider.tickMarkPosition = .below
         speedSlider.allowsTickMarkValuesOnly = true
         speedSlider.isContinuous = true
         speedSlider.setAccessibilityLabel("Scroll speed")
-        help(speedSlider, "Adjust scrolling speed from 50% to 200%. 100% is the default.")
+        help(speedSlider, "Adjust scrolling speed from 20% to 300% in 10% steps. 100% is the default.")
         speedSlider.widthAnchor.constraint(equalToConstant: 240).isActive = true
         speedLabel = label("")
         speedLabel.font = .monospacedDigitSystemFont(ofSize: 12, weight: .medium)
@@ -283,7 +297,12 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         delayItem.alignment = .leading
         delayItem.spacing = 12
         for view in delayItem.arrangedSubviews { view.widthAnchor.constraint(equalTo: delayItem.widthAnchor).isActive = true }
-        let scrollingGroup = group(settingsRow("Reverse direction", control: reverseItem), speedRow, delayItem)
+        let scrollingGroup = group(
+            settingsRow("Reverse vertical", control: reverseVerticalItem),
+            settingsRow("Reverse horizontal", control: reverseHorizontalItem),
+            speedRow, delayItem,
+            settingsRow("Bring window to front", control: raiseWindowItem)
+        )
         fullWidth(scrollingGroup)
 
         fullWidth(sectionHeading("Indicator", "scope"))
@@ -325,12 +344,14 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         let permissionSpacer = NSView()
         permissionSpacer.setContentHuggingPriority(.defaultLow, for: .horizontal)
         launchAtStartupStatusLabel = label("", secondary: true)
+        restoreDefaultsButton = button("Restore Defaults", "arrow.counterclockwise", #selector(restoreDefaults))
         let appGroup = group(
             settingsRow("Open settings on launch", control: openSettingsButton),
             settingsRow("Show menu bar icon", control: hideIconItem),
             settingsRow("Launch at login", control: launchAtStartupItem),
             launchAtStartupStatusLabel,
-            row(permissionStatusLabel, permissionSpacer, permissionItem)
+            row(permissionStatusLabel, permissionSpacer, permissionItem),
+            restoreDefaultsButton
         )
         fullWidth(appGroup)
 
@@ -397,19 +418,50 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         refreshAccessControls()
     }
 
-    @objc private func toggleReverseDirection() {
-        reverseDirection = reverseItem.state == .on
-        defaults.set(reverseDirection, forKey: "reverseDirection")
+    @objc private func toggleReverseVertical() {
+        reverseVertical = reverseVerticalItem.state == .on
+        defaults.set(reverseVertical, forKey: "reverseVertical")
+    }
+
+    @objc private func toggleReverseHorizontal() {
+        reverseHorizontal = reverseHorizontalItem.state == .on
+        defaults.set(reverseHorizontal, forKey: "reverseHorizontal")
+    }
+
+    @objc private func toggleRaiseWindow() {
+        raiseWindowOnScroll = raiseWindowItem.state == .on
+        defaults.set(raiseWindowOnScroll, forKey: "raiseWindowOnScroll")
+    }
+
+    @objc private func restoreDefaults() {
+        stopScrolling()
+        for key in Self.restorableDefaultsKeys { defaults.removeObject(forKey: key) }
+        holdToLockMode = false
+        holdDelayEnabled = true
+        holdDelayMilliseconds = 200
+        scrollSpeedPercent = 100
+        reverseVertical = false
+        reverseHorizontal = false
+        raiseWindowOnScroll = true
+        scrollRemainder = .zero
+        overlay.setDarkMode(false)
+        overlay.setSize(32)
+        updateScrollModeMenuItems()
+        updateSpeedControls()
+        updateMarkerMenuItem()
+        updateSizeMenuItems()
     }
 
     @objc private func changeScrollSpeed(_ sender: NSSlider) {
-        scrollSpeedPercent = min(200, max(50, Int((sender.doubleValue / 10).rounded()) * 10))
+        scrollSpeedPercent = min(300, max(20, Int((sender.doubleValue / 10).rounded()) * 10))
         defaults.set(scrollSpeedPercent, forKey: "scrollSpeedPercent")
         updateSpeedControls()
     }
 
     private func updateSpeedControls() {
-        reverseItem.state = reverseDirection ? .on : .off
+        reverseVerticalItem.state = reverseVertical ? .on : .off
+        reverseHorizontalItem.state = reverseHorizontal ? .on : .off
+        raiseWindowItem.state = raiseWindowOnScroll ? .on : .off
         speedSlider.doubleValue = Double(scrollSpeedPercent)
         speedLabel.stringValue = "\(scrollSpeedPercent)%"
         speedSlider.setAccessibilityValueDescription("\(scrollSpeedPercent) percent")
@@ -786,9 +838,17 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         if let stored = defaults.object(forKey: "holdToLockMode") as? Bool {
             holdToLockMode = stored
         }
-        reverseDirection = defaults.bool(forKey: "reverseDirection")
+        if defaults.object(forKey: "reverseVertical") == nil,
+           defaults.object(forKey: "reverseHorizontal") == nil,
+           let legacy = defaults.object(forKey: "reverseDirection") as? Bool {
+            defaults.set(legacy, forKey: "reverseVertical")
+            defaults.set(legacy, forKey: "reverseHorizontal")
+        }
+        reverseVertical = defaults.bool(forKey: "reverseVertical")
+        reverseHorizontal = defaults.bool(forKey: "reverseHorizontal")
+        raiseWindowOnScroll = defaults.object(forKey: "raiseWindowOnScroll") as? Bool ?? true
         let savedSpeed = defaults.integer(forKey: "scrollSpeedPercent")
-        if (50...200).contains(savedSpeed), savedSpeed.isMultiple(of: 10) {
+        if (20...300).contains(savedSpeed), savedSpeed.isMultiple(of: 10) {
             scrollSpeedPercent = savedSpeed
         }
     }
@@ -970,7 +1030,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
     private func engage() {
         guard !engaged, let anchor else { return }
         engaged = true
-        if let target = pendingTarget, AXIsProcessTrusted(), let element = element(at: target) {
+        if raiseWindowOnScroll, let target = pendingTarget, AXIsProcessTrusted(), let element = element(at: target) {
             focusTarget(element)
         }
         overlay.show(at: anchor)
@@ -1006,9 +1066,11 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
 
     private func nextScrollDelta(for adjusted: CGPoint) -> (vertical: Int32, horizontal: Int32)? {
         guard adjusted.x != 0 || adjusted.y != 0 else { return nil }
-        let direction: CGFloat = reverseDirection ? -1 : 1
-        scrollRemainder.y += clamp(adjusted.y * scrollScale * direction)
-        scrollRemainder.x += clamp(-adjusted.x * scrollScale * direction)
+        func curved(_ value: CGFloat) -> CGFloat {
+            value * pow(abs(value) / 120, 0.35)
+        }
+        scrollRemainder.y += clamp(curved(adjusted.y) * scrollScale * (reverseVertical ? -1 : 1))
+        scrollRemainder.x += clamp(-curved(adjusted.x) * scrollScale * (reverseHorizontal ? -1 : 1))
         let vertical = Int32(scrollRemainder.y.rounded())
         let horizontal = Int32(scrollRemainder.x.rounded())
         scrollRemainder.y -= CGFloat(vertical)

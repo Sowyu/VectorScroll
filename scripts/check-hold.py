@@ -26,6 +26,123 @@ final class PointerActionProbe: NSObject {
 }
 
 extension VectorScrollApp {
+    static func checkScrollingSettings() {
+        let subject = VectorScrollApp()
+        let saved = Dictionary(uniqueKeysWithValues: Self.restorableDefaultsKeys.map { ($0, subject.defaults.object(forKey: $0)) })
+        let accessKeys = ["openSettingsOnLaunch", "showMenuBarIcon", "onboardingCompleted"]
+        let savedAccess = Dictionary(uniqueKeysWithValues: accessKeys.map { ($0, subject.defaults.object(forKey: $0)) })
+        defer {
+            for key in Self.restorableDefaultsKeys { subject.defaults.set(saved[key]!, forKey: key) }
+            for key in accessKeys { subject.defaults.set(savedAccess[key]!, forKey: key) }
+        }
+        for key in Self.restorableDefaultsKeys { subject.defaults.removeObject(forKey: key) }
+        subject.defaults.set(true, forKey: "reverseDirection")
+        subject.restoreSettings()
+        assert(subject.reverseVertical && subject.reverseHorizontal)
+        assert(subject.defaults.bool(forKey: "reverseVertical") && subject.defaults.bool(forKey: "reverseHorizontal"))
+        assert(subject.defaults.bool(forKey: "reverseDirection"))
+        subject.defaults.set(false, forKey: "reverseVertical")
+        subject.defaults.removeObject(forKey: "reverseHorizontal")
+        subject.restoreSettings()
+        assert(!subject.reverseVertical && !subject.reverseHorizontal, "A partial migration must not overwrite new settings")
+        print("PASS: migration from reverseDirection preserves legacy and existing axis settings")
+        subject.configureMenu()
+        let offset = CGPoint(x: 120, y: 120)
+        subject.scrollRemainder = .zero
+        let forward = subject.nextScrollDelta(for: offset)!
+        for vertical in [false, true] {
+            for horizontal in [false, true] {
+                subject.reverseVerticalItem.state = vertical ? .on : .off
+                subject.toggleReverseVertical()
+                subject.reverseHorizontalItem.state = horizontal ? .on : .off
+                subject.toggleReverseHorizontal()
+                let restored = VectorScrollApp()
+                restored.restoreSettings()
+                assert(restored.reverseVertical == vertical && restored.reverseHorizontal == horizontal)
+                let delta = restored.nextScrollDelta(for: offset)!
+                assert(delta.vertical == (vertical ? -forward.vertical : forward.vertical))
+                assert(delta.horizontal == (horizontal ? -forward.horizontal : forward.horizontal))
+            }
+        }
+        print("PASS: each reverse switch persists and affects only its axis")
+        assert(subject.speedSlider.minValue == 20 && subject.speedSlider.maxValue == 300)
+        assert(subject.speedSlider.numberOfTickMarks == 29)
+        // Use an unrestricted sender to exercise clamping beyond the UI slider limits.
+        let sender = NSSlider(value: 100, minValue: -100, maxValue: 500, target: nil, action: nil)
+        for (input, expected) in [(19.0, 20), (24, 20), (26, 30), (-100, 20), (294, 290), (296, 300), (301, 300), (500, 300)] {
+            sender.doubleValue = input
+            subject.changeScrollSpeed(sender)
+            assert(subject.scrollSpeedPercent == expected)
+            let restored = VectorScrollApp()
+            restored.restoreSettings()
+            assert(restored.scrollSpeedPercent == expected)
+        }
+        for invalid in [10, 310, 25] {
+            subject.defaults.set(invalid, forKey: "scrollSpeedPercent")
+            let restored = VectorScrollApp()
+            restored.restoreSettings()
+            assert(restored.scrollSpeedPercent == 100)
+        }
+        print("PASS: speed slider rounding and clamping at 20 and 300, saved-value validation")
+        let curve = VectorScrollApp()
+        var previous: Int32 = 0
+        for distance in [10.0, 30, 60, 120, 180] {
+            curve.scrollRemainder = .zero
+            let delta = curve.nextScrollDelta(for: CGPoint(x: distance, y: distance))!
+            assert(delta.vertical > previous && delta.horizontal == -delta.vertical)
+            if distance == 120 { assert(delta.vertical == Int32((120 * curve.scrollScale).rounded())) }
+            if distance < 120 { assert(CGFloat(delta.vertical) < distance * curve.scrollScale) }
+            if distance > 120 { assert(CGFloat(delta.vertical) > distance * curve.scrollScale) }
+            previous = delta.vertical
+        }
+        print("PASS: scroll curve is monotonic and equals linear speed at 120 points")
+        for enabled in [false, true] {
+            subject.raiseWindowItem.state = enabled ? .on : .off
+            subject.toggleRaiseWindow()
+            let restored = VectorScrollApp()
+            restored.restoreSettings()
+            assert(restored.raiseWindowOnScroll == enabled)
+        }
+        print("PASS: bring window to front switch persists")
+        subject.selectHoldToLock()
+        subject.holdDelayEnabled = false
+        subject.holdDelayMilliseconds = 950
+        subject.scrollSpeedPercent = 300
+        subject.reverseVertical = true
+        subject.reverseHorizontal = true
+        subject.raiseWindowOnScroll = false
+        subject.selectDarkMode()
+        subject.sizePicker.selectItem(withTag: 48)
+        subject.selectMarkerSize(subject.sizePicker)
+        for key in Self.restorableDefaultsKeys { subject.defaults.set(999, forKey: key) }
+        subject.setAccessPreferences(showMenuBar: false, openSettings: true)
+        subject.defaults.set(true, forKey: "onboardingCompleted")
+        subject.eventTapInstalled = true
+        subject.startScrolling(at: .zero, target: .zero)
+        assert(subject.isActive)
+        assert(subject.restoreDefaultsButton.action == #selector(restoreDefaults))
+        subject.restoreDefaultsButton.performClick(nil)
+        assert(!subject.isActive && subject.timer == nil && subject.engageWorkItem == nil)
+        for key in Self.restorableDefaultsKeys { assert(subject.defaults.object(forKey: key) == nil, "Reset must remove \(key)") }
+        assert(!subject.holdToLockMode && subject.holdDelayEnabled && subject.holdDelayMilliseconds == 200)
+        assert(subject.scrollSpeedPercent == 100 && !subject.reverseVertical && !subject.reverseHorizontal && subject.raiseWindowOnScroll)
+        assert(!subject.overlay.isDarkMode && subject.overlay.size == 32)
+        assert(subject.holdScrollItem.state == .on && subject.holdToLockItem.state == .off && subject.delayItem.isHidden)
+        assert(subject.delayToggle.state == .on && subject.delaySlider.isEnabled && subject.delaySlider.doubleValue == 200)
+        assert(subject.delayLabel.stringValue == "200 ms" && subject.speedLabel.stringValue == "100%" && subject.speedSlider.doubleValue == 100)
+        assert(subject.reverseVerticalItem.state == .off && subject.reverseHorizontalItem.state == .off && subject.raiseWindowItem.state == .on)
+        assert(subject.indicatorAppearance.selectedSegment == 0 && subject.sizePicker.selectedItem?.tag == 32)
+        assert(!subject.markerPreview.isDarkMode && subject.markerPreview.frame.width == 32)
+        assert(subject.defaults.bool(forKey: "openSettingsOnLaunch") && !subject.defaults.bool(forKey: "showMenuBarIcon"))
+        assert(subject.openSettingsOnLaunch && subject.menuBarIconHidden && subject.openSettingsButton.state == .on && subject.hideIconItem.state == .off)
+        assert(subject.defaults.bool(forKey: "onboardingCompleted"))
+        let restored = VectorScrollApp()
+        restored.restoreSettings()
+        assert(restored.scrollSpeedPercent == 100 && !restored.reverseVertical && !restored.reverseHorizontal && restored.raiseWindowOnScroll)
+        print("PASS: Restore Defaults resets scrolling and indicator settings and controls, preserves app access and onboarding")
+        subject.settingsWindow.close()
+    }
+
     static func checkDelaySettings() -> Bool {
         let subject = VectorScrollApp()
         subject.configureMenu()
@@ -61,30 +178,30 @@ extension VectorScrollApp {
         assert(subject.holdToLockThreshold == 0.75)
         assert(subject.delayLabel.stringValue == "750 ms")
         assert(subject.delaySlider.accessibilityValueDescription() == "750 milliseconds")
-        assert(subject.scrollScale == 0.42 && !subject.reverseDirection)
+        assert(subject.scrollScale == 0.42 && !subject.reverseVertical && !subject.reverseHorizontal)
         subject.speedSlider.doubleValue = 83
         subject.changeScrollSpeed(subject.speedSlider)
         assert(subject.scrollSpeedPercent == 80 && subject.speedLabel.stringValue == "80%")
         assert(subject.speedSlider.accessibilityValueDescription() == "80 percent")
         assert(abs(subject.scrollScale - 0.336) < 0.0001)
-        subject.reverseItem.state = .on
-        subject.toggleReverseDirection()
+        subject.reverseVerticalItem.state = .on
+        subject.toggleReverseVertical()
         let speedRestored = VectorScrollApp()
         speedRestored.restoreSettings()
-        assert(speedRestored.scrollSpeedPercent == 80 && speedRestored.reverseDirection)
+        assert(speedRestored.scrollSpeedPercent == 80 && speedRestored.reverseVertical && !speedRestored.reverseHorizontal)
         subject.eventTapInstalled = true
         subject.startScrolling(at: .zero, target: .zero) // Hold mode: no indicator until the pointer leaves the dead zone.
         assert(subject.isActive && !subject.engaged)
         subject.stopScrolling()
         subject.eventTapInstalled = false
-        print("PASS: speed slider rounding and scale, reverse direction persistence, deferred hold-mode engagement")
+        print("PASS: speed slider rounding and scale, vertical reversal persistence, deferred hold-mode engagement")
         let scrolling = VectorScrollApp()
         scrolling.scrollSpeedPercent = 50
         let adjusted = CGPoint(x: 1, y: 1)
         assert(scrolling.nextScrollDelta(for: adjusted) == nil)
         var verticalTotal: Int32 = 0
         var horizontalTotal: Int32 = 0
-        for _ in 1..<10 {
+        for _ in 1..<40 {
             if let delta = scrolling.nextScrollDelta(for: adjusted) {
                 assert(abs(delta.vertical) <= 1 && abs(delta.horizontal) <= 1)
                 verticalTotal += delta.vertical
@@ -96,10 +213,15 @@ extension VectorScrollApp {
         scrolling.scrollRemainder = .zero
         let forward = scrolling.nextScrollDelta(for: CGPoint(x: 10, y: 20))!
         scrolling.scrollRemainder = .zero
-        scrolling.reverseDirection = true
-        let reverse = scrolling.nextScrollDelta(for: CGPoint(x: 10, y: 20))!
-        assert(reverse.vertical == -forward.vertical && reverse.horizontal == -forward.horizontal)
-        print("PASS: sub-pixel scroll carry at 50% speed, zero-delta suppression, and both-axis reversal")
+        scrolling.reverseVertical = true
+        let verticalReverse = scrolling.nextScrollDelta(for: CGPoint(x: 10, y: 20))!
+        assert(verticalReverse.vertical == -forward.vertical && verticalReverse.horizontal == forward.horizontal)
+        scrolling.scrollRemainder = .zero
+        scrolling.reverseVertical = false
+        scrolling.reverseHorizontal = true
+        let horizontalReverse = scrolling.nextScrollDelta(for: CGPoint(x: 10, y: 20))!
+        assert(horizontalReverse.vertical == forward.vertical && horizontalReverse.horizontal == -forward.horizontal)
+        print("PASS: sub-pixel scroll carry at 50% speed, zero-delta suppression, and per-axis reversal")
         for dark in [false, true] {
             if dark { subject.selectDarkMode() } else { subject.selectLightMode() }
             assert(subject.indicatorAppearance.selectedSegment == (dark ? 1 : 0))
@@ -114,7 +236,7 @@ extension VectorScrollApp {
         subject.selectLightMode()
         subject.sizePicker.selectItem(withTag: 32)
         subject.selectMarkerSize(subject.sizePicker)
-        assert(subject.reverseItem.toolTip != nil && subject.speedSlider.accessibilityHelp() != nil)
+        assert(subject.reverseVerticalItem.toolTip != nil && subject.speedSlider.accessibilityHelp() != nil)
         print("PASS: live indicator preview at all sizes and appearances, spoken slider units, and contextual help")
         subject.defaults.removeObject(forKey: "onboardingCompleted")
         subject.showOnboarding()
@@ -254,7 +376,7 @@ extension VectorScrollApp {
         content.layoutSubtreeIfNeeded()
         assert(stack.bounds.width <= scroll.contentView.bounds.width, "Narrow settings must fit horizontally")
         for control in [subject.speedSlider!, subject.delaySlider!, subject.indicatorAppearance!, subject.sizePicker!,
-                        subject.reverseItem!, subject.openSettingsButton!, subject.hideIconItem!,
+                        subject.reverseVerticalItem!, subject.reverseHorizontalItem!, subject.raiseWindowItem!, subject.restoreDefaultsButton!, subject.openSettingsButton!, subject.hideIconItem!,
                         subject.launchAtStartupItem!, subject.permissionItem!, subject.updateItem!] as [NSControl] {
             let bounds = control.convert(control.bounds, to: scroll.documentView)
             assert(bounds.minX >= 0 && bounds.maxX <= scroll.contentView.bounds.width,
@@ -392,7 +514,8 @@ extension VectorScrollApp {
         print("PASS: pointer clicks on switch, icon, subtitle, and action areas; disabled controls")
         // Test mutations above should not leak into the presentational previews.
         subject.scrollSpeedPercent = 100
-        subject.reverseDirection = false
+        subject.reverseVertical = false
+        subject.reverseHorizontal = false
         subject.updateSpeedControls()
         subject.applyLaunchAtStartupStatus(.notRegistered)
         subject.applyPermissionStatus(canListen: true, canAccess: true)
@@ -496,6 +619,7 @@ final class AuditAppDelegate: NSObject, NSApplicationDelegate {
         let promptRelease = VectorScrollApp.checkRelease(delay: 0.1)
         let delayedRelease = VectorScrollApp.checkRelease(delay: 0.3)
         let recovery = VectorScrollApp.checkEventRecovery()
+        VectorScrollApp.checkScrollingSettings()
         let settings = VectorScrollApp.checkDelaySettings()
         let passed = promptRelease && delayedRelease && recovery && settings
         if passed {
