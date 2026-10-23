@@ -624,7 +624,7 @@ extension VectorScrollApp {
         assert(subject.handleEvent(type: .otherMouseDown, event: down) == nil)
         let movedUp = mouse(.otherMouseUp, at: CGPoint(x: 456, y: 567))
         assert(subject.handleEvent(type: .otherMouseUp, event: movedUp) == nil)
-        assert(replays == [down.location], "A replay must retain the press point even if release delivery moves")
+        assert(replays.isEmpty, "A release outside the dead zone is a drag, not a click")
 
         replays.removeAll()
         assert(subject.handleEvent(type: .otherMouseDown, event: down) == nil)
