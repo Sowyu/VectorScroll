@@ -211,8 +211,10 @@ extension VectorScrollApp {
         assert(!subject.openSettingsOnLaunch && subject.statusItem != nil)
         assert(subject.hideIconItem.state == .on)
         subject.settingsWindow.close()
+        // Reopening the app always shows Settings, even with launch-time opening off.
         _ = subject.applicationShouldHandleReopen(NSApp, hasVisibleWindows: false)
-        assert(!subject.settingsWindow.isVisible)
+        assert(subject.settingsWindow.isVisible)
+        subject.settingsWindow.close()
         subject.defaults.set(false, forKey: "showMenuBarIcon")
         subject.defaults.set(false, forKey: "openSettingsOnLaunch")
         let repaired = VectorScrollApp()
