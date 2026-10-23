@@ -26,12 +26,7 @@
 "App" = "App";
 "Appearance" = "外觀";
 "Approval is required in Login Items." = "需要在「登入項目」中核准。";
-/* Mouse side-button navigation action. */
-"Back" = "上一頁";
-"Back and forward buttons" = "上一頁和下一頁按鈕";
 "Bring window to front" = "將視窗移到最前方";
-/* Mouse button number, counting from one. */
-"Button %ld" = "按鈕 %ld";
 "Cancel" = "取消";
 "Change the scrolling indicator's diameter. The preview shows its actual size." = "更改捲動指示器的直徑。預覽會顯示實際大小。";
 "Check for Updates…" = "檢查更新…";
@@ -50,8 +45,6 @@
 "Drag right to scroll left instead of right." = "向右拖移會向左捲動，而不是向右。";
 "Excluded apps" = "已排除的 App";
 "Finish" = "完成";
-/* Mouse side-button navigation action. */
-"Forward" = "下一頁";
 "GitHub reported an invalid update size." = "GitHub 回報的更新大小無效。";
 "Hold duration" = "按住時間";
 "Hold the middle button over any window and move the pointer. Change the mode, speed, direction, and indicator in Settings." = "在任何視窗上按住滑鼠中鍵並移動指標。可在「設定」中更改模式、速度、方向和指示器。";
@@ -81,8 +74,7 @@
 "Launch at login could not be changed" = "無法更改登入時啟動設定";
 /* Light appearance of the scrolling indicator. */
 "Light" = "淺色";
-"Middle-button scrolling and side buttons are off in these apps. Useful for apps that pan with the middle button, like Blender or Figma." = "在這些 App 中，中鍵捲動和側邊按鈕會關閉。適用於使用中鍵平移的 App，例如 Blender 或 Figma。";
-"Mouse buttons" = "滑鼠按鈕";
+"Middle-button scrolling is off in these apps. Useful for apps that pan with the middle button, like Blender or Figma." = "在這些 App 中，中鍵捲動會關閉。適用於使用中鍵平移的 App，例如 Blender 或 Figma。";
 "No excluded apps" = "沒有已排除的 App";
 "OK" = "好";
 "Open Login Items" = "打開「登入項目」";
@@ -91,7 +83,6 @@
 "Open System Settings" = "打開「系統設定」";
 "Open VectorScroll from Applications to enable this." = "請從「應用程式」打開 VectorScroll 以啟用此功能。";
 "Open settings on launch" = "啟動時打開設定";
-"Press a side button…" = "請按下側邊按鈕…";
 "Quit VectorScroll" = "結束 VectorScroll";
 "Ready to scroll" = "準備好捲動";
 "Release the middle button to stop" = "放開中鍵即可停止";
@@ -110,14 +101,11 @@
 "Scroll while holding the middle button" = "按住中鍵時捲動";
 "Scrolling" = "捲動";
 "Scrolling indicator preview" = "捲動指示器預覽";
-"Sends ⌘[ and ⌘]. Apps that use those shortcuts for something else can be excluded below." = "傳送 ⌘[ 和 ⌘]。將這些快速鍵用於其他用途的 App 可在下方排除。";
 "Set up permissions" = "設定權限";
 "Settings…" = "設定…";
 "Setup" = "初始設定";
 "Setup Guide" = "設定指南";
 "Setup complete" = "設定完成";
-/* Begin capturing a mouse side button. */
-"Set…" = "指定…";
 "Show menu bar icon" = "顯示選單列圖像";
 "Show this window when VectorScroll starts. If both access options are off, the menu bar icon returns." = "VectorScroll 啟動時顯示此視窗。如果兩個存取選項都已關閉，選單列圖像會重新出現。";
 /* Scrolling indicator diameter. */

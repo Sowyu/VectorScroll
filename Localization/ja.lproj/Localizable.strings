@@ -26,12 +26,7 @@
 "App" = "App";
 "Appearance" = "外観";
 "Approval is required in Login Items." = "ログイン項目での承認が必要です。";
-/* Mouse side-button navigation action. */
-"Back" = "戻る";
-"Back and forward buttons" = "戻る/進むボタン";
 "Bring window to front" = "ウインドウを前面に表示";
-/* Mouse button number, counting from one. */
-"Button %ld" = "ボタン %ld";
 "Cancel" = "キャンセル";
 "Change the scrolling indicator's diameter. The preview shows its actual size." = "スクロールインジケータの直径を変更します。プレビューには実際のサイズが表示されます。";
 "Check for Updates…" = "アップデートを確認…";
@@ -50,8 +45,6 @@
 "Drag right to scroll left instead of right." = "右にドラッグすると、右ではなく左にスクロールします。";
 "Excluded apps" = "除外するApp";
 "Finish" = "完了";
-/* Mouse side-button navigation action. */
-"Forward" = "進む";
 "GitHub reported an invalid update size." = "GitHubが無効なアップデートサイズを報告しました。";
 "Hold duration" = "長押し時間";
 "Hold the middle button over any window and move the pointer. Change the mode, speed, direction, and indicator in Settings." = "任意のウインドウの上で中ボタンを押しながらポインタを動かします。モード、速度、方向、インジケータは設定で変更できます。";
@@ -81,8 +74,7 @@
 "Launch at login could not be changed" = "ログイン時の起動を変更できませんでした";
 /* Light appearance of the scrolling indicator. */
 "Light" = "ライト";
-"Middle-button scrolling and side buttons are off in these apps. Useful for apps that pan with the middle button, like Blender or Figma." = "これらのAppでは、中ボタンスクロールとサイドボタンがオフになります。BlenderやFigmaなど、中ボタンでパンするAppに便利です。";
-"Mouse buttons" = "マウスボタン";
+"Middle-button scrolling is off in these apps. Useful for apps that pan with the middle button, like Blender or Figma." = "これらのAppでは、中ボタンスクロールがオフになります。BlenderやFigmaなど、中ボタンでパンするAppに便利です。";
 "No excluded apps" = "除外するAppはありません";
 "OK" = "OK";
 "Open Login Items" = "ログイン項目を開く";
@@ -91,7 +83,6 @@
 "Open System Settings" = "システム設定を開く";
 "Open VectorScroll from Applications to enable this." = "有効にするには、アプリケーションからVectorScrollを開いてください。";
 "Open settings on launch" = "起動時に設定を開く";
-"Press a side button…" = "サイドボタンを押してください…";
 "Quit VectorScroll" = "VectorScrollを終了";
 "Ready to scroll" = "スクロールの準備完了";
 "Release the middle button to stop" = "中ボタンを離すと停止";
@@ -110,14 +101,11 @@
 "Scroll while holding the middle button" = "中ボタンを押しながらスクロール";
 "Scrolling" = "スクロール";
 "Scrolling indicator preview" = "スクロールインジケータのプレビュー";
-"Sends ⌘[ and ⌘]. Apps that use those shortcuts for something else can be excluded below." = "⌘[と⌘]を送信します。これらのショートカットを別の用途で使うAppは、下で除外できます。";
 "Set up permissions" = "権限を設定";
 "Settings…" = "設定…";
 "Setup" = "セットアップ";
 "Setup Guide" = "セットアップガイド";
 "Setup complete" = "セットアップ完了";
-/* Begin capturing a mouse side button. */
-"Set…" = "指定…";
 "Show menu bar icon" = "メニューバーアイコンを表示";
 "Show this window when VectorScroll starts. If both access options are off, the menu bar icon returns." = "VectorScrollの起動時にこのウインドウを表示します。2つのアクセスオプションがどちらもオフの場合は、メニューバーアイコンが再表示されます。";
 /* Scrolling indicator diameter. */

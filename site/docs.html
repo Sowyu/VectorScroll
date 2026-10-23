@@ -30,16 +30,14 @@
     <p><b>Start delay</b> applies to toggle mode. Require a hold of 50 to 1,000 ms before scrolling engages. Default 200 ms. Turn it off to start on a plain click.</p>
     <p><b>Speed</b> runs from 20% to 300% in 10% steps and applies to both axes. Outside the dead zone, speed grows a little faster than distance, so small movements stay precise and large ones move quickly, up to 120 px per tick. <b>Reverse vertical</b> and <b>Reverse horizontal</b> flip each axis on its own.</p>
     <p>VectorScroll scrolls the window under the pointer, not the frontmost app. <b>Bring window to front</b> also activates that window's app when scrolling starts. Turn it off to scroll background windows without switching apps.</p>
-    <h2 id="buttons">Mouse buttons</h2>
-    <p><b>Back and forward buttons</b> make side buttons navigate in every app, including Safari, Finder, and Preview. Press <b>Set…</b> and then the side button you want for each direction. VectorScroll sends ⌘[ and ⌘] and keeps the button press from reaching the app, so browsers that already handle side buttons go back only once. Off by default.</p>
     <h2 id="excluded">Excluded apps</h2>
-    <p>Middle-button scrolling and side buttons are off while the pointer is over an excluded app. Add Blender, Figma, or CAD tools here so they can still pan with the middle button.</p>
+    <p>Middle-button scrolling is off while the pointer is over an excluded app. Add Blender, Figma, or CAD tools here so they can still pan with the middle button.</p>
     <h2 id="indicator">Indicator</h2>
     <p>A circle with four arrows marks the point where you pressed. Choose light or dark, and 28, 32, 40, or 48 pt.</p>
     <h2 id="settings">Settings</h2>
     <img src="settings-hold.png" alt="Settings window in hold-to-scroll mode" width="620" height="677">
     <p>The window opens on launch by default and from the menu bar icon. Command-W or the window close button hides it, and scrolling keeps working. Every change saves immediately.</p>
-    <p><b>Open settings on launch</b> and <b>Show menu bar icon</b> control how you reach the app. One of them always stays on. <b>Launch at login</b> registers with the system login items. <b>Setup guide</b> at the top of the window reopens the permission walkthrough. <b>Restore Defaults</b> resets scrolling, indicator, and mouse button settings.</p>
+    <p><b>Open settings on launch</b> and <b>Show menu bar icon</b> control how you reach the app. One of them always stays on. <b>Launch at login</b> registers with the system login items. <b>Setup guide</b> at the top of the window reopens the permission walkthrough. <b>Restore Defaults</b> resets scrolling and indicator settings.</p>
     <p>The globe button next to the version number picks the app's language: English, Deutsch, Español, Français, Italiano, Português (Brasil), Русский, 日本語, 한국어, 简体中文, or 繁體中文. VectorScroll restarts in the new language. System Language follows macOS.</p>
     <p>If the menu bar icon is hidden, reopen the window from Applications or run:</p>
     <pre>open -a VectorScroll</pre>

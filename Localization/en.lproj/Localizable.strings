@@ -26,12 +26,7 @@
 "App" = "App";
 "Appearance" = "Appearance";
 "Approval is required in Login Items." = "Approval is required in Login Items.";
-/* Mouse side-button navigation action. */
-"Back" = "Back";
-"Back and forward buttons" = "Back and forward buttons";
 "Bring window to front" = "Bring window to front";
-/* Mouse button number, counting from one. */
-"Button %ld" = "Button %ld";
 "Cancel" = "Cancel";
 "Change the scrolling indicator's diameter. The preview shows its actual size." = "Change the scrolling indicator's diameter. The preview shows its actual size.";
 "Check for Updates…" = "Check for Updates…";
@@ -50,8 +45,6 @@
 "Drag right to scroll left instead of right." = "Drag right to scroll left instead of right.";
 "Excluded apps" = "Excluded apps";
 "Finish" = "Finish";
-/* Mouse side-button navigation action. */
-"Forward" = "Forward";
 "GitHub reported an invalid update size." = "GitHub reported an invalid update size.";
 "Hold duration" = "Hold duration";
 "Hold the middle button over any window and move the pointer. Change the mode, speed, direction, and indicator in Settings." = "Hold the middle button over any window and move the pointer. Change the mode, speed, direction, and indicator in Settings.";
@@ -81,8 +74,7 @@
 "Launch at login could not be changed" = "Launch at login could not be changed";
 /* Light appearance of the scrolling indicator. */
 "Light" = "Light";
-"Middle-button scrolling and side buttons are off in these apps. Useful for apps that pan with the middle button, like Blender or Figma." = "Middle-button scrolling and side buttons are off in these apps. Useful for apps that pan with the middle button, like Blender or Figma.";
-"Mouse buttons" = "Mouse buttons";
+"Middle-button scrolling is off in these apps. Useful for apps that pan with the middle button, like Blender or Figma." = "Middle-button scrolling is off in these apps. Useful for apps that pan with the middle button, like Blender or Figma.";
 "No excluded apps" = "No excluded apps";
 "OK" = "OK";
 "Open Login Items" = "Open Login Items";
@@ -91,7 +83,6 @@
 "Open System Settings" = "Open System Settings";
 "Open VectorScroll from Applications to enable this." = "Open VectorScroll from Applications to enable this.";
 "Open settings on launch" = "Open settings on launch";
-"Press a side button…" = "Press a side button…";
 "Quit VectorScroll" = "Quit VectorScroll";
 "Ready to scroll" = "Ready to scroll";
 "Release the middle button to stop" = "Release the middle button to stop";
@@ -110,14 +101,11 @@
 "Scroll while holding the middle button" = "Scroll while holding the middle button";
 "Scrolling" = "Scrolling";
 "Scrolling indicator preview" = "Scrolling indicator preview";
-"Sends ⌘[ and ⌘]. Apps that use those shortcuts for something else can be excluded below." = "Sends ⌘[ and ⌘]. Apps that use those shortcuts for something else can be excluded below.";
 "Set up permissions" = "Set up permissions";
 "Settings…" = "Settings…";
 "Setup" = "Setup";
 "Setup Guide" = "Setup Guide";
 "Setup complete" = "Setup complete";
-/* Begin capturing a mouse side button. */
-"Set…" = "Set…";
 "Show menu bar icon" = "Show menu bar icon";
 "Show this window when VectorScroll starts. If both access options are off, the menu bar icon returns." = "Show this window when VectorScroll starts. If both access options are off, the menu bar icon returns.";
 /* Scrolling indicator diameter. */
