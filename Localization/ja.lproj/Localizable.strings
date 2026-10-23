@@ -81,7 +81,6 @@
 "Open Login Items to allow VectorScroll." = "ログイン項目を開いて、VectorScrollを許可してください。";
 "Open Settings" = "設定を開く";
 "Open System Settings" = "システム設定を開く";
-"Open VectorScroll from Applications to enable this." = "有効にするには、アプリケーションからVectorScrollを開いてください。";
 "Open settings on launch" = "起動時に設定を開く";
 "Quit VectorScroll" = "VectorScrollを終了";
 "Ready to scroll" = "スクロールの準備完了";
@@ -96,7 +95,6 @@
 "Reverse vertical" = "垂直方向を反転";
 "Review VectorScroll in Login Items." = "ログイン項目でVectorScrollを確認してください。";
 "Review the permissions needed for middle-button scrolling." = "中ボタンスクロールに必要な権限を確認します。";
-"Run the installed VectorScroll app from Applications." = "アプリケーションにインストールされたVectorScrollを実行してください。";
 "Scroll speed" = "スクロール速度";
 "Scroll while holding the middle button" = "中ボタンを押しながらスクロール";
 "Scrolling" = "スクロール";

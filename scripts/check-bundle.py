@@ -8,8 +8,8 @@ import sys
 root = Path(__file__).resolve().parent.parent
 contents = root / "dist/VectorScroll.app/Contents"
 info = plistlib.loads((contents / "Info.plist").read_bytes())
-assert info["CFBundleShortVersionString"] == "1.11.1"
-assert info["CFBundleVersion"] == "22"
+assert info["CFBundleShortVersionString"] == "1.11.2"
+assert info["CFBundleVersion"] == "23"
 assert info["LSMinimumSystemVersion"] == "14.0"
 localizations = {folder.name for folder in (root / "Localization").glob("*.lproj") if folder.is_dir()}
 packaged = {folder.name for folder in (contents / "Resources").glob("*.lproj") if folder.is_dir()}
