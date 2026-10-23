@@ -155,13 +155,16 @@ private final class SettingsButtonCell: NSButtonCell {
 @MainActor
 final class SettingsButton: NSButton {
     var symbolName: String { didSet { needsDisplay = true } }
-    var displayTitle: String? { didSet { needsDisplay = true } }
+    var displayTitle: String? { didSet { updateToolTip(); needsDisplay = true } }
     var detail: String? {
         didSet {
-            toolTip = detail
+            updateToolTip()
             setAccessibilityHelp(detail)
             needsDisplay = true
         }
+    }
+    private func updateToolTip() {
+        toolTip = [displayTitle ?? title, detail].compactMap { $0 }.joined(separator: "\n")
     }
     private var hovered = false
     private var hoverArea: NSTrackingArea?

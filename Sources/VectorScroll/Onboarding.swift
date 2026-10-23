@@ -27,7 +27,7 @@ final class Onboarding: NSObject, NSWindowDelegate {
     override init() {
         let setupWindow = SettingsWindow(contentRect: NSRect(x: 0, y: 0, width: 500, height: 320),
                                          styleMask: [.titled, .closable, .miniaturizable], backing: .buffered, defer: false)
-        setupWindow.title = "VectorScroll Setup"
+        setupWindow.title = L("VectorScroll Setup")
         SettingsStyle.prepareWindow(setupWindow)
         setupWindow.isReleasedWhenClosed = false
         setupWindow.center()
@@ -75,6 +75,7 @@ final class Onboarding: NSObject, NSWindowDelegate {
             stack.leadingAnchor.constraint(equalTo: backdrop.leadingAnchor, constant: 32),
             stack.trailingAnchor.constraint(equalTo: backdrop.trailingAnchor, constant: -32),
             stack.topAnchor.constraint(equalTo: backdrop.topAnchor, constant: 52),
+            buttons.topAnchor.constraint(greaterThanOrEqualTo: stack.bottomAnchor, constant: 24),
             buttons.trailingAnchor.constraint(equalTo: backdrop.trailingAnchor, constant: -32),
             buttons.bottomAnchor.constraint(equalTo: backdrop.bottomAnchor, constant: -28)
         ])
@@ -144,37 +145,50 @@ final class Onboarding: NSObject, NSWindowDelegate {
     }
 
     private func render() {
-        stepLabel.stringValue = step == .welcome ? "Setup" : step == .done ? "Setup complete" : "Step \(step.rawValue) of 2"
+        stepLabel.stringValue = step == .welcome ? L("Setup") : step == .done ? L("Setup complete") : L("Step %ld of %ld", step.rawValue, 2)
         secondary.isHidden = false
         status.stringValue = ""
         switch step {
         case .welcome:
-            title.stringValue = "Welcome to VectorScroll"
-            body.stringValue = "Hold the middle mouse button and move the pointer to scroll any window. macOS needs two permissions first. This takes about a minute, and you can come back to it from Settings."
-            primary.title = "Set up permissions"
-            secondary.title = "Later"
+            title.stringValue = L("Welcome to VectorScroll")
+            body.stringValue = L("Hold the middle mouse button and move the pointer to scroll any window. macOS needs two permissions first. This takes about a minute, and you can come back to it from Settings.")
+            primary.title = L("Set up permissions")
+            secondary.title = L("Later")
         case .inputMonitoring:
-            title.stringValue = "Allow Input Monitoring"
-            body.stringValue = "This lets VectorScroll notice when you press the middle button. Nothing you type is read. macOS shows its own dialog once. If it does not appear, open System Settings, turn on VectorScroll under Input Monitoring, then come back here."
-            primary.title = askedInputMonitoring ? "Open System Settings" : "Allow Input Monitoring"
-            secondary.title = "Later"
-            status.stringValue = askedInputMonitoring ? "Waiting for Input Monitoring. This page moves on by itself once it is allowed." : "Required"
+            title.stringValue = L("Allow Input Monitoring")
+            body.stringValue = L("This lets VectorScroll notice when you press the middle button. Nothing you type is read. macOS shows its own dialog once. If it does not appear, open System Settings, turn on VectorScroll under Input Monitoring, then come back here.")
+            primary.title = askedInputMonitoring ? L("Open System Settings") : L("Allow Input Monitoring")
+            secondary.title = L("Later")
+            status.stringValue = askedInputMonitoring ? L("Waiting for Input Monitoring. This page moves on by itself once it is allowed.") : L("Required")
         case .accessibility:
-            title.stringValue = "Allow Accessibility"
-            body.stringValue = "Accessibility lets VectorScroll bring the window under your pointer forward and send scroll events to it. Vector scrolling stays off until this permission is allowed."
-            primary.title = askedAccessibility ? "Open System Settings" : "Allow Accessibility"
-            secondary.title = "Later"
-            status.stringValue = askedAccessibility ? "Waiting for Accessibility. This page moves on by itself once it is allowed." : "Required"
+            title.stringValue = L("Allow Accessibility")
+            body.stringValue = L("Accessibility lets VectorScroll bring the window under your pointer forward and send scroll events to it. Vector scrolling stays off until this permission is allowed.")
+            primary.title = askedAccessibility ? L("Open System Settings") : L("Allow Accessibility")
+            secondary.title = L("Later")
+            status.stringValue = askedAccessibility ? L("Waiting for Accessibility. This page moves on by itself once it is allowed.") : L("Required")
         case .done:
-            title.stringValue = "You're set"
-            body.stringValue = "Hold the middle button over any window and move the pointer. Change the mode, speed, direction, and indicator in Settings."
-            primary.title = "Finish"
-            secondary.title = "Open Settings"
+            title.stringValue = L("You're set")
+            body.stringValue = L("Hold the middle button over any window and move the pointer. Change the mode, speed, direction, and indicator in Settings.")
+            primary.title = L("Finish")
+            secondary.title = L("Open Settings")
         }
         SettingsStyle.setSymbol(step == .done ? "checkmark" : (askedInputMonitoring && step == .inputMonitoring) || (askedAccessibility && step == .accessibility) ? "gearshape" : "arrow.right", on: primary)
         SettingsStyle.setSymbol(step == .done ? "gearshape" : "xmark", on: secondary)
         secondary.keyEquivalent = step == .done ? "" : "\u{1b}"
         primary.needsDisplay = true
+        // Measure wrapped content at the fixed window width, allowing longer translations.
+        let fields = [stepLabel, title, body, status]
+        let textHeight = fields.reduce(CGFloat.zero) { total, field in
+            let rect = (field.stringValue as NSString).boundingRect(
+                with: NSSize(width: 416, height: CGFloat.greatestFiniteMagnitude),
+                options: [.usesLineFragmentOrigin, .usesFontLeading],
+                attributes: [.font: field.font!])
+            return total + ceil(rect.height) + 2
+        }
+        let height = max(320, 52 + textHeight + 30 + 24 + max(primary.fittingSize.height, secondary.fittingSize.height) + 28)
+        if abs(window.contentView!.bounds.height - height) > 0.5 {
+            window.setContentSize(NSSize(width: 500, height: height))
+        }
     }
 
     private func transition(to newStep: Step) {
@@ -183,7 +197,7 @@ final class Onboarding: NSObject, NSWindowDelegate {
         render()
         window.makeFirstResponder(primary)
         NSAccessibility.post(element: window, notification: .announcementRequested, userInfo: [
-            .announcement: "\(stepLabel.stringValue). \(title.stringValue)",
+            .announcement: L("%@. %@", stepLabel.stringValue, title.stringValue),
             .priority: NSAccessibilityPriorityLevel.high.rawValue
         ])
     }

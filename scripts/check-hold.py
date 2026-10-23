@@ -667,7 +667,7 @@ generated = output / "main.swift"
 generated.write_text(source.split(entry)[0] + harness)
 binary = output / "check-hold"
 subprocess.run(["swiftc", "-swift-version", "6", "-warnings-as-errors",
-                str(generated), str(root / "Sources/VectorScroll/SideButtons.swift"), str(root / "Sources/VectorScroll/ExcludedApps.swift"), str(root / "Sources/VectorScroll/SettingsStyle.swift"), str(root / "Sources/VectorScroll/Onboarding.swift"), str(root / "Sources/VectorScroll/Updates.swift"), str(root / "Sources/VectorScroll/UpdateInstaller.swift"), "-o", str(binary), "-framework", "AppKit",
+                str(generated), str(root / "Sources/VectorScroll/Localization.swift"), str(root / "Sources/VectorScroll/SideButtons.swift"), str(root / "Sources/VectorScroll/ExcludedApps.swift"), str(root / "Sources/VectorScroll/SettingsStyle.swift"), str(root / "Sources/VectorScroll/Onboarding.swift"), str(root / "Sources/VectorScroll/Updates.swift"), str(root / "Sources/VectorScroll/UpdateInstaller.swift"), "-o", str(binary), "-framework", "AppKit",
                 "-framework", "ApplicationServices", "-framework", "ServiceManagement"], check=True)
 # LaunchServices registers the probe as a real foreground app. macOS 26 will
 # not activate an unbundled command-line process for native control tracking.
