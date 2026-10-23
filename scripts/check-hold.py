@@ -27,6 +27,34 @@ final class PointerActionProbe: NSObject {
 
 extension VectorScrollApp {
     static func checkDelaySettings() -> Bool {
+        let suite = "local.vectorscroll.side-buttons.\(UUID().uuidString)"
+        let featureDefaults = UserDefaults(suiteName: suite)!
+        defer { featureDefaults.removePersistentDomain(forName: suite) }
+        let initial = SideButtons.settings(in: featureDefaults)
+        assert(!initial.enabled && initial.back == 3 && initial.forward == 4)
+        let swappedBack = SideButtons.mapping(4, for: .back, back: 3, forward: 4)
+        assert(swappedBack.back == 4 && swappedBack.forward == 3)
+        let swappedForward = SideButtons.mapping(3, for: .forward, back: 3, forward: 4)
+        assert(swappedForward.back == 4 && swappedForward.forward == 3)
+        let unchanged = SideButtons.mapping(2, for: .back, back: 3, forward: 4)
+        assert(unchanged.back == 3 && unchanged.forward == 4)
+        assert(SideButtons.keyCode(for: .back) == 0x21 && SideButtons.keyCode(for: .forward) == 0x1E)
+        assert(!ExcludedApps.isExcluded(at: .zero, defaults: featureDefaults))
+        ExcludedApps.add(["com.example.one", "com.example.one", "com.example.two"], to: featureDefaults)
+        ExcludedApps.add(["com.example.two"], to: featureDefaults)
+        assert(ExcludedApps.bundleIDs(in: featureDefaults) == ["com.example.one", "com.example.two"])
+        ExcludedApps.remove("com.example.one", from: featureDefaults)
+        assert(ExcludedApps.bundleIDs(in: featureDefaults) == ["com.example.two"])
+        let sideButtons = SideButtons(defaults: featureDefaults)
+        assert(!sideButtons.makeSettingsSection().subviews.isEmpty)
+        assert(!ExcludedApps.makeSettingsSection(defaults: featureDefaults).subviews.isEmpty)
+        ExcludedApps.remove("com.example.two", from: featureDefaults)
+        assert(!ExcludedApps.makeSettingsSection(defaults: featureDefaults).subviews.isEmpty)
+        var canceledCapture = false
+        sideButtons.beginCapture(for: .back) { canceledCapture = $0 == nil }
+        sideButtons.cancelCapture()
+        assert(canceledCapture)
+        print("PASS: side button defaults, mapping swaps, shortcut key codes, capture cancellation, exclusion storage and empty fast path, and settings sections")
         let subject = VectorScrollApp()
         subject.configureMenu()
         let titles = subject.menu.items.filter { !$0.isHidden }.map(\.title)
@@ -515,7 +543,7 @@ generated = output / "main.swift"
 generated.write_text(source.split(entry)[0] + harness)
 binary = output / "check-hold"
 subprocess.run(["swiftc", "-swift-version", "6", "-warnings-as-errors",
-                str(generated), str(root / "Sources/VectorScroll/SettingsStyle.swift"), str(root / "Sources/VectorScroll/Onboarding.swift"), str(root / "Sources/VectorScroll/Updates.swift"), str(root / "Sources/VectorScroll/UpdateInstaller.swift"), "-o", str(binary), "-framework", "AppKit",
+                str(generated), str(root / "Sources/VectorScroll/SideButtons.swift"), str(root / "Sources/VectorScroll/ExcludedApps.swift"), str(root / "Sources/VectorScroll/SettingsStyle.swift"), str(root / "Sources/VectorScroll/Onboarding.swift"), str(root / "Sources/VectorScroll/Updates.swift"), str(root / "Sources/VectorScroll/UpdateInstaller.swift"), "-o", str(binary), "-framework", "AppKit",
                 "-framework", "ApplicationServices", "-framework", "ServiceManagement"], check=True)
 # LaunchServices registers the probe as a real foreground app. macOS 26 will
 # not activate an unbundled command-line process for native control tracking.
