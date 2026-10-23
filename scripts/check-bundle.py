@@ -2,6 +2,8 @@
 from pathlib import Path
 import plistlib
 import struct
+import subprocess
+import sys
 
 root = Path(__file__).resolve().parent.parent
 contents = root / "dist/VectorScroll.app/Contents"
@@ -9,6 +11,13 @@ info = plistlib.loads((contents / "Info.plist").read_bytes())
 assert info["CFBundleShortVersionString"] == "1.9.0"
 assert info["CFBundleVersion"] == "18"
 assert info["LSMinimumSystemVersion"] == "14.0"
+localizations = {folder.name for folder in (root / "Localization").glob("*.lproj") if folder.is_dir()}
+packaged = {folder.name for folder in (contents / "Resources").glob("*.lproj") if folder.is_dir()}
+assert packaged == localizations, f"Packaged languages differ: {packaged} != {localizations}"
+assert info["CFBundleDevelopmentRegion"] == "en"
+assert info["CFBundleLocalizations"] == sorted(name[:-6] for name in localizations if name != "Base.lproj")
+subprocess.run([sys.executable, str(root / "scripts/check-localization.py")], check=True)
+print("PASS: packaged localization folders and Info.plist language metadata")
 assert (contents / "MacOS" / info["CFBundleExecutable"]).stat().st_size > 0
 # check-hold.py checks real menu items. Optimized Swift short strings need not
 # appear as contiguous text in the executable, so binary string scans are invalid.
