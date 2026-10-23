@@ -31,7 +31,7 @@ final class LanguagePicker: NSPopUpButton {
             menu.addItem(item)
         }
         addChoice(L("System Language"), code: nil)
-        let languages = Bundle.main.localizations.filter { $0 != "Base" }.map { code in
+        let languages = Bundle.main.localizations.filter { $0 != "Base" }.map { (code: String) -> (code: String, name: String) in
             let locale = Locale(identifier: code)
             let name = (locale.localizedString(forIdentifier: code) ?? code).capitalized(with: locale)
             return (code: code, name: name)
