@@ -330,7 +330,7 @@ extension VectorScrollApp {
         assert(subject.holdToLockThreshold == 0)
         assert(!subject.delaySlider.isEnabled)
         assert(subject.holdToLockItem.accessibilityHelp() == "Click to start, click to stop")
-        assert(subject.holdToLockItem.title == "Keep scrolling until the next click")
+        assert(subject.holdToLockItem.title == "Toggle scrolling")
         subject.eventTapInstalled = true
         subject.armHoldToLock(at: .zero, target: .zero)
         assert(subject.isActive && subject.engageWorkItem == nil)
@@ -388,24 +388,47 @@ extension VectorScrollApp {
         let stack = descendants(scroll.documentView!).compactMap { $0 as? NSStackView }.first!
         assert(stack.bounds.width <= scroll.contentView.bounds.width, "Settings must fit horizontally")
         assert(scroll.hasVerticalScroller, "All settings must remain reachable on smaller screens")
-        #if compiler(>=6.2)
-        if #available(macOS 26, *) {
-            assert(descendants(content).contains { $0 is NSGlassEffectView }, "Modern settings must use native Liquid Glass")
-            assert(subject.updateItem.bezelStyle == .glass, "Modern actions must use the native glass bezel")
-            print("PASS: native Liquid Glass content and actions on macOS 26")
+        let setup = Onboarding()
+        for window in [subject.settingsWindow!, setup.window] {
+            let views = descendants(window.contentView!)
+            assert(!views.contains { $0 is NSVisualEffectView }, "Settings and setup must have solid content")
+            #if compiler(>=6.2)
+            if #available(macOS 26, *) {
+                assert(!views.contains { $0 is NSGlassEffectView }, "Groups must not use glass containers")
+            }
+            #endif
+            assert(window.isOpaque && window.backgroundColor.alphaComponent == 1, "Window backgrounds must be solid")
+            for button in views.compactMap({ $0 as? NSButton }) where button.isBordered && !(button is NSPopUpButton) {
+                if button === subject.holdScrollItem || button === subject.holdToLockItem { continue }
+                assert(button.bezelStyle == .push && button.image == nil, "Action buttons must use plain push bezels")
+            }
+            for control in views.compactMap({ $0 as? NSSwitch }) {
+                assert(control.controlSize == .mini, "Settings switches must be mini")
+            }
         }
-        #endif
+        assert(setup.primary.keyEquivalent == "\r", "Setup must keep its default action")
+        for (name, component) in [(NSAppearance.Name.aqua, CGFloat(236) / 255), (.darkAqua, CGFloat(30) / 255)] {
+            NSAppearance(named: name)!.performAsCurrentDrawingAppearance {
+                let color = SettingsStyle.background.usingColorSpace(.sRGB)!
+                assert(abs(color.redComponent - component) < 0.001 && color.alphaComponent == 1)
+            }
+        }
+        print("PASS: solid settings and setup backgrounds, plain push actions, and mini switches")
         assert(subject.settingsWindow.standardWindowButton(.closeButton)?.isHidden == false)
         assert(subject.settingsWindow.standardWindowButton(.closeButton)?.isEnabled == true)
         assert(subject.settingsWindow.standardWindowButton(.miniaturizeButton)?.isEnabled == true)
         assert(subject.settingsWindow.standardWindowButton(.zoomButton)?.isEnabled == true)
         let originalFrame = subject.settingsWindow.frame
         subject.settingsWindow.setContentSize(NSSize(width: 520, height: 500))
+        subject.applyPermissionStatus(canListen: false, canAccess: false)
+        subject.downloadItem.isHidden = false
+        subject.setUpdateStatus("Checking for updates…", busy: true)
         content.layoutSubtreeIfNeeded()
+        assert(scroll.contentView.bounds.width <= 520, "Visible update and permission actions must not widen the window")
         assert(stack.bounds.width <= scroll.contentView.bounds.width, "Narrow settings must fit horizontally")
         for control in [subject.speedSlider!, subject.delaySlider!, subject.indicatorAppearance!, subject.sizePicker!,
                         subject.reverseVerticalItem!, subject.reverseHorizontalItem!, subject.raiseWindowItem!, subject.restoreDefaultsButton!, subject.openSettingsButton!, subject.hideIconItem!,
-                        subject.launchAtStartupItem!, subject.permissionItem!, subject.updateItem!] as [NSControl] {
+                        subject.launchAtStartupItem!, subject.permissionItem!, subject.updateItem!, subject.downloadItem!, subject.updateProgress!] as [NSView] {
             let bounds = control.convert(control.bounds, to: scroll.documentView)
             assert(bounds.minX >= 0 && bounds.maxX <= scroll.contentView.bounds.width,
                    "Native settings controls must fit the narrow window: \(control)")
@@ -414,6 +437,9 @@ extension VectorScrollApp {
         content.layoutSubtreeIfNeeded()
         let updateBounds = subject.updateItem.convert(subject.updateItem.bounds, to: scroll.documentView)
         assert(scroll.contentView.documentVisibleRect.intersects(updateBounds), "Updates must remain reachable in a short window")
+        subject.downloadItem.isHidden = true
+        subject.setUpdateStatus("", busy: false)
+        subject.updatePermissionMenuItem()
         subject.settingsWindow.setFrame(originalFrame, display: true)
         content.layoutSubtreeIfNeeded()
         let closeEvent = NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: .command,
@@ -438,7 +464,8 @@ extension VectorScrollApp {
         }
         subject.updatePermissionMenuItem()
         print("PASS: native close control, Command-W close/reopen, and permission status transitions")
-        assert(subject.holdScrollItem is SettingsButton)
+        assert(type(of: subject.holdScrollItem!) == NSButton.self)
+        assert(type(of: subject.holdToLockItem!) == NSButton.self)
         func savePreview(_ window: NSWindow, _ name: String, appearance: NSAppearance.Name = .darkAqua) {
             // Scrolling to the top flashes the overlay scroller, so hide it for the capture.
             scroll.hasVerticalScroller = false
@@ -495,19 +522,18 @@ extension VectorScrollApp {
             } while Date() < deadline
             assert((try? String(contentsOf: completion, encoding: .utf8)) == "0", "The runner must deliver a real pointer click")
         }
-        // The custom cards promise a full-surface target. Standard controls use
-        // their native glyph/title or bezel, tested through real mouse tracking.
+        // Native radio buttons track their glyph and title, tested at their real frames.
         for button in [subject.holdScrollItem!, subject.holdToLockItem!] {
             content.layoutSubtreeIfNeeded()
             button.scrollToVisible(button.bounds)
             content.layoutSubtreeIfNeeded()
-            for point in [NSPoint(x: 8, y: 8), NSPoint(x: button.bounds.midX, y: button.bounds.midY), NSPoint(x: button.bounds.maxX - 20, y: button.bounds.midY)] {
+            for point in [NSPoint(x: 7, y: button.bounds.midY), NSPoint(x: 60, y: button.bounds.midY)] {
                 let location = button.convert(point, to: nil)
                 let event = NSEvent.mouseEvent(with: .leftMouseDown, location: location, modifierFlags: [], timestamp: ProcessInfo.processInfo.systemUptime, windowNumber: subject.settingsWindow.windowNumber, context: nil, eventNumber: 1, clickCount: 1, pressure: 1)!
                 let hit = button.cell!.hitTest(for: event, in: button.bounds, of: button)
                 let target = content.hitTest(content.convert(location, from: nil))
                 assert(target === button, "Visible button must receive pointer events")
-                assert(hit.contains(.trackableArea), "Entire drawn button must be clickable")
+                assert(hit.contains(.trackableArea), "Native radio glyph and title must be clickable")
             }
         }
         mouseClick(subject.hideIconItem, at: NSPoint(x: subject.hideIconItem.bounds.midX, y: subject.hideIconItem.bounds.midY))
@@ -516,9 +542,9 @@ extension VectorScrollApp {
         assert(subject.overlay.isDarkMode && subject.markerPreview.isDarkMode)
         mouseClick(subject.indicatorAppearance, at: NSPoint(x: subject.indicatorAppearance.bounds.width * 0.25, y: subject.indicatorAppearance.bounds.midY))
         assert(!subject.overlay.isDarkMode && !subject.markerPreview.isDarkMode)
-        mouseClick(subject.holdScrollItem, at: NSPoint(x: 8, y: 8))
+        mouseClick(subject.holdScrollItem, at: NSPoint(x: 7, y: subject.holdScrollItem.bounds.midY))
         assert(!subject.holdToLockMode && subject.holdScrollItem.state == .on)
-        mouseClick(subject.holdToLockItem, at: NSPoint(x: 80, y: 48))
+        mouseClick(subject.holdToLockItem, at: NSPoint(x: 60, y: subject.holdToLockItem.bounds.midY))
         assert(subject.holdToLockMode && subject.holdToLockItem.state == .on)
         let probe = PointerActionProbe()
         // Synthetic drag-out events hang even an unmodified NSButton in this
@@ -539,7 +565,7 @@ extension VectorScrollApp {
             button.target = originalTarget
             button.action = originalAction
         }
-        print("PASS: pointer clicks on switch, icon, subtitle, and action areas; disabled controls")
+        print("PASS: pointer clicks on switches, radio glyphs and titles, and actions; disabled controls")
         // Test mutations above should not leak into the presentational previews.
         subject.scrollSpeedPercent = 100
         subject.reverseVertical = false
@@ -554,7 +580,7 @@ extension VectorScrollApp {
         savePreview(subject.settingsWindow, "settings-delay-preview")
         subject.selectHoldToScroll()
         content.layoutSubtreeIfNeeded()
-        // Let the mode cards redraw before capturing, or the old selection shows too.
+        // Let the radios redraw before capturing, or the old selection shows too.
         subject.settingsWindow.displayIfNeeded()
         RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.3))
         savePreview(subject.settingsWindow, "settings-preview")

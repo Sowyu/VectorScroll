@@ -40,10 +40,10 @@ final class Onboarding: NSObject, NSWindowDelegate {
             field.preferredMaxLayoutWidth = 416
             return field
         }
-        stepLabel = label(12, color: SettingsStyle.secondary)
-        title = label(22, weight: .semibold)
-        body = label(14)
-        status = label(12, weight: .medium, color: SettingsStyle.secondary)
+        stepLabel = label(11, color: SettingsStyle.secondary)
+        title = label(20, weight: .semibold)
+        body = label(13)
+        status = label(11, weight: .regular, color: SettingsStyle.secondary)
         primary = SettingsStyle.actionButton("", symbol: "arrow.right", target: nil, action: nil)
         secondary = SettingsStyle.actionButton("", symbol: "xmark", target: nil, action: nil)
         super.init()
@@ -62,22 +62,15 @@ final class Onboarding: NSObject, NSWindowDelegate {
         buttons.spacing = 12
         buttons.translatesAutoresizingMaskIntoConstraints = false
         let content = window.contentView!
-        let backdrop = SettingsStyle.backdrop()
-        backdrop.translatesAutoresizingMaskIntoConstraints = false
-        content.addSubview(backdrop)
-        backdrop.addSubview(stack)
-        backdrop.addSubview(buttons)
+        content.addSubview(stack)
+        content.addSubview(buttons)
         NSLayoutConstraint.activate([
-            backdrop.leadingAnchor.constraint(equalTo: content.leadingAnchor),
-            backdrop.trailingAnchor.constraint(equalTo: content.trailingAnchor),
-            backdrop.topAnchor.constraint(equalTo: content.topAnchor),
-            backdrop.bottomAnchor.constraint(equalTo: content.bottomAnchor),
-            stack.leadingAnchor.constraint(equalTo: backdrop.leadingAnchor, constant: 32),
-            stack.trailingAnchor.constraint(equalTo: backdrop.trailingAnchor, constant: -32),
-            stack.topAnchor.constraint(equalTo: backdrop.topAnchor, constant: 52),
+            stack.leadingAnchor.constraint(equalTo: content.leadingAnchor, constant: 32),
+            stack.trailingAnchor.constraint(equalTo: content.trailingAnchor, constant: -32),
+            stack.topAnchor.constraint(equalTo: content.topAnchor, constant: 52),
             buttons.topAnchor.constraint(greaterThanOrEqualTo: stack.bottomAnchor, constant: 24),
-            buttons.trailingAnchor.constraint(equalTo: backdrop.trailingAnchor, constant: -32),
-            buttons.bottomAnchor.constraint(equalTo: backdrop.bottomAnchor, constant: -28)
+            buttons.trailingAnchor.constraint(equalTo: content.trailingAnchor, constant: -32),
+            buttons.bottomAnchor.constraint(equalTo: content.bottomAnchor, constant: -28)
         ])
         primary.target = self
         primary.action = #selector(primaryPressed)
@@ -172,8 +165,6 @@ final class Onboarding: NSObject, NSWindowDelegate {
             primary.title = L("Finish")
             secondary.title = L("Open Settings")
         }
-        SettingsStyle.setSymbol(step == .done ? "checkmark" : (askedInputMonitoring && step == .inputMonitoring) || (askedAccessibility && step == .accessibility) ? "gearshape" : "arrow.right", on: primary)
-        SettingsStyle.setSymbol(step == .done ? "gearshape" : "xmark", on: secondary)
         secondary.keyEquivalent = step == .done ? "" : "\u{1b}"
         primary.needsDisplay = true
         // Measure wrapped content at the fixed window width, allowing longer translations.
