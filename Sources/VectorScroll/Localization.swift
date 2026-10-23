@@ -12,13 +12,15 @@ func L(_ format: String, _ arguments: CVarArg...) -> String {
 final class LanguagePicker: NSPopUpButton {
     init() {
         super.init(frame: .zero, pullsDown: true)
-        isBordered = false
+        bezelStyle = .recessed
+        showsBorderOnlyWhileMouseInside = true
         controlSize = .small
         imagePosition = .imageOnly
         (cell as? NSPopUpButtonCell)?.arrowPosition = .noArrow
         toolTip = L("Language")
         setAccessibilityLabel(L("Language"))
         let menu = NSMenu()
+        menu.autoenablesItems = false
         let heading = NSMenuItem(title: "", action: nil, keyEquivalent: "")
         heading.image = NSImage(systemSymbolName: "globe", accessibilityDescription: L("Language"))
         menu.addItem(heading)
@@ -31,7 +33,7 @@ final class LanguagePicker: NSPopUpButton {
             menu.addItem(item)
         }
         addChoice(L("System Language"), code: nil)
-        let languages = Bundle.main.localizations.filter { $0 != "Base" }.map { (code: String) -> (code: String, name: String) in
+        let languages = Set(Bundle.main.localizations).filter { $0 != "Base" }.map { (code: String) -> (code: String, name: String) in
             let locale = Locale(identifier: code)
             let name = (locale.localizedString(forIdentifier: code) ?? code).capitalized(with: locale)
             return (code: code, name: name)
