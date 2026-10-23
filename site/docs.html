@@ -25,22 +25,26 @@
     <p>Download the <a href="https://github.com/Sowyu/VectorScroll/releases/latest/download/VectorScroll.dmg">DMG</a>, drag VectorScroll into Applications, and open it. The setup guide asks for two permissions, one page each. Then press the middle button in any window and move the pointer.</p>
     <img src="onboarding.png" alt="Setup guide, Input Monitoring step" width="500" height="320">
     <h2 id="scrolling">Scrolling</h2>
-    <p><b>Hold to scroll</b> is the default. Hold the middle button, move, release to stop. Nothing happens until the pointer leaves the 10 pt dead zone, so a quick middle click still opens a link in a new tab.</p>
-    <p><b>Toggle scrolling</b> keeps going after you let go. Any mouse button stops it. The click that stops it also reaches the app under the pointer, so stop over empty space if you do not want to activate something.</p>
+    <p><b>Hold to scroll</b> is the default. Hold the middle button, move, release to stop. VectorScroll holds the click until it knows what it was. If the pointer never left the 10 pt dead zone, the app gets a normal middle click, so a quick middle click still opens a link in a new tab. If you scrolled, the app never sees the click.</p>
+    <p><b>Toggle scrolling</b> keeps going after you let go. Any mouse button stops it, and that click is not passed on, so stopping never activates a link or button.</p>
     <p><b>Start delay</b> applies to toggle mode. Require a hold of 50 to 1,000 ms before scrolling engages. Default 200 ms. Turn it off to start on a plain click.</p>
-    <p><b>Speed</b> runs from 50% to 200% in 10% steps and applies to both axes. Outside the dead zone, speed scales with distance up to 120 px per tick. <b>Reverse direction</b> flips it for people who expect natural scrolling.</p>
-    <p>VectorScroll scrolls the window under the pointer, not the frontmost app. It raises that window first.</p>
+    <p><b>Speed</b> runs from 20% to 300% in 10% steps and applies to both axes. Outside the dead zone, speed grows a little faster than distance, so small movements stay precise and large ones move quickly, up to 120 px per tick. <b>Reverse vertical</b> and <b>Reverse horizontal</b> flip each axis on its own.</p>
+    <p>VectorScroll scrolls the window under the pointer, not the frontmost app. <b>Bring window to front</b> also activates that window's app when scrolling starts. Turn it off to scroll background windows without switching apps.</p>
+    <h2 id="buttons">Mouse buttons</h2>
+    <p><b>Back and forward buttons</b> make side buttons navigate in every app, including Safari, Finder, and Preview. Press <b>Set…</b> and then the side button you want for each direction. VectorScroll sends ⌘[ and ⌘] and keeps the button press from reaching the app, so browsers that already handle side buttons go back only once. Off by default.</p>
+    <h2 id="excluded">Excluded apps</h2>
+    <p>Middle-button scrolling and side buttons are off while the pointer is over an excluded app. Add Blender, Figma, or CAD tools here so they can still pan with the middle button.</p>
     <h2 id="indicator">Indicator</h2>
     <p>A circle with four arrows marks the point where you pressed. Choose light or dark, and 28, 32, 40, or 48 pt.</p>
     <h2 id="settings">Settings</h2>
     <img src="settings-hold.png" alt="Settings window in hold-to-scroll mode" width="620" height="677">
     <p>The window opens on launch by default and from the menu bar icon. Command-W or the window close button hides it, and scrolling keeps working. Every change saves immediately.</p>
-    <p><b>Open settings on launch</b> and <b>Show menu bar icon</b> control how you reach the app. One of them always stays on. <b>Launch at login</b> registers with the system login items. <b>Setup guide</b> at the top of the window reopens the permission walkthrough.</p>
+    <p><b>Open settings on launch</b> and <b>Show menu bar icon</b> control how you reach the app. One of them always stays on. <b>Launch at login</b> registers with the system login items. <b>Setup guide</b> at the top of the window reopens the permission walkthrough. <b>Restore Defaults</b> resets scrolling, indicator, and mouse button settings.</p>
     <p>If the menu bar icon is hidden, reopen the window from Applications or run:</p>
     <pre>open -a VectorScroll</pre>
     <h2 id="updates">Updates</h2>
     <p>The app checks GitHub on launch and every 24 hours. Background checks never show dialogs and need no account.</p>
-    <p><b>Check for Updates</b> then <b>Install Update</b> downloads the DMG, verifies its SHA-256 against the release digest, checks the bundle identifier, version, processor support, and exact signing identity against the installed app, then swaps the app in place. It keeps the update only if the relaunched app returns a one-time health token. Settings are kept. The previous version stays next to the app as <code>Previous.app</code> inside a hidden folder, and a failed swap restores it.</p>
+    <p><b>Check for Updates</b> then <b>Install Update</b> downloads the DMG, verifies its SHA-256 against the release digest, checks the bundle identifier, version, processor support, and exact signing identity against the installed app, then swaps the app in place. It keeps the update only if the relaunched app returns a one-time health token. Settings are kept. The previous version stays next to the app as <code>Previous.app</code> inside a hidden folder, and a failed swap restores it. After a successful update, older update folders move to the Trash.</p>
     <p>The app has to live in a writable folder, normally Applications. Running from the mounted DMG is refused with an explanation.</p>
     <h2 id="permissions">Permissions</h2>
     <p><b>Input Monitoring</b> lets the app see the middle button. Nothing you type is read. <b>Accessibility</b> lets it post generated scroll events and raise the window under the pointer. Both permissions are required.</p>
@@ -50,6 +54,7 @@
     <h2 id="trouble">Troubleshooting</h2>
     <p><b>Nothing happens on middle click.</b> Check Input Monitoring and Accessibility in Settings. Both must say Allowed. If they do and scrolling still does not start, quit and reopen the app. macOS sometimes needs a relaunch after a grant.</p>
     <p><b>The wrong window scrolls.</b> Accessibility is missing, so the app cannot raise the window under the pointer. Grant it in System Settings.</p>
+    <p><b>Middle-dragging stopped panning in Blender or Figma.</b> Add the app under Excluded apps.</p>
     <p><b>Middle click stopped opening links in new tabs.</b> You are in toggle mode with the start delay off. Turn the delay on, or switch to hold mode.</p>
     <p><b>Install Update is refused.</b> The app is running from the DMG or from a read-only folder. Move it to Applications.</p>
     <h2 id="build">Building from source</h2>
