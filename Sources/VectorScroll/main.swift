@@ -85,9 +85,18 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         }
         installEventTap()
         startPermissionStatusTimer()
+        for (center, name) in [
+            (NSWorkspace.shared.notificationCenter, NSWorkspace.willSleepNotification),
+            (NSWorkspace.shared.notificationCenter, NSWorkspace.sessionDidResignActiveNotification),
+            (DistributedNotificationCenter.default(), Notification.Name("com.apple.screenIsLocked"))
+        ] {
+            _ = center.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
+                MainActor.assumeIsolated { self?.stopScrolling() }
+            }
+        }
         checkForUpdates(manual: false)
         let updateTimer = DispatchSource.makeTimerSource(queue: .main)
-        updateTimer.schedule(deadline: .now() + .seconds(86400), repeating: .seconds(86400), leeway: .seconds(60))
+        updateTimer.schedule(wallDeadline: .now() + .seconds(86400), repeating: .seconds(86400), leeway: .seconds(60))
         updateTimer.setEventHandler { [weak self] in self?.checkForUpdates(manual: false) }
         self.updateTimer = updateTimer
         updateTimer.resume()
@@ -571,7 +580,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
     }
 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
-        if onboarding != nil { showOnboarding() } else if openSettingsOnLaunch { showSettings() }
+        if onboarding != nil { showOnboarding() } else { showSettings() }
         return true
     }
 
@@ -1061,7 +1070,7 @@ private final class ScrollOverlayWindow {
         window.hasShadow = false
         window.ignoresMouseEvents = true
         window.level = .statusBar
-        window.collectionBehavior = [.canJoinAllSpaces, .transient, .ignoresCycle]
+        window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .transient, .ignoresCycle]
     }
 
     func show(at point: CGPoint) {
