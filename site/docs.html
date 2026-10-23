@@ -25,7 +25,8 @@
     <p>Download the <a href="https://github.com/Sowyu/VectorScroll/releases/latest/download/VectorScroll.dmg">DMG</a>, drag VectorScroll into Applications, and open it. The setup guide asks for two permissions, one page each. Then press the middle button in any window and move the pointer.</p>
     <img src="onboarding.png" alt="Setup guide, Input Monitoring step" width="500" height="352">
     <h2 id="scrolling">Scrolling</h2>
-    <p><b>Hold to scroll</b> is the default. Hold the middle button, move, release to stop. VectorScroll holds the click until it knows what it was. If the pointer never left the 10 pt dead zone, the app gets a normal middle click, so a quick middle click still opens a link in a new tab. If you scrolled, the app never sees the click.</p>
+    <p><b>Hold to scroll</b> is the default. Hold the middle button, move, release to stop. The indicator appears as soon as you move, or after a 0.2 s hold. VectorScroll holds the click until it knows what it was. A quick click that never left the 10 pt dead zone reaches the app as a normal middle click, so it still opens a link in a new tab. If you scrolled or held, the app never sees the click.</p>
+    <p><b>Hold or click</b> works like autoscroll on Windows. Hold and drag to scroll until you let go, or click once to keep scrolling until the next click. In this mode a middle click always starts scrolling, so it never opens links.</p>
     <p><b>Toggle scrolling</b> keeps going after you let go. Any mouse button stops it, and that click is not passed on, so stopping never activates a link or button.</p>
     <p><b>Start delay</b> applies to toggle mode. Require a hold of 50 to 1,000 ms before scrolling engages. Default 200 ms. Turn it off to start on a plain click.</p>
     <p><b>Speed</b> runs from 20% to 300% in 10% steps and applies to both axes. Outside the dead zone, speed grows a little faster than distance, so small movements stay precise and large ones move quickly, up to 120 px per tick. <b>Reverse vertical</b> and <b>Reverse horizontal</b> flip each axis on its own.</p>
@@ -49,7 +50,7 @@
     <p><b>Input Monitoring</b> lets the app see the middle button. Nothing you type is read. <b>Accessibility</b> lets it post generated scroll events and raise the window under the pointer. Both permissions are required.</p>
     <p>Automatic updates require the exact signing identity of the installed app. A stable release certificate lets macOS keep both grants across those updates. Builds you compile yourself are signed ad hoc and need re-granting after each build.</p>
     <p>When releases move from the current self-signed certificate to Developer ID, install that first Developer ID release manually once. Automatic updates then resume under the new identity.</p>
-    <p>Status for both refreshes every second in Settings. A missing permission shows a button that opens the right System Settings pane.</p>
+    <p>Status for both refreshes every second in Settings. It says Ready to scroll only when VectorScroll is actually receiving the mouse. A missing permission shows a button that opens the right System Settings pane.</p>
     <h2 id="trouble">Troubleshooting</h2>
     <p><b>Nothing happens on middle click.</b> Check Input Monitoring and Accessibility in Settings. Both must say Allowed. If they do and scrolling still does not start, quit and reopen the app. macOS sometimes needs a relaunch after a grant.</p>
     <p><b>The wrong window scrolls.</b> Accessibility is missing, so the app cannot raise the window under the pointer. Grant it in System Settings.</p>

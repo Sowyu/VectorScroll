@@ -816,8 +816,17 @@ extension VectorScrollApp {
 
         assert(subject.handleEvent(type: .otherMouseDown, event: down) == nil)
         subject.engaged = true // Simulate leaving the dead zone, as in the hold-mode checks.
+        subject.leftDeadZone = true
         assert(subject.handleEvent(type: .otherMouseUp, event: up) == nil)
         assert(!subject.isActive && !subject.engaged && replays.isEmpty)
+        // A long press that showed the indicator but never left the dead zone still counts as a click.
+        assert(subject.handleEvent(type: .otherMouseDown, event: down) == nil)
+        subject.engaged = true
+        assert(subject.handleEvent(type: .otherMouseUp, event: up) == nil)
+        assert(subject.isActive && replays.isEmpty)
+        assert(subject.handleEvent(type: .leftMouseDown, event: leftDown) == nil)
+        assert(subject.handleEvent(type: .leftMouseUp, event: leftUp) == nil)
+        assert(!subject.isActive && subject.swallowedButtonUps.isEmpty)
         // A release outside the dead zone stops even if the timer has not engaged yet.
         assert(subject.handleEvent(type: .otherMouseDown, event: down) == nil)
         assert(subject.handleEvent(type: .otherMouseUp, event: mouse(.otherMouseUp, at: CGPoint(x: 200, y: 300))) == nil)
@@ -836,7 +845,14 @@ extension VectorScrollApp {
         assert(!subject.isActive && !subject.engaged && replays == [down.location])
         assert(subject.handleEvent(type: .leftMouseDown, event: leftDown)?.takeUnretainedValue() === leftDown)
         replays.removeAll()
-        print("PASS: hold mode releases to stop and never enters toggle-style scrolling")
+        // Holding still shows the indicator after 0.2 s, and that long press is not replayed as a click.
+        assert(subject.handleEvent(type: .otherMouseDown, event: down) == nil)
+        assert(!subject.engaged)
+        RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.35))
+        assert(subject.engaged, "Holding still for 0.2 s must show the indicator")
+        assert(subject.handleEvent(type: .otherMouseUp, event: up) == nil)
+        assert(!subject.isActive && replays.isEmpty, "A long press is not a click")
+        print("PASS: hold mode releases to stop, shows the indicator after a 0.2 s hold, and never enters toggle-style scrolling")
 
         subject.tapState = .listenOnly
         for mode in [ScrollMode.hold, .toggle, .both] {

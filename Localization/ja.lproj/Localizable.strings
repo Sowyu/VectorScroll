@@ -158,3 +158,7 @@
 "Waiting for Input Monitoring. This page moves on by itself once it is allowed." = "入力監視の許可を待っています。許可されると、このページは自動で次に進みます。";
 "Welcome to VectorScroll" = "VectorScrollへようこそ";
 "You're set" = "準備完了";
+"Hold or click" = "長押しまたはクリック";
+"Hold and drag, or click to keep scrolling" = "押したままドラッグ、またはクリックでスクロールを継続";
+"Ready to scroll. macOS didn't allow holding back clicks, so middle-clicks also reach apps." = "スクロールの準備完了。macOSがクリックの保留を許可しなかったため、中クリックはAppにも届きます。";
+"VectorScroll can't watch the mouse. Quit and reopen it. If that doesn't help, remove it from Accessibility and Input Monitoring in System Settings and add it again." = "VectorScrollがマウスを監視できません。終了してからもう一度開いてください。解決しない場合は、システム設定の「アクセシビリティ」と「入力監視」からVectorScrollを削除し、もう一度追加してください。";
