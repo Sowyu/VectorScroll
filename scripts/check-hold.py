@@ -78,6 +78,28 @@ extension VectorScrollApp {
         subject.stopScrolling()
         subject.eventTapInstalled = false
         print("PASS: speed slider rounding and scale, reverse direction persistence, deferred hold-mode engagement")
+        let scrolling = VectorScrollApp()
+        scrolling.scrollSpeedPercent = 50
+        let adjusted = CGPoint(x: 1, y: 1)
+        assert(scrolling.nextScrollDelta(for: adjusted) == nil)
+        var verticalTotal: Int32 = 0
+        var horizontalTotal: Int32 = 0
+        for _ in 1..<10 {
+            if let delta = scrolling.nextScrollDelta(for: adjusted) {
+                assert(abs(delta.vertical) <= 1 && abs(delta.horizontal) <= 1)
+                verticalTotal += delta.vertical
+                horizontalTotal += delta.horizontal
+            }
+        }
+        assert(verticalTotal > 0 && horizontalTotal < 0)
+        assert(scrolling.nextScrollDelta(for: .zero) == nil)
+        scrolling.scrollRemainder = .zero
+        let forward = scrolling.nextScrollDelta(for: CGPoint(x: 10, y: 20))!
+        scrolling.scrollRemainder = .zero
+        scrolling.reverseDirection = true
+        let reverse = scrolling.nextScrollDelta(for: CGPoint(x: 10, y: 20))!
+        assert(reverse.vertical == -forward.vertical && reverse.horizontal == -forward.horizontal)
+        print("PASS: sub-pixel scroll carry at 50% speed, zero-delta suppression, and both-axis reversal")
         for dark in [false, true] {
             if dark { subject.selectDarkMode() } else { subject.selectLightMode() }
             assert(subject.indicatorAppearance.selectedSegment == (dark ? 1 : 0))
