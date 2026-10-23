@@ -578,6 +578,8 @@ extension VectorScrollApp {
     static func checkRelease(delay: TimeInterval) -> Bool {
         let subject = VectorScrollApp()
         subject.holdToLockMode = true
+        var replays: [CGPoint] = []
+        subject.postClick = { replays.append($0) }
         let down = CGEvent(mouseEventSource: nil, mouseType: .otherMouseDown,
                            mouseCursorPosition: .zero, mouseButton: .center)!
         let up = CGEvent(mouseEventSource: nil, mouseType: .otherMouseUp,
@@ -585,33 +587,174 @@ extension VectorScrollApp {
         down.timestamp = 1_000_000_000
         up.timestamp = down.timestamp + 100_000_000 // Physical press lasts 100 ms.
         // Drive the real handler with event coordinates; no live tap is needed.
-        _ = subject.handleEvent(type: .otherMouseDown, event: down)
+        assert(subject.handleEvent(type: .otherMouseDown, event: down) == nil)
         assert(subject.engageWorkItem != nil)
         Thread.sleep(forTimeInterval: delay)
-        _ = subject.handleEvent(type: .otherMouseUp, event: up)
-        let canceled = subject.engageWorkItem == nil && !subject.isActive
+        assert(subject.handleEvent(type: .otherMouseUp, event: up) == nil)
+        let canceled = subject.engageWorkItem == nil && !subject.isActive && replays == [down.location]
         subject.cancelArmedHoldToLock()
         print("\(canceled ? "PASS" : "FAIL"): 100 ms click, release handled after \(Int(delay * 1000)) ms")
         return canceled
     }
 
+    static func checkClickFiltering() -> Bool {
+        func mouse(_ type: CGEventType, button: CGMouseButton = .center,
+                   at point: CGPoint = CGPoint(x: 123, y: 234)) -> CGEvent {
+            let event = CGEvent(mouseEventSource: nil, mouseType: type,
+                                mouseCursorPosition: point, mouseButton: button)!
+            event.setIntegerValueField(.mouseEventClickState, value: 1)
+            return event
+        }
+        let subject = VectorScrollApp()
+        subject.eventTapInstalled = true
+        var replays: [CGPoint] = []
+        subject.postClick = { replays.append($0) }
+        let down = mouse(.otherMouseDown)
+        let up = mouse(.otherMouseUp)
+        let drag = mouse(.otherMouseDragged)
+        assert(subject.handleEvent(type: .otherMouseDown, event: down) == nil)
+        assert(subject.isActive && !subject.engaged)
+        assert(subject.handleEvent(type: .otherMouseDragged, event: drag) == nil)
+        assert(subject.handleEvent(type: .otherMouseUp, event: up) == nil)
+        assert(!subject.isActive && subject.swallowedButtonUps.isEmpty && subject.heldMiddleClick == nil)
+        assert(replays == [down.location], "Plain clicks must replay at the original press point")
+        print("PASS: hold-mode down, drag, and up swallowed; plain click replayed once at the press point")
+
+        replays.removeAll()
+        assert(subject.handleEvent(type: .otherMouseDown, event: down) == nil)
+        let movedUp = mouse(.otherMouseUp, at: CGPoint(x: 456, y: 567))
+        assert(subject.handleEvent(type: .otherMouseUp, event: movedUp) == nil)
+        assert(replays == [down.location], "A replay must retain the press point even if release delivery moves")
+
+        replays.removeAll()
+        assert(subject.handleEvent(type: .otherMouseDown, event: down) == nil)
+        subject.engaged = true // Simulate the timer engaging after leaving the dead zone, without AX/UI work.
+        assert(subject.handleEvent(type: .otherMouseDragged, event: drag) == nil)
+        assert(subject.handleEvent(type: .otherMouseUp, event: up) == nil)
+        assert(!subject.isActive && replays.isEmpty)
+        assert(subject.handleEvent(type: .otherMouseUp, event: up)?.takeUnretainedValue() === up)
+        assert(subject.handleEvent(type: .otherMouseDragged, event: drag)?.takeUnretainedValue() === drag)
+        print("PASS: engaged hold-mode down and up swallowed without replay; unrelated up and drag pass through")
+
+        subject.holdToLockMode = true
+        assert(subject.handleEvent(type: .otherMouseDown, event: down) == nil)
+        assert(subject.engageWorkItem != nil && !subject.isActive)
+        assert(subject.handleEvent(type: .otherMouseUp, event: up) == nil)
+        assert(subject.engageWorkItem == nil && !subject.isActive && replays == [down.location])
+        print("PASS: toggle-with-delay early release swallowed and replayed")
+
+        replays.removeAll()
+        subject.middleButtonIsDown = { true }
+        assert(subject.handleEvent(type: .otherMouseDown, event: down) == nil)
+        subject.engageWorkItem!.perform() // Elapse the delay deterministically while the button is held.
+        assert(subject.isActive && subject.engageWorkItem == nil && !subject.engaged,
+               "Toggle engagement must be deferred out of the filtering callback")
+        assert(subject.handleEvent(type: .otherMouseUp, event: up) == nil)
+        assert(subject.isActive && replays.isEmpty)
+        subject.stopScrolling()
+        print("PASS: toggle-with-delay held press starts scrolling, swallows release, and never replays")
+
+        // A physical release can precede delivery of its event on a busy main queue.
+        subject.middleButtonIsDown = { false }
+        assert(subject.handleEvent(type: .otherMouseDown, event: down) == nil)
+        subject.engageWorkItem!.perform()
+        assert(!subject.isActive && subject.engageWorkItem == nil)
+        assert(subject.handleEvent(type: .otherMouseUp, event: up) == nil)
+        assert(replays == [down.location])
+        replays.removeAll()
+        print("PASS: delayed toggle timer cannot start scrolling after physical release")
+
+        subject.holdDelayEnabled = false
+        assert(subject.handleEvent(type: .otherMouseDown, event: down) == nil)
+        assert(subject.isActive && !subject.engaged && subject.engageWorkItem == nil)
+        assert(subject.handleEvent(type: .otherMouseUp, event: up) == nil)
+        assert(subject.isActive && replays.isEmpty)
+        subject.stopScrolling()
+        print("PASS: toggle without delay swallows its starting down and up, with engagement deferred")
+
+        let stopButtons: [(CGEventType, CGEventType, CGMouseButton)] = [
+            (.leftMouseDown, .leftMouseUp, .left),
+            (.rightMouseDown, .rightMouseUp, .right),
+            (.otherMouseDown, .otherMouseUp, .center),
+            (.otherMouseDown, .otherMouseUp, CGMouseButton(rawValue: 3)!)
+        ]
+        for (downType, upType, button) in stopButtons {
+            assert(subject.handleEvent(type: .otherMouseDown, event: down) == nil)
+            assert(subject.handleEvent(type: .otherMouseUp, event: up) == nil)
+            assert(subject.isActive)
+            assert(subject.handleEvent(type: downType, event: mouse(downType, button: button)) == nil)
+            assert(!subject.isActive)
+            let unrelatedUp = mouse(.otherMouseUp, button: CGMouseButton(rawValue: 4)!)
+            assert(subject.handleEvent(type: .otherMouseUp, event: unrelatedUp)?.takeUnretainedValue() === unrelatedUp)
+            assert(subject.handleEvent(type: upType, event: mouse(upType, button: button)) == nil)
+            assert(subject.swallowedButtonUps.isEmpty && replays.isEmpty)
+        }
+        // Stopping with a second button before releasing the start button must swallow both releases.
+        assert(subject.handleEvent(type: .otherMouseDown, event: down) == nil)
+        assert(subject.handleEvent(type: .leftMouseDown, event: mouse(.leftMouseDown, button: .left)) == nil)
+        assert(subject.handleEvent(type: .otherMouseUp, event: up) == nil)
+        assert(subject.handleEvent(type: .leftMouseUp, event: mouse(.leftMouseUp, button: .left)) == nil)
+        assert(subject.swallowedButtonUps.isEmpty && replays.isEmpty)
+        print("PASS: left, right, middle, and extra-button stop clicks and matching ups swallowed")
+
+        assert(subject.handleEvent(type: .otherMouseDown, event: down) == nil)
+        for type in [CGEventType.otherMouseDown, .otherMouseDragged, .otherMouseUp, .leftMouseDown, .leftMouseUp] {
+            let marked = mouse(type)
+            marked.setIntegerValueField(.eventSourceUserData, value: replayEventMarker)
+            assert(subject.handleEvent(type: type, event: marked)?.takeUnretainedValue() === marked)
+            assert(subject.isActive && subject.heldMiddleClick == down.location && subject.swallowedButtonUps == [2])
+        }
+        assert(subject.handleEvent(type: .otherMouseUp, event: up) == nil)
+        subject.stopScrolling()
+        assert(replays.isEmpty)
+        print("PASS: marked replay events pass through unchanged without altering click or scroll state")
+
+        subject.holdToLockMode = false
+        assert(subject.handleEvent(type: .otherMouseDown, event: down) == nil)
+        subject.stopScrolling() // Settings changes or sleep discard replay eligibility but still pair the up.
+        assert(subject.handleEvent(type: .otherMouseUp, event: up) == nil)
+        assert(replays.isEmpty)
+        let extraDown = mouse(.otherMouseDown, button: CGMouseButton(rawValue: 3)!)
+        assert(subject.handleEvent(type: .otherMouseDown, event: extraDown)?.takeUnretainedValue() === extraDown)
+        print("PASS: external scrolling cancellation discards replay; unused mouse buttons pass through")
+        return true
+    }
+
     static func checkEventRecovery() -> Bool {
         let subject = VectorScrollApp()
         subject.eventTapInstalled = true
+        var replays: [CGPoint] = []
+        subject.postClick = { replays.append($0) }
         let down = CGEvent(mouseEventSource: nil, mouseType: .otherMouseDown,
                            mouseCursorPosition: CGPoint(x: 123, y: 234), mouseButton: .center)!
-        _ = subject.handleEvent(type: .otherMouseDown, event: down)
+        assert(subject.handleEvent(type: .otherMouseDown, event: down) == nil)
         assert(subject.isActive && subject.timer != nil)
         assert(subject.anchor == down.unflippedLocation, "Anchor must come from the press event")
         assert(subject.pendingTarget == down.location, "AX targeting must retain CoreGraphics coordinates")
         _ = subject.handleEvent(type: .tapDisabledByTimeout, event: down)
         assert(!subject.isActive && subject.timer == nil && subject.anchor == nil && subject.pendingTarget == nil)
+        assert(subject.heldMiddleClick == nil && subject.swallowedButtonUps.isEmpty && replays.isEmpty)
+        let up = CGEvent(mouseEventSource: nil, mouseType: .otherMouseUp,
+                         mouseCursorPosition: down.location, mouseButton: .center)!
+        assert(subject.handleEvent(type: .otherMouseUp, event: up)?.takeUnretainedValue() === up)
         subject.holdToLockMode = true
-        _ = subject.handleEvent(type: .otherMouseDown, event: down)
+        assert(subject.handleEvent(type: .otherMouseDown, event: down) == nil)
         assert(subject.engageWorkItem != nil)
         _ = subject.handleEvent(type: .tapDisabledByUserInput, event: down)
         assert(subject.engageWorkItem == nil && !subject.isActive)
+        assert(subject.heldMiddleClick == nil && subject.swallowedButtonUps.isEmpty && replays.isEmpty)
+        assert(subject.handleEvent(type: .otherMouseUp, event: up)?.takeUnretainedValue() === up)
+        subject.holdDelayEnabled = false
+        assert(subject.handleEvent(type: .otherMouseDown, event: down) == nil)
+        assert(subject.handleEvent(type: .otherMouseUp, event: up) == nil)
+        let left = CGEvent(mouseEventSource: nil, mouseType: .leftMouseDown,
+                           mouseCursorPosition: down.location, mouseButton: .left)!
+        assert(subject.handleEvent(type: .leftMouseDown, event: left) == nil)
+        assert(subject.swallowedButtonUps == [0])
+        _ = subject.handleEvent(type: .tapDisabledByTimeout, event: down)
+        assert(subject.swallowedButtonUps.isEmpty && replays.isEmpty)
         print("PASS: press-event anchoring and disabled-tap cancellation of scrolling and delayed holds")
+        print("PASS: tap-disabled events clear held clicks and stop-button releases without replay")
         return true
     }
 }
@@ -646,10 +789,11 @@ final class AuditAppDelegate: NSObject, NSApplicationDelegate {
         NSApp.activate()
         let promptRelease = VectorScrollApp.checkRelease(delay: 0.1)
         let delayedRelease = VectorScrollApp.checkRelease(delay: 0.3)
+        let filtering = VectorScrollApp.checkClickFiltering()
         let recovery = VectorScrollApp.checkEventRecovery()
         VectorScrollApp.checkScrollingSettings()
         let settings = VectorScrollApp.checkDelaySettings()
-        let passed = promptRelease && delayedRelease && recovery && settings
+        let passed = promptRelease && delayedRelease && filtering && recovery && settings
         if passed {
             try! "PASS".write(toFile: CommandLine.arguments[2], atomically: true, encoding: .utf8)
         }
@@ -708,7 +852,8 @@ def capture_windows():
 capture_thread = threading.Thread(target=capture_windows, daemon=True)
 capture_thread.start()
 try:
-    subprocess.run(["open", "-n", "-W", "--stdout", str(stdout), "--stderr", str(stderr),
+    # A failed assertion must not leave the next probe behind a restore-windows dialog.
+    subprocess.run(["open", "-n", "-F", "-W", "--stdout", str(stdout), "--stderr", str(stderr),
                     str(bundle), "--args", str(root), str(result), str(captures)], check=True, timeout=60, cwd=root)
 finally:
     stop_capture.set()
