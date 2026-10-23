@@ -59,8 +59,9 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
     private var swallowedButtonUps: Set<Int64> = []
     private var excludedMiddleClick = false
     private var scrollingGeneration: UInt64 = 0
+    // Ask the hardware state. Once the tap swallows the press, the session state reports it released.
     private var middleButtonIsDown: () -> Bool = {
-        CGEventSource.buttonState(.combinedSessionState, button: .center)
+        CGEventSource.buttonState(.hidSystemState, button: .center)
     }
     private static let replayEventMarker: Int64 = 0x56534352434C494B
     private var postClick: (CGPoint) -> Void = { (point: CGPoint) -> Void in
