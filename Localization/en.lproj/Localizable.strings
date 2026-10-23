@@ -158,3 +158,7 @@
 "Waiting for Input Monitoring. This page moves on by itself once it is allowed." = "Waiting for Input Monitoring. This page moves on by itself once it is allowed.";
 "Welcome to VectorScroll" = "Welcome to VectorScroll";
 "You're set" = "You're set";
+"Hold or click" = "Hold or click";
+"Hold and drag, or click to keep scrolling" = "Hold and drag, or click to keep scrolling";
+"Ready to scroll. macOS didn't allow holding back clicks, so middle-clicks also reach apps." = "Ready to scroll. macOS didn't allow holding back clicks, so middle-clicks also reach apps.";
+"VectorScroll can't watch the mouse. Quit and reopen it. If that doesn't help, remove it from Accessibility and Input Monitoring in System Settings and add it again." = "VectorScroll can't watch the mouse. Quit and reopen it. If that doesn't help, remove it from Accessibility and Input Monitoring in System Settings and add it again.";

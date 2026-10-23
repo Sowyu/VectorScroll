@@ -117,7 +117,7 @@ extension VectorScrollApp {
         for key in Self.restorableDefaultsKeys { subject.defaults.set(999, forKey: key) }
         subject.setAccessPreferences(showMenuBar: false, openSettings: true)
         subject.defaults.set(true, forKey: "onboardingCompleted")
-        subject.eventTapInstalled = true
+        subject.tapState = .filtering
         subject.startScrolling(at: .zero, target: .zero)
         assert(subject.isActive)
         assert(subject.restoreDefaultsButton.action == #selector(restoreDefaults))
@@ -127,7 +127,7 @@ extension VectorScrollApp {
         assert(!subject.holdToLockMode && subject.holdDelayEnabled && subject.holdDelayMilliseconds == 200)
         assert(subject.scrollSpeedPercent == 100 && !subject.reverseVertical && !subject.reverseHorizontal && subject.raiseWindowOnScroll)
         assert(!subject.overlay.isDarkMode && subject.overlay.size == 32)
-        assert(subject.holdScrollItem.state == .on && subject.holdToLockItem.state == .off && subject.delayItem.isHidden)
+        assert(subject.holdScrollItem.state == .on && subject.holdToLockItem.state == .off && subject.holdOrClickItem.state == .off && subject.delayItem.isHidden)
         assert(subject.delayToggle.state == .on && subject.delaySlider.isEnabled && subject.delaySlider.doubleValue == 200)
         assert(subject.delayLabel.stringValue == "200 ms" && subject.speedLabel.stringValue == "100%" && subject.speedSlider.doubleValue == 100)
         assert(subject.reverseVerticalItem.state == .off && subject.reverseHorizontalItem.state == .off && subject.raiseWindowItem.state == .on)
@@ -164,6 +164,7 @@ extension VectorScrollApp {
         assert(subject.menu.items.first?.action == #selector(showSettings))
         assert(subject.holdScrollItem.action == #selector(selectHoldToScroll))
         assert(subject.holdToLockItem.action == #selector(selectHoldToLock))
+        assert(subject.holdOrClickItem.action == #selector(selectBoth))
         assert(subject.sizePicker.numberOfItems == 4)
         print("PASS: minimal menu and native settings controls")
         assert(subject.updateItem.action == #selector(checkUpdatesFromMenu))
@@ -202,11 +203,11 @@ extension VectorScrollApp {
         let speedRestored = VectorScrollApp()
         speedRestored.restoreSettings()
         assert(speedRestored.scrollSpeedPercent == 80 && speedRestored.reverseVertical && !speedRestored.reverseHorizontal)
-        subject.eventTapInstalled = true
+        subject.tapState = .filtering
         subject.startScrolling(at: .zero, target: .zero) // Hold mode: no indicator until the pointer leaves the dead zone.
         assert(subject.isActive && !subject.engaged)
         subject.stopScrolling()
-        subject.eventTapInstalled = false
+        subject.tapState = .none
         print("PASS: speed slider rounding and scale, vertical reversal persistence, deferred hold-mode engagement")
         let scrolling = VectorScrollApp()
         scrolling.scrollSpeedPercent = 50
@@ -316,7 +317,7 @@ extension VectorScrollApp {
         assert(!subject.delaySlider.isEnabled)
         assert(subject.holdToLockItem.accessibilityHelp() == "Click to start, click to stop")
         assert(subject.holdToLockItem.title == "Toggle scrolling")
-        subject.eventTapInstalled = true
+        subject.tapState = .filtering
         subject.armHoldToLock(at: .zero, target: .zero)
         assert(subject.isActive && subject.engageWorkItem == nil)
         subject.stopScrolling() // Cancel before the main queue can post any input.
@@ -384,7 +385,7 @@ extension VectorScrollApp {
             #endif
             assert(window.isOpaque && window.backgroundColor.alphaComponent == 1, "Window backgrounds must be solid")
             for button in views.compactMap({ $0 as? NSButton }) where button.isBordered && !(button is NSPopUpButton) {
-                if button === subject.holdScrollItem || button === subject.holdToLockItem { continue }
+                if button === subject.holdScrollItem || button === subject.holdToLockItem || button === subject.holdOrClickItem { continue }
                 assert(button.bezelStyle == .push && button.image == nil, "Action buttons must use plain push bezels")
             }
             for control in views.compactMap({ $0 as? NSSwitch }) {
@@ -439,7 +440,9 @@ extension VectorScrollApp {
                 subject.applyPermissionStatus(canListen: canListen, canAccess: canAccess)
                 assert(subject.permissionItem.isHidden == (canListen && canAccess))
                 if canListen && canAccess {
-                    assert(subject.permissionStatusLabel.stringValue == "Ready to scroll")
+                    assert(subject.permissionStatusLabel.stringValue == Self.permissionStatusText(
+                        canListen: true, canAccess: true, tapState: subject.tapState,
+                        tapEnabled: subject.eventTap.map { (tap: CFMachPort) -> Bool in CGEvent.tapIsEnabled(tap: tap) } ?? false))
                 } else {
                     if !canListen { assert(subject.permissionStatusLabel.stringValue.contains("Input Monitoring")) }
                     if !canAccess { assert(subject.permissionStatusLabel.stringValue.contains("Accessibility")) }
@@ -508,7 +511,7 @@ extension VectorScrollApp {
             assert((try? String(contentsOf: completion, encoding: .utf8)) == "0", "The runner must deliver a real pointer click")
         }
         // Native radio buttons track their glyph and title, tested at their real frames.
-        for button in [subject.holdScrollItem!, subject.holdToLockItem!] {
+        for button in [subject.holdScrollItem!, subject.holdToLockItem!, subject.holdOrClickItem!] {
             content.layoutSubtreeIfNeeded()
             button.scrollToVisible(button.bounds)
             content.layoutSubtreeIfNeeded()
@@ -531,6 +534,13 @@ extension VectorScrollApp {
         assert(!subject.holdToLockMode && subject.holdScrollItem.state == .on)
         mouseClick(subject.holdToLockItem, at: NSPoint(x: 60, y: subject.holdToLockItem.bounds.midY))
         assert(subject.holdToLockMode && subject.holdToLockItem.state == .on)
+        mouseClick(subject.holdOrClickItem, at: NSPoint(x: 60, y: subject.holdOrClickItem.bounds.midY))
+        assert(subject.scrollMode == .both && subject.holdOrClickItem.state == .on && subject.delayItem.isHidden)
+        assert(subject.holdScrollItem.state == .off && subject.holdToLockItem.state == .off)
+        let bothRestored = VectorScrollApp()
+        bothRestored.restoreSettings()
+        assert(bothRestored.scrollMode == .both)
+        subject.selectHoldToLock()
         let probe = PointerActionProbe()
         // Synthetic drag-out events hang even an unmodified NSButton in this
         // runner. Clicks use the real window routing; native drag tracking is unchanged.
@@ -592,6 +602,7 @@ extension VectorScrollApp {
     static func checkRelease(delay: TimeInterval) -> Bool {
         let subject = VectorScrollApp()
         subject.holdToLockMode = true
+        subject.tapState = .filtering
         var replays: [CGPoint] = []
         subject.postClick = { replays.append($0) }
         let down = CGEvent(mouseEventSource: nil, mouseType: .otherMouseDown,
@@ -620,7 +631,7 @@ extension VectorScrollApp {
             return event
         }
         let subject = VectorScrollApp()
-        subject.eventTapInstalled = true
+        subject.tapState = .filtering
         var replays: [CGPoint] = []
         subject.postClick = { replays.append($0) }
         let down = mouse(.otherMouseDown)
@@ -748,9 +759,140 @@ extension VectorScrollApp {
         return true
     }
 
+    static func checkScrollModesAndTapStatus() -> Bool {
+        let subject = VectorScrollApp()
+        let keys = ["scrollMode", "holdToLockMode"]
+        let saved = Dictionary(uniqueKeysWithValues: keys.map { (key: String) -> (String, Any?) in
+            (key, subject.defaults.object(forKey: key))
+        })
+        defer { for key in keys { subject.defaults.set(saved[key]!, forKey: key) } }
+        for legacy in [false, true] {
+            subject.defaults.removeObject(forKey: "scrollMode")
+            subject.defaults.set(legacy, forKey: "holdToLockMode")
+            subject.restoreSettings()
+            assert(subject.scrollMode == (legacy ? .toggle : .hold))
+            assert(subject.defaults.string(forKey: "scrollMode") == (legacy ? "toggle" : "hold"))
+        }
+        subject.defaults.removeObject(forKey: "scrollMode")
+        subject.defaults.removeObject(forKey: "holdToLockMode")
+        subject.restoreSettings()
+        assert(subject.scrollMode == .hold)
+        for mode in [ScrollMode.hold, .toggle, .both] {
+            subject.defaults.set(mode.rawValue, forKey: "scrollMode")
+            subject.defaults.set(mode != .toggle, forKey: "holdToLockMode")
+            subject.restoreSettings()
+            assert(subject.scrollMode == mode, "New mode must override the legacy value")
+        }
+        subject.holdToLockMode = true
+        assert(subject.scrollMode == .toggle)
+        subject.holdToLockMode = false
+        assert(subject.scrollMode == .hold)
+        print("PASS: scroll-mode migration, default hold, persisted-mode precedence, and compatibility property")
+
+        func mouse(_ type: CGEventType, button: CGMouseButton = .center,
+                   at point: CGPoint = CGPoint(x: 123, y: 234)) -> CGEvent {
+            CGEvent(mouseEventSource: nil, mouseType: type, mouseCursorPosition: point, mouseButton: button)!
+        }
+        subject.tapState = .filtering
+        subject.raiseWindowOnScroll = false
+        subject.scrollMode = .both
+        subject.holdDelayEnabled = true
+        subject.holdDelayMilliseconds = 1000
+        var replays: [CGPoint] = []
+        subject.postClick = { (point: CGPoint) -> Void in replays.append(point) }
+        let down = mouse(.otherMouseDown)
+        let up = mouse(.otherMouseUp)
+        let leftDown = mouse(.leftMouseDown, button: .left)
+        let leftUp = mouse(.leftMouseUp, button: .left)
+        assert(subject.handleEvent(type: .otherMouseDown, event: down) == nil)
+        assert(subject.isActive && !subject.engaged && subject.engageWorkItem == nil)
+        assert(subject.handleEvent(type: .otherMouseUp, event: up) == nil)
+        assert(subject.isActive && subject.engaged && subject.heldMiddleClick == nil && replays.isEmpty)
+        assert(subject.handleEvent(type: .leftMouseDown, event: leftDown) == nil)
+        assert(!subject.isActive && subject.swallowedButtonUps == [0])
+        assert(subject.handleEvent(type: .leftMouseUp, event: leftUp) == nil)
+        assert(subject.swallowedButtonUps.isEmpty && replays.isEmpty)
+        print("PASS: both-mode click ignores toggle delay, engages, never replays, and swallows the next left down/up")
+
+        assert(subject.handleEvent(type: .otherMouseDown, event: down) == nil)
+        subject.engaged = true // Simulate leaving the dead zone, as in the hold-mode checks.
+        assert(subject.handleEvent(type: .otherMouseUp, event: up) == nil)
+        assert(!subject.isActive && !subject.engaged && replays.isEmpty)
+        // A release outside the dead zone stops even if the timer has not engaged yet.
+        assert(subject.handleEvent(type: .otherMouseDown, event: down) == nil)
+        assert(subject.handleEvent(type: .otherMouseUp, event: mouse(.otherMouseUp, at: CGPoint(x: 200, y: 300))) == nil)
+        assert(!subject.isActive && replays.isEmpty)
+        // Observe a brief drag out and back between timer ticks.
+        assert(subject.handleEvent(type: .otherMouseDown, event: down) == nil)
+        assert(subject.handleEvent(type: .otherMouseDragged, event: mouse(.otherMouseDragged, at: CGPoint(x: 200, y: 300))) == nil)
+        assert(subject.engaged)
+        assert(subject.handleEvent(type: .otherMouseUp, event: up) == nil)
+        assert(!subject.isActive && replays.isEmpty)
+        print("PASS: both-mode engaged hold, moved release, and drag out/back stop without replay")
+
+        subject.scrollMode = .hold
+        assert(subject.handleEvent(type: .otherMouseDown, event: down) == nil)
+        assert(subject.handleEvent(type: .otherMouseUp, event: up) == nil)
+        assert(!subject.isActive && !subject.engaged && replays == [down.location])
+        assert(subject.handleEvent(type: .leftMouseDown, event: leftDown)?.takeUnretainedValue() === leftDown)
+        replays.removeAll()
+        print("PASS: hold mode releases to stop and never enters toggle-style scrolling")
+
+        subject.tapState = .listenOnly
+        for mode in [ScrollMode.hold, .toggle, .both] {
+            subject.scrollMode = mode
+            subject.holdDelayEnabled = mode == .toggle
+            assert(subject.handleEvent(type: .otherMouseDown, event: down)?.takeUnretainedValue() === down)
+            assert(subject.handleEvent(type: .otherMouseUp, event: up)?.takeUnretainedValue() === up)
+            assert(replays.isEmpty && subject.swallowedButtonUps.isEmpty)
+            assert(subject.isActive == (mode == .both))
+            if subject.isActive {
+                assert(subject.handleEvent(type: .leftMouseDown, event: leftDown)?.takeUnretainedValue() === leftDown)
+                assert(subject.handleEvent(type: .leftMouseUp, event: leftUp)?.takeUnretainedValue() === leftUp)
+                assert(!subject.isActive && subject.swallowedButtonUps.isEmpty)
+            }
+        }
+        subject.scrollMode = .hold
+        _ = subject.handleEvent(type: .otherMouseDown, event: down)
+        subject.engaged = true
+        _ = subject.handleEvent(type: .otherMouseUp, event: up)
+        assert(!subject.isActive && replays.isEmpty)
+        print("PASS: listen-only never replays or swallows clicks in any mode, and hold release still stops")
+
+        let failure = "VectorScroll can't watch the mouse. Quit and reopen it. If that doesn't help, remove it from Accessibility and Input Monitoring in System Settings and add it again."
+        for state in [TapState.none, .filtering, .listenOnly] {
+            let expected = state == .none ? failure : state == .filtering ? "Ready to scroll"
+                : "Ready to scroll. macOS didn't allow holding back clicks, so middle-clicks also reach apps."
+            assert(Self.permissionStatusText(canListen: true, canAccess: true, tapState: state, tapEnabled: true) == expected)
+            assert(Self.permissionStatusText(canListen: true, canAccess: true, tapState: state, tapEnabled: false) == failure)
+            assert(Self.permissionStatusText(canListen: false, canAccess: false, tapState: state, tapEnabled: true)
+                   == "Input Monitoring and Accessibility are required")
+            assert(Self.permissionStatusText(canListen: false, canAccess: true, tapState: state, tapEnabled: true)
+                   == "Input Monitoring is required")
+            assert(Self.permissionStatusText(canListen: true, canAccess: false, tapState: state, tapEnabled: true)
+                   == "Accessibility is required")
+        }
+        print("PASS: status text for all tap states, disabled taps, and unchanged missing-permission messages")
+
+        subject.tapState = .filtering
+        subject.scrollMode = .both
+        for revoke in [false, true] {
+            _ = subject.handleEvent(type: .otherMouseDown, event: down)
+            _ = subject.handleEvent(type: .otherMouseUp, event: up)
+            assert(subject.isActive && subject.engaged)
+            if revoke { subject.tearDownEventTap() }
+            else { _ = subject.handleEvent(type: .tapDisabledByTimeout, event: down) }
+            assert(!subject.isActive && !subject.engaged && subject.heldMiddleClick == nil)
+            assert(subject.swallowedButtonUps.isEmpty && replays.isEmpty)
+        }
+        assert(subject.tapState == .none)
+        print("PASS: disabled-tap and permission teardown clear both-mode latch and click state")
+        return true
+    }
+
     static func checkEventRecovery() -> Bool {
         let subject = VectorScrollApp()
-        subject.eventTapInstalled = true
+        subject.tapState = .filtering
         var replays: [CGPoint] = []
         subject.postClick = { replays.append($0) }
         let down = CGEvent(mouseEventSource: nil, mouseType: .otherMouseDown,
@@ -819,9 +961,10 @@ final class AuditAppDelegate: NSObject, NSApplicationDelegate {
         let delayedRelease = VectorScrollApp.checkRelease(delay: 0.3)
         let filtering = VectorScrollApp.checkClickFiltering()
         let recovery = VectorScrollApp.checkEventRecovery()
+        let modes = VectorScrollApp.checkScrollModesAndTapStatus()
         VectorScrollApp.checkScrollingSettings()
         let settings = VectorScrollApp.checkDelaySettings()
-        let passed = promptRelease && delayedRelease && filtering && recovery && settings
+        let passed = promptRelease && delayedRelease && filtering && recovery && modes && settings
         if passed {
             try! "PASS".write(toFile: CommandLine.arguments[2], atomically: true, encoding: .utf8)
         }
