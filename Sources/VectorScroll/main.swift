@@ -6,6 +6,7 @@
 private final class VectorScrollApp: NSObject, NSApplicationDelegate {
     private let markerSizes = [28, 32, 40, 48]
     private let defaults = UserDefaults.standard
+    private let sideButtons = SideButtons()
     private var updateItem: NSButton!
     private var downloadItem: NSButton!
     private var updateStatusLabel: NSTextField!
@@ -102,6 +103,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         self.updateTimer = updateTimer
         updateTimer.resume()
         _ = try? UpdateInstaller.acknowledgeLaunch()
+        sideButtons.refresh()
     }
 
     private func configureMenu() {
@@ -313,6 +315,11 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         let sizeAndPreview = row(sizePicker, previewBox)
         let sizeRow = settingsRow("Size", control: sizeAndPreview, detail: "Actual-size preview")
         fullWidth(group(appearanceRow, sizeRow))
+
+        fullWidth(sectionHeading("Mouse buttons", "computermouse.fill"))
+        fullWidth(sideButtons.makeSettingsSection())
+        fullWidth(sectionHeading("Excluded apps", "nosign"))
+        fullWidth(ExcludedApps.makeSettingsSection())
 
         fullWidth(sectionHeading("App", "slider.horizontal.3"))
         openSettingsButton = toggle("Open settings on launch", #selector(toggleOpenSettings))
@@ -860,6 +867,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         timer.setEventHandler { [weak self] in
             self?.installEventTap()
             self?.updateLaunchAtStartupItem()
+            self?.sideButtons.refresh()
         }
         permissionStatusTimer = timer
         timer.resume()
