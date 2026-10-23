@@ -45,6 +45,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
     private var scrollSpeedPercent = 100
     private var scrollScale: CGFloat { baseScrollScale * CGFloat(scrollSpeedPercent) / 100 }
     private var reverseDirection = false
+    private var scrollRemainder = CGPoint.zero
     private var engaged = false
     private var pendingTarget: CGPoint?
     private let deadZone: CGFloat = 10
@@ -924,6 +925,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
 
     private func startScrolling(at point: CGPoint, target: CGPoint) {
         guard eventTapInstalled else { return }
+        scrollRemainder = .zero
         anchor = point
         isActive = true
         // Hold mode engages once the pointer leaves the dead zone, so a plain
@@ -945,6 +947,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
 
     private func stopScrolling() {
         cancelArmedHoldToLock()
+        scrollRemainder = .zero
         guard isActive else { return }
         timer?.cancel()
         timer = nil
@@ -976,23 +979,32 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
 
         guard adjusted.x != 0 || adjusted.y != 0 else { return }
         engage()
-
-        let direction: CGFloat = reverseDirection ? -1 : 1
-        let vertical = clamp(adjusted.y * scrollScale * direction)
-        let horizontal = clamp(-adjusted.x * scrollScale * direction)
+        guard let delta = nextScrollDelta(for: adjusted) else { return }
 
         guard let scrollEvent = CGEvent(
             scrollWheelEvent2Source: nil,
             units: .pixel,
             wheelCount: 2,
-            wheel1: Int32(vertical.rounded()),
-            wheel2: Int32(horizontal.rounded()),
+            wheel1: delta.vertical,
+            wheel2: delta.horizontal,
             wheel3: 0
         ) else {
             return
         }
 
         scrollEvent.post(tap: .cgSessionEventTap)
+    }
+
+    private func nextScrollDelta(for adjusted: CGPoint) -> (vertical: Int32, horizontal: Int32)? {
+        guard adjusted.x != 0 || adjusted.y != 0 else { return nil }
+        let direction: CGFloat = reverseDirection ? -1 : 1
+        scrollRemainder.y += clamp(adjusted.y * scrollScale * direction)
+        scrollRemainder.x += clamp(-adjusted.x * scrollScale * direction)
+        let vertical = Int32(scrollRemainder.y.rounded())
+        let horizontal = Int32(scrollRemainder.x.rounded())
+        scrollRemainder.y -= CGFloat(vertical)
+        scrollRemainder.x -= CGFloat(horizontal)
+        return vertical == 0 && horizontal == 0 ? nil : (vertical, horizontal)
     }
 
     private func applyDeadZone(_ value: CGFloat) -> CGFloat {
@@ -1008,6 +1020,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
 
     private func element(at point: CGPoint) -> AXUIElement? {
         let system = AXUIElementCreateSystemWide()
+        AXUIElementSetMessagingTimeout(system, 0.25)
         var element: AXUIElement?
         let error = AXUIElementCopyElementAtPosition(system, Float(point.x), Float(point.y), &element)
         return error == .success ? element : nil
