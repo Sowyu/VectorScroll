@@ -7,7 +7,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
     private static let restorableDefaultsKeys: [String] = [
         "holdToLockMode", "holdDelayEnabled", "holdDelayMilliseconds", "scrollSpeedPercent",
         "reverseVertical", "reverseHorizontal", "reverseDirection", "raiseWindowOnScroll",
-        "darkMode", "markerSize"
+        "darkMode", "markerSize", "sideButtonsEnabled", "backButton", "forwardButton"
     ]
     private let markerSizes = [28, 32, 40, 48]
     private let defaults = UserDefaults.standard
@@ -358,7 +358,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
             settingsRow("Launch at login", control: launchAtStartupItem),
             launchAtStartupStatusLabel,
             row(permissionStatusLabel, permissionSpacer, permissionItem),
-            restoreDefaultsButton
+            row(NSView(), restoreDefaultsButton)
         )
         fullWidth(appGroup)
 
@@ -457,6 +457,9 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         updateSpeedControls()
         updateMarkerMenuItem()
         updateSizeMenuItems()
+        sideButtons.cancelCapture()
+        sideButtons.refresh()
+        sideButtons.updateLabels()
     }
 
     @objc private func changeScrollSpeed(_ sender: NSSlider) {

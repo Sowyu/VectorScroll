@@ -361,7 +361,7 @@ enum UpdateInstaller {
         for entry in entries {
             guard entry.lastPathComponent.hasPrefix(prefix),
                   UUID(uuidString: String(entry.lastPathComponent.dropFirst(prefix.count))) != nil,
-                  entry.standardizedFileURL != current.standardizedFileURL else { continue }
+                  entry.lastPathComponent != current.standardizedFileURL.lastPathComponent else { continue }
             do {
                 let values = try entry.resourceValues(forKeys: keys)
                 guard values.isDirectory == true, values.isSymbolicLink == false,
