@@ -96,10 +96,10 @@ enum SettingsStyle {
         content.translatesAutoresizingMaskIntoConstraints = false
         container.addSubview(content)
         NSLayoutConstraint.activate([
-            content.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 14),
-            content.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -14),
-            content.topAnchor.constraint(equalTo: container.topAnchor, constant: 12),
-            content.bottomAnchor.constraint(equalTo: container.bottomAnchor, constant: -12)
+            content.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 16),
+            content.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -16),
+            content.topAnchor.constraint(equalTo: container.topAnchor, constant: 14),
+            content.bottomAnchor.constraint(equalTo: container.bottomAnchor, constant: -14)
         ])
         return container
     }

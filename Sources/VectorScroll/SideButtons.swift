@@ -207,7 +207,7 @@ enum MouseSettingsStyle {
         let content = NSStackView(views: views)
         content.orientation = .vertical
         content.alignment = .leading
-        content.spacing = 12
+        content.spacing = 16
         for view in views { view.widthAnchor.constraint(equalTo: content.widthAnchor).isActive = true }
         return SettingsStyle.groupContainer(for: content)
     }

@@ -138,14 +138,14 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
     }
 
     private func configureSettingsWindow() {
-        settingsWindow = SettingsWindow(contentRect: NSRect(x: 0, y: 0, width: 620, height: 720),
+        settingsWindow = SettingsWindow(contentRect: NSRect(x: 0, y: 0, width: 620, height: 820),
                                   styleMask: [.titled, .closable, .miniaturizable, .resizable], backing: .buffered, defer: false)
         settingsWindow.title = "VectorScroll Settings"
         SettingsStyle.prepareWindow(settingsWindow)
         settingsWindow.isReleasedWhenClosed = false
         settingsWindow.minSize = NSSize(width: 520, height: 500)
-        if !settingsWindow.setFrameUsingName("VectorScrollSettingsV4") { settingsWindow.center() }
-        settingsWindow.setFrameAutosaveName("VectorScrollSettingsV4")
+        if !settingsWindow.setFrameUsingName("VectorScrollSettingsV5") { settingsWindow.center() }
+        settingsWindow.setFrameAutosaveName("VectorScrollSettingsV5")
 
         func label(_ text: String, secondary: Bool = false) -> NSTextField {
             let field = NSTextField(wrappingLabelWithString: text)
@@ -179,7 +179,8 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         let stack = NSStackView()
         stack.orientation = .vertical
         stack.alignment = .leading
-        stack.spacing = 8
+        stack.spacing = 10
+        var headings: [NSView] = []
         func fullWidth(_ view: NSView) {
             stack.addArrangedSubview(view)
             view.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
@@ -190,7 +191,9 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
             icon.heightAnchor.constraint(equalToConstant: 17).isActive = true
             let heading = label(title)
             heading.font = .systemFont(ofSize: 14, weight: .semibold)
-            return row(icon, heading)
+            let headingRow = row(icon, heading)
+            headings.append(headingRow)
+            return headingRow
         }
         func settingsRow(_ title: String, control: NSView, detail: String? = nil) -> NSView {
             let text = NSStackView()
@@ -212,7 +215,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
             let content = NSStackView(views: views)
             content.orientation = .vertical
             content.alignment = .leading
-            content.spacing = 12
+            content.spacing = 16
             for view in views { view.widthAnchor.constraint(equalTo: content.widthAnchor).isActive = true }
             return SettingsStyle.groupContainer(for: content)
         }
@@ -297,7 +300,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         ])
         delayItem.orientation = .vertical
         delayItem.alignment = .leading
-        delayItem.spacing = 12
+        delayItem.spacing = 16
         for view in delayItem.arrangedSubviews { view.widthAnchor.constraint(equalTo: delayItem.widthAnchor).isActive = true }
         let scrollingGroup = group(
             settingsRow("Reverse vertical", control: reverseVerticalItem),
@@ -361,6 +364,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
             row(NSView(), restoreDefaultsButton)
         )
         fullWidth(appGroup)
+        stack.setCustomSpacing(20, after: appGroup)
 
         updateItem = button("Check for Updates…", "arrow.clockwise", #selector(checkUpdatesFromMenu))
         downloadItem = button("Install Update…", "arrow.down", #selector(installUpdate))
@@ -384,6 +388,12 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         fullWidth(row(version, updateControls))
         fullWidth(updateStatusLabel)
 
+        // Sections breathe: more room above each heading than between a heading and its group.
+        for heading in headings {
+            if let index = stack.arrangedSubviews.firstIndex(of: heading), index > 0 {
+                stack.setCustomSpacing(26, after: stack.arrangedSubviews[index - 1])
+            }
+        }
         let content = settingsWindow.contentView!
         let backdrop = SettingsStyle.backdrop()
         backdrop.translatesAutoresizingMaskIntoConstraints = false
@@ -413,8 +423,8 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
             document.widthAnchor.constraint(equalTo: scroll.contentView.widthAnchor),
             stack.leadingAnchor.constraint(equalTo: document.leadingAnchor, constant: 32),
             stack.trailingAnchor.constraint(equalTo: document.trailingAnchor, constant: -32),
-            stack.topAnchor.constraint(equalTo: document.topAnchor, constant: 16),
-            stack.bottomAnchor.constraint(equalTo: document.bottomAnchor, constant: -16)
+            stack.topAnchor.constraint(equalTo: document.topAnchor, constant: 20),
+            stack.bottomAnchor.constraint(equalTo: document.bottomAnchor, constant: -24)
         ])
         updateMarkerMenuItem()
         updateSizeMenuItems()
