@@ -554,6 +554,9 @@ extension VectorScrollApp {
         savePreview(subject.settingsWindow, "settings-delay-preview")
         subject.selectHoldToScroll()
         content.layoutSubtreeIfNeeded()
+        // Let the mode cards redraw before capturing, or the old selection shows too.
+        subject.settingsWindow.displayIfNeeded()
+        RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.3))
         savePreview(subject.settingsWindow, "settings-preview")
         savePreview(subject.settingsWindow, "settings-light-preview", appearance: .aqua)
         subject.setUpdateStatus("Checking for updates…", busy: true)
