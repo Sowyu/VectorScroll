@@ -39,7 +39,17 @@ enum SettingsStyle {
         button.imageHugsTitle = true
     }
 
+    // Menu bar apps can't count on activation. Bring the window to the current
+    // Space, including over full-screen apps, and front it even if macOS declines.
+    static func present(_ window: NSWindow) {
+        if window.isMiniaturized { window.deminiaturize(nil) }
+        NSApp.activate()
+        window.makeKeyAndOrderFront(nil)
+        window.orderFrontRegardless()
+    }
+
     static func prepareWindow(_ window: NSWindow) {
+        window.collectionBehavior.insert([.moveToActiveSpace, .fullScreenAuxiliary])
         let reduceTransparency = NSWorkspace.shared.accessibilityDisplayShouldReduceTransparency
         window.titlebarAppearsTransparent = true
         window.titleVisibility = .visible

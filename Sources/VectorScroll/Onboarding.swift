@@ -91,8 +91,7 @@ final class Onboarding: NSObject, NSWindowDelegate {
 
     func show() {
         render()
-        window.makeKeyAndOrderFront(nil)
-        NSApp.activate()
+        SettingsStyle.present(window)
     }
 
     // Called by the app's status timer. No permission prompt starts here.
