@@ -18,6 +18,10 @@ ICONSET="$ICONSET/VectorScroll.iconset"
 mkdir -p "$MACOS" "$RESOURCES"
 
 cp "$BIN_DIR/VectorScroll" "$MACOS/VectorScroll"
+for localization in Localization/*.lproj; do
+    [ -d "$localization" ] || continue
+    cp -R "$localization" "$RESOURCES/"
+done
 swift scripts/make-icons.swift "$ICONSET"
 iconutil -c icns "$ICONSET" -o "$RESOURCES/VectorScroll.icns"
 
@@ -25,6 +29,8 @@ cat > "$CONTENTS/Info.plist" <<'PLIST'
 <?xml version="1.0" encoding="UTF-8"?>
 <plist version="1.0">
 <dict>
+    <key>CFBundleDevelopmentRegion</key>
+    <string>en</string>
     <key>CFBundleExecutable</key>
     <string>VectorScroll</string>
     <key>CFBundleIdentifier</key>
@@ -56,6 +62,18 @@ cat > "$CONTENTS/Info.plist" <<'PLIST'
 </dict>
 </plist>
 PLIST
+
+# Advertise precisely the languages shipped in this bundle.
+python3 - "$CONTENTS/Info.plist" <<'PYTHON'
+from pathlib import Path
+import plistlib
+import sys
+path = Path(sys.argv[1])
+info = plistlib.loads(path.read_bytes())
+info["CFBundleLocalizations"] = sorted(folder.stem for folder in Path("Localization").glob("*.lproj")
+                                       if folder.is_dir() and folder.stem != "Base")
+path.write_bytes(plistlib.dumps(info, sort_keys=False))
+PYTHON
 
 # A stable identity keeps TCC grants across updates. Ad-hoc signatures change
 # every build, so macOS forgets Input Monitoring after each one. Developer ID

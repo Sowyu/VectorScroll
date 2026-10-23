@@ -44,7 +44,7 @@ enum ExcludedApps {
         let rows = ExcludedAppsRows(defaults: defaults)
         return MouseSettingsStyle.group([
             rows,
-            MouseSettingsStyle.note("Middle-button scrolling and side buttons are off in these apps. Useful for apps that pan with the middle button, like Blender or Figma.")
+            MouseSettingsStyle.note(L("Middle-button scrolling and side buttons are off in these apps. Useful for apps that pan with the middle button, like Blender or Figma."))
         ])
     }
 }
@@ -66,7 +66,7 @@ private final class ExcludedAppsRows: NSStackView {
     private func rebuild() {
         for view in arrangedSubviews { removeArrangedSubview(view); view.removeFromSuperview() }
         let ids = ExcludedApps.bundleIDs(in: defaults)
-        if ids.isEmpty { addArrangedSubview(MouseSettingsStyle.note("No excluded apps")) }
+        if ids.isEmpty { addArrangedSubview(MouseSettingsStyle.note(L("No excluded apps"))) }
         for id in ids {
             let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: id)
             let name = url.map { FileManager.default.displayName(atPath: $0.path) } ?? id
@@ -74,7 +74,7 @@ private final class ExcludedAppsRows: NSStackView {
             icon.widthAnchor.constraint(equalToConstant: 24).isActive = true
             icon.heightAnchor.constraint(equalToConstant: 24).isActive = true
             icon.imageScaling = .scaleProportionallyUpOrDown
-            let remove = NSButton(image: NSImage(systemSymbolName: "minus.circle", accessibilityDescription: "Remove \(name)")!, target: self, action: #selector(removeApp(_:)))
+            let remove = NSButton(image: NSImage(systemSymbolName: "minus.circle", accessibilityDescription: L("Remove %@", name))!, target: self, action: #selector(removeApp(_:)))
             remove.identifier = NSUserInterfaceItemIdentifier(id)
             remove.isBordered = false
             let row = NSStackView(views: [icon, MouseSettingsStyle.row(name, control: remove)])
@@ -82,7 +82,7 @@ private final class ExcludedAppsRows: NSStackView {
             addArrangedSubview(row)
             row.widthAnchor.constraint(equalTo: widthAnchor).isActive = true
         }
-        addArrangedSubview(SettingsStyle.actionButton("Add App…", symbol: "plus", target: self, action: #selector(addApps)))
+        addArrangedSubview(SettingsStyle.actionButton(L("Add App…"), symbol: "plus", target: self, action: #selector(addApps)))
     }
 
     @objc private func removeApp(_ sender: NSButton) {
@@ -98,7 +98,7 @@ private final class ExcludedAppsRows: NSStackView {
         panel.allowsMultipleSelection = true
         panel.canChooseDirectories = false
         panel.canChooseFiles = true
-        panel.prompt = "Add"
+        panel.prompt = L("Add")
         guard panel.runModal() == .OK else { return }
         ExcludedApps.add(panel.urls.compactMap { Bundle(url: $0)?.bundleIdentifier }, to: defaults)
         rebuild()
