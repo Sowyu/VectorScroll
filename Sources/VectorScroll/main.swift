@@ -44,6 +44,23 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
     private var eventTapInstalled = false
     private var holdToLockMode = false
     private var engageWorkItem: DispatchWorkItem?
+    private var heldMiddleClick: CGPoint?
+    private var swallowedButtonUps: Set<Int64> = []
+    private var excludedMiddleClick = false
+    private var scrollingGeneration: UInt64 = 0
+    private var middleButtonIsDown: () -> Bool = {
+        CGEventSource.buttonState(.combinedSessionState, button: .center)
+    }
+    private static let replayEventMarker: Int64 = 0x56534352434C494B
+    private var postClick: (CGPoint) -> Void = { point in
+        for type in [CGEventType.otherMouseDown, .otherMouseUp] {
+            guard let event = CGEvent(mouseEventSource: nil, mouseType: type,
+                                      mouseCursorPosition: point, mouseButton: .center) else { continue }
+            event.setIntegerValueField(.mouseEventClickState, value: 1)
+            event.setIntegerValueField(.eventSourceUserData, value: VectorScrollApp.replayEventMarker)
+            event.post(tap: .cgSessionEventTap)
+        }
+    }
     private var menuBarIconHidden = false
     private let overlay = ScrollOverlayWindow()
 
@@ -878,6 +895,8 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
             // Permission can be revoked while running. Retire the old tap before
             // retrying, instead of overwriting a still-registered run-loop source.
             stopScrolling()
+            swallowedButtonUps.removeAll()
+            excludedMiddleClick = false
             if let runLoopSource {
                 CFRunLoopRemoveSource(CFRunLoopGetMain(), runLoopSource, .commonModes)
                 self.runLoopSource = nil
@@ -893,9 +912,12 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
 
         let events: [CGEventType] = [
             .leftMouseDown,
+            .leftMouseUp,
             .rightMouseDown,
+            .rightMouseUp,
             .otherMouseDown,
-            .otherMouseUp
+            .otherMouseUp,
+            .otherMouseDragged
         ]
 
         let mask = events.reduce(CGEventMask(0)) { partial, type in
@@ -913,7 +935,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         eventTap = CGEvent.tapCreate(
             tap: .cgSessionEventTap,
             place: .headInsertEventTap,
-            options: .listenOnly,
+            options: .defaultTap,
             eventsOfInterest: mask,
             callback: callback,
             userInfo: Unmanaged.passUnretained(self).toOpaque()
@@ -946,49 +968,73 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
     }
 
     private func handleEvent(type: CGEventType, event: CGEvent) -> Unmanaged<CGEvent>? {
+        if event.getIntegerValueField(.eventSourceUserData) == Self.replayEventMarker {
+            return Unmanaged.passUnretained(event)
+        }
         if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
             // The release may have happened while input delivery was disabled.
             stopScrolling()
+            swallowedButtonUps.removeAll()
+            excludedMiddleClick = false
             if let eventTap {
                 CGEvent.tapEnable(tap: eventTap, enable: true)
             }
             return Unmanaged.passUnretained(event)
         }
 
-        if isActive {
-            if holdToLockMode {
-                if type == .leftMouseDown || type == .rightMouseDown || type == .otherMouseDown {
-                    stopScrolling()
-                }
-            } else if type == .otherMouseUp {
-                if event.getIntegerValueField(.mouseEventButtonNumber) == 2 {
-                    stopScrolling()
-                }
-            }
+        let button = event.getIntegerValueField(.mouseEventButtonNumber)
+        if type == .otherMouseDown, button == 2, appIsExcluded(at: event.location) {
+            excludedMiddleClick = true
+            return Unmanaged.passUnretained(event)
+        }
+        if button == 2, excludedMiddleClick, type == .otherMouseUp || type == .otherMouseDragged {
+            if type == .otherMouseUp { excludedMiddleClick = false }
             return Unmanaged.passUnretained(event)
         }
 
-        if type == .otherMouseDown {
-            let buttonNumber = event.getIntegerValueField(.mouseEventButtonNumber)
-            if buttonNumber == 2 {
+        if type == .leftMouseUp || type == .rightMouseUp || type == .otherMouseUp {
+            guard swallowedButtonUps.remove(button) != nil else { return Unmanaged.passUnretained(event) }
+            if button == 2, let point = heldMiddleClick {
+                let replay = holdToLockMode ? !isActive : !engaged
+                heldMiddleClick = nil
                 if holdToLockMode {
-                    armHoldToLock(at: event.unflippedLocation, target: event.location)
+                    cancelArmedHoldToLock()
                 } else {
-                    startScrolling(at: event.unflippedLocation, target: event.location)
+                    stopScrolling()
                 }
+                if replay { postClick(point) }
+            }
+            return nil
+        }
+
+        if type == .otherMouseDragged, button == 2, swallowedButtonUps.contains(button) {
+            return nil
+        }
+
+        if isActive {
+            if holdToLockMode, type == .leftMouseDown || type == .rightMouseDown || type == .otherMouseDown {
+                stopScrolling()
+                swallowedButtonUps.insert(button)
+                return nil
             }
             return Unmanaged.passUnretained(event)
         }
 
-        if holdToLockMode, type == .otherMouseUp {
-            let buttonNumber = event.getIntegerValueField(.mouseEventButtonNumber)
-            if buttonNumber == 2 {
-                cancelArmedHoldToLock()
+        if type == .otherMouseDown, button == 2 {
+            heldMiddleClick = event.location
+            swallowedButtonUps.insert(button)
+            if holdToLockMode {
+                armHoldToLock(at: event.unflippedLocation, target: event.location)
+            } else {
+                startScrolling(at: event.unflippedLocation, target: event.location)
             }
+            return nil
         }
 
         return Unmanaged.passUnretained(event)
     }
+
+    private func appIsExcluded(at point: CGPoint) -> Bool { false }
 
     private func armHoldToLock(at point: CGPoint, target: CGPoint) {
         cancelArmedHoldToLock()
@@ -1000,7 +1046,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
             guard let self else { return }
             self.engageWorkItem = nil
             // A delayed main queue must not turn a released click into a hold.
-            guard CGEventSource.buttonState(.combinedSessionState, button: .center) else { return }
+            guard self.middleButtonIsDown() else { return }
             self.startScrolling(at: point, target: target)
         }
         engageWorkItem = work
@@ -1022,7 +1068,15 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         // Toggle mode already filtered clicks with the delay, so show feedback now.
         engaged = false
         pendingTarget = target
-        if holdToLockMode { engage() }
+        scrollingGeneration &+= 1
+        let generation = scrollingGeneration
+        if holdToLockMode {
+            // AX targeting must run after returning from the filtering tap.
+            DispatchQueue.main.async { [weak self] in
+                guard let self, self.isActive, self.scrollingGeneration == generation else { return }
+                self.engage()
+            }
+        }
 
         timer?.cancel()
         let timer = DispatchSource.makeTimerSource(queue: .main)
@@ -1036,6 +1090,9 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
 
     private func stopScrolling() {
         cancelArmedHoldToLock()
+        // Discard replay eligibility, but still swallow any matching releases.
+        heldMiddleClick = nil
+        scrollingGeneration &+= 1
         scrollRemainder = .zero
         guard isActive else { return }
         timer?.cancel()
