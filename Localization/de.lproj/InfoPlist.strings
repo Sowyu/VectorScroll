@@ -1,0 +1,4 @@
+/* macOS permission prompt explanation. */
+"NSAccessibilityUsageDescription" = "VectorScroll verwendet die Bedienungshilfen, um das Fenster unter dem Cursor in den Vordergrund zu bringen und im Auftrag des Benutzers native Scroll-Ereignisse zu senden.";
+/* macOS permission prompt explanation. */
+"NSInputMonitoringUsageDescription" = "VectorScroll erkennt die Mittelklick- und andere Maustasten, um das Vektor-Scrollen zu starten und zu beenden.";

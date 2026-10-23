@@ -1,0 +1,4 @@
+/* macOS permission prompt explanation. */
+"NSAccessibilityUsageDescription" = "VectorScroll 使用輔助使用功能將游標下方的視窗移到最前方，並代表使用者傳送原生捲動事件。";
+/* macOS permission prompt explanation. */
+"NSInputMonitoringUsageDescription" = "VectorScroll 會監聽滑鼠中鍵和其他按鈕，以開始和停止向量捲動。";

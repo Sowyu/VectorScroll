@@ -1,0 +1,172 @@
+/* Indicator preview accessibility value: appearance name, then diameter in points. */
+"%@, %ld points" = "%@, %ld Punkte";
+/* Accessibility announcement: setup step followed by its title. */
+"%@. %@" = "%@. %@";
+/* Hold delay accessibility value. */
+"%ld milliseconds" = "%ld Millisekunden";
+/* Hold delay in milliseconds; compact visible label. */
+"%ld ms" = "%ld ms";
+/* Scroll speed accessibility value. */
+"%ld percent" = "%ld Prozent";
+/* Indicator diameter in points; size menu. */
+"%ld pt" = "%ld Pt.";
+/* Scroll speed percentage shown beside the slider. %% displays a literal percent sign. */
+"%ld%%" = "%ld %%";
+"Accessibility Settings…" = "Einstellungen für Bedienungshilfen …";
+"Accessibility is required" = "Bedienungshilfen erforderlich";
+"Accessibility lets VectorScroll bring the window under your pointer forward and send scroll events to it. Vector scrolling stays off until this permission is allowed." = "Mit den Bedienungshilfen kann VectorScroll das Fenster unter dem Zeiger in den Vordergrund bringen und Scroll-Ereignisse dorthin senden. Vektor-Scrollen bleibt ausgeschaltet, bis diese Berechtigung erteilt ist.";
+"Activate the app under the pointer when scrolling starts. Scrolling works either way." = "Aktiviert beim Start des Scrollens das Programm unter dem Zeiger. Scrollen funktioniert in beiden Fällen.";
+"Actual-size preview" = "Vorschau in Originalgröße";
+"Actual-size preview of the scrolling indicator." = "Vorschau des Scroll-Indikators in Originalgröße.";
+"Add" = "Hinzufügen";
+"Add App…" = "Programm hinzufügen …";
+"Adjust scrolling speed from 20% to 300% in 10% steps. 100% is the default." = "Scrollgeschwindigkeit von 20 % bis 300 % in 10-%-Schritten anpassen. 100 % ist der Standard.";
+"Allow Accessibility" = "Bedienungshilfen erlauben";
+"Allow Input Monitoring" = "Eingabeüberwachung erlauben";
+"App" = "Programm";
+"Appearance" = "Erscheinungsbild";
+"Approval is required in Login Items." = "In den Anmeldeobjekten ist eine Freigabe erforderlich.";
+/* Mouse side-button navigation action. */
+"Back" = "Zurück";
+"Back and forward buttons" = "Zurück- und Vorwärts-Tasten";
+"Bring window to front" = "Fenster in den Vordergrund";
+/* Mouse button number, counting from one. */
+"Button %ld" = "Taste %ld";
+"Cancel" = "Abbrechen";
+"Change the scrolling indicator's diameter. The preview shows its actual size." = "Ändere den Durchmesser des Scroll-Indikators. Die Vorschau zeigt die tatsächliche Größe.";
+"Check for Updates…" = "Nach Updates suchen …";
+"Checking for updates…" = "Suche nach Updates …";
+"Checks daily and installs only when you choose." = "Sucht täglich und installiert nur auf deinen Wunsch.";
+"Choose a light or dark scrolling indicator for contrast with the content beneath it." = "Wähle einen hellen oder dunklen Scroll-Indikator, damit er sich vom Inhalt darunter abhebt.";
+"Click to start, click to stop" = "Klicken zum Starten, Klicken zum Beenden";
+/* %@ is the error description. */
+"Couldn't check for updates. %@" = "Updates konnten nicht gesucht werden. %@";
+/* Dark appearance of the scrolling indicator. */
+"Dark" = "Dunkel";
+"Delay before scrolling starts" = "Verzögerung vor Scroll-Beginn";
+/* %@ is the version being downloaded. */
+"Downloading VectorScroll %@…" = "VectorScroll %@ wird geladen …";
+"Drag down to scroll up instead of down." = "Nach unten ziehen, um nach oben statt nach unten zu scrollen.";
+"Drag right to scroll left instead of right." = "Nach rechts ziehen, um nach links statt nach rechts zu scrollen.";
+"Excluded apps" = "Ausgeschlossene Programme";
+"Finish" = "Fertig";
+/* Mouse side-button navigation action. */
+"Forward" = "Vorwärts";
+"GitHub reported an invalid update size." = "GitHub hat eine ungültige Update-Größe gemeldet.";
+"Hold duration" = "Haltedauer";
+"Hold the middle button over any window and move the pointer. Change the mode, speed, direction, and indicator in Settings." = "Halte die mittlere Maustaste über einem beliebigen Fenster gedrückt und bewege den Zeiger. Modus, Geschwindigkeit, Richtung und Indikator änderst du in den Einstellungen.";
+"Hold the middle mouse button and move the pointer to scroll any window. macOS needs two permissions first. This takes about a minute, and you can come back to it from Settings." = "Halte die mittlere Maustaste gedrückt und bewege den Zeiger, um ein beliebiges Fenster zu scrollen. Zuerst braucht macOS zwei Berechtigungen. Das dauert etwa eine Minute, und du kannst später über die Einstellungen darauf zurückkommen.";
+"Hold to scroll" = "Halten zum Scrollen";
+"Hold to start, click to stop" = "Halten zum Starten, Klicken zum Beenden";
+"How long to hold the middle button before toggle scrolling starts." = "Wie lange die mittlere Taste gehalten werden muss, bevor das Umschalt-Scrollen startet.";
+"Indicator" = "Indikator";
+"Indicator appearance" = "Erscheinungsbild des Indikators";
+"Indicator size" = "Größe des Indikators";
+"Input Monitoring Settings…" = "Einstellungen für Eingabeüberwachung …";
+"Input Monitoring and Accessibility are required" = "Eingabeüberwachung und Bedienungshilfen erforderlich";
+"Input Monitoring is required" = "Eingabeüberwachung erforderlich";
+/* Install the available version named by %@. */
+"Install Update %@…" = "Update %@ installieren …";
+"Install Update…" = "Update installieren …";
+"Invalid update health check destination." = "Ungültiges Ziel der Update-Integritätsprüfung.";
+"Invalid update health check." = "Ungültige Update-Integritätsprüfung.";
+"Invalid update plan." = "Ungültiger Update-Plan.";
+"Keep Settings and Quit in the menu bar. Hiding the icon enables Open settings on launch." = "Behalte „Einstellungen“ und „Beenden“ in der Menüleiste. Wenn du das Symbol ausblendest, wird „Einstellungen beim Start öffnen“ aktiviert.";
+"Keep scrolling until the next click" = "Bis zum nächsten Klick weiterscrollen";
+/* Tooltip and accessibility label for the globe language picker. */
+"Language" = "Sprache";
+"Language could not be changed" = "Sprache konnte nicht geändert werden";
+"Later" = "Später";
+"Launch at login" = "Beim Anmelden öffnen";
+"Launch at login could not be changed" = "Öffnen beim Anmelden konnte nicht geändert werden";
+/* Light appearance of the scrolling indicator. */
+"Light" = "Hell";
+"Middle-button scrolling and side buttons are off in these apps. Useful for apps that pan with the middle button, like Blender or Figma." = "Das Scrollen mit der mittleren Taste und die Seitentasten sind in diesen Programmen aus. Nützlich für Programme, die mit der mittleren Taste schwenken, etwa Blender oder Figma.";
+"Mouse buttons" = "Maustasten";
+"No excluded apps" = "Keine ausgeschlossenen Programme";
+"OK" = "OK";
+"Open Login Items" = "Anmeldeobjekte öffnen";
+"Open Login Items to allow VectorScroll." = "Öffne die Anmeldeobjekte, um VectorScroll zu erlauben.";
+"Open Settings" = "Einstellungen öffnen";
+"Open System Settings" = "Systemeinstellungen öffnen";
+"Open VectorScroll from Applications to enable this." = "Öffne VectorScroll aus dem Ordner „Programme“, um das zu aktivieren.";
+"Open settings on launch" = "Einstellungen beim Start öffnen";
+"Press a side button…" = "Seitentaste drücken …";
+"Quit VectorScroll" = "VectorScroll beenden";
+"Ready to scroll" = "Bereit zum Scrollen";
+"Release the middle button to stop" = "Mittlere Taste loslassen zum Beenden";
+/* Remove the named app from exclusions. */
+"Remove %@" = "%@ entfernen";
+"Require a brief hold so a normal middle-click can still open a link in a new tab." = "Verlangt kurzes Halten, damit ein normaler Mittelklick weiterhin einen Link in einem neuen Tab öffnen kann.";
+"Required" = "Erforderlich";
+"Restarting VectorScroll…" = "VectorScroll wird neu gestartet …";
+"Restore Defaults" = "Standard wiederherstellen";
+"Reverse horizontal" = "Horizontal umkehren";
+"Reverse vertical" = "Vertikal umkehren";
+"Review VectorScroll in Login Items." = "Prüfe VectorScroll in den Anmeldeobjekten.";
+"Review the permissions needed for middle-button scrolling." = "Prüfe die Berechtigungen, die für das Scrollen mit der mittleren Taste nötig sind.";
+"Run the installed VectorScroll app from Applications." = "Starte das installierte VectorScroll aus dem Ordner „Programme“.";
+"Scroll speed" = "Scrollgeschwindigkeit";
+"Scroll while holding the middle button" = "Scrollen bei gedrückter mittlerer Taste";
+"Scrolling" = "Scrollen";
+"Scrolling indicator preview" = "Vorschau des Scroll-Indikators";
+"Sends ⌘[ and ⌘]. Apps that use those shortcuts for something else can be excluded below." = "Sendet ⌘[ und ⌘]. Programme, die diese Kurzbefehle anders nutzen, kannst du unten ausschließen.";
+"Set up permissions" = "Berechtigungen einrichten";
+"Settings…" = "Einstellungen …";
+"Setup" = "Einrichtung";
+"Setup Guide" = "Einrichtungsassistent";
+"Setup complete" = "Einrichtung abgeschlossen";
+/* Begin capturing a mouse side button. */
+"Set…" = "Festlegen …";
+"Show menu bar icon" = "Menüleistensymbol anzeigen";
+"Show this window when VectorScroll starts. If both access options are off, the menu bar icon returns." = "Zeigt dieses Fenster beim Start von VectorScroll an. Sind beide Zugriffsoptionen aus, erscheint das Symbol in der Menüleiste wieder.";
+/* Scrolling indicator diameter. */
+"Size" = "Größe";
+/* Current permission step and total permission steps. */
+"Step %ld of %ld" = "Schritt %ld von %ld";
+/* Use the macOS preferred language; first entry in the language menu. */
+"System Language" = "Systemsprache";
+"The app version could not be compared with the latest release." = "Die App-Version konnte nicht mit der neuesten Version verglichen werden.";
+"The downloaded app has an invalid executable." = "Die geladene App enthält eine ungültige ausführbare Datei.";
+"The downloaded app has the wrong version." = "Die geladene App hat die falsche Version.";
+"The installed app changed while updating. Please check for updates again." = "Die installierte App hat sich während des Updates geändert. Suche bitte erneut nach Updates.";
+"The installed app is not signed by the VectorScroll release identity. Reinstall it manually before updating." = "Die installierte App ist nicht mit der VectorScroll-Release-Identität signiert. Installiere sie vor dem Update manuell neu.";
+"The installed app's code signature is invalid. Reinstall VectorScroll manually before updating." = "Die Codesignatur der installierten App ist ungültig. Installiere VectorScroll vor dem Update manuell neu.";
+"The installed app's signing identity could not be read." = "Die Signaturidentität der installierten App konnte nicht gelesen werden.";
+"The latest release has no supported installer. Try again later." = "Die neueste Version enthält kein unterstütztes Installationsprogramm. Versuche es später erneut.";
+"The update could not atomically replace the installed app. Your previous app has been kept." = "Das Update konnte die installierte App nicht atomar ersetzen. Deine bisherige App wurde behalten.";
+"The update did not match GitHub's SHA-256 checksum. Nothing was installed." = "Das Update stimmte nicht mit der SHA-256-Prüfsumme von GitHub überein. Es wurde nichts installiert.";
+"The update does not contain a valid VectorScroll app." = "Das Update enthält keine gültige VectorScroll-App.";
+"The update download was incomplete. Please try again." = "Der Update-Download war unvollständig. Bitte versuche es erneut.";
+"The update download was larger than GitHub reported. Nothing was installed." = "Der Update-Download war größer als von GitHub gemeldet. Es wurde nichts installiert.";
+"The update has an invalid Info.plist." = "Das Update hat eine ungültige Info.plist.";
+"The update has an invalid minimum macOS version." = "Das Update hat eine ungültige macOS-Mindestversion.";
+"The update has an unreadable code signature." = "Das Update hat eine nicht lesbare Codesignatur.";
+"The update helper could not start. The current app is still installed." = "Das Update-Hilfsprogramm konnte nicht gestartet werden. Die aktuelle App bleibt installiert.";
+"The update was not signed by the same identity as the installed app." = "Das Update wurde nicht mit derselben Identität signiert wie die installierte App.";
+"The updated app did not finish starting. The previous version was restored." = "Die aktualisierte App wurde nicht fertig gestartet. Die vorherige Version wurde wiederhergestellt.";
+"This copy cannot update in its current location. Move VectorScroll from the DMG into a writable Applications folder, then try again." = "Diese Kopie kann sich an ihrem aktuellen Speicherort nicht aktualisieren. Bewege VectorScroll aus dem DMG in einen beschreibbaren Ordner „Programme“ und versuche es erneut.";
+"This lets VectorScroll notice when you press the middle button. Nothing you type is read. macOS shows its own dialog once. If it does not appear, open System Settings, turn on VectorScroll under Input Monitoring, then come back here." = "So erkennt VectorScroll, wenn du die mittlere Maustaste drückst. Was du tippst, wird nicht gelesen. macOS zeigt einmal einen eigenen Dialog an. Erscheint er nicht, öffne die Systemeinstellungen, aktiviere VectorScroll unter „Eingabeüberwachung“ und komm dann hierher zurück.";
+"This update does not support this Mac's processor." = "Dieses Update unterstützt den Prozessor dieses Mac nicht.";
+"This update is not newer than the installed app." = "Dieses Update ist nicht neuer als die installierte App.";
+"This update requires a newer version of macOS." = "Dieses Update erfordert eine neuere Version von macOS.";
+"Toggle scrolling" = "Scrollen umschalten";
+"Update could not be completed" = "Update konnte nicht abgeschlossen werden";
+"Update failed." = "Update fehlgeschlagen.";
+"Update in progress" = "Update läuft";
+"Vector Scroll" = "Vector Scroll";
+"VectorScroll" = "VectorScroll";
+/* %@ is the newly available version. */
+"VectorScroll %@ is available." = "VectorScroll %@ ist verfügbar.";
+/* %@ is the installed version. */
+"VectorScroll %@ is up to date." = "VectorScroll %@ ist auf dem neuesten Stand.";
+"VectorScroll Settings" = "VectorScroll-Einstellungen";
+"VectorScroll Setup" = "VectorScroll-Einrichtung";
+"VectorScroll did not quit in time. Please try again." = "VectorScroll wurde nicht rechtzeitig beendet. Bitte versuche es erneut.";
+"Verifying the update…" = "Update wird überprüft …";
+/* Installed app version in the settings footer. */
+"Version %@" = "Version %@";
+"Waiting for Accessibility. This page moves on by itself once it is allowed." = "Warten auf Bedienungshilfen. Diese Seite geht von selbst weiter, sobald sie erlaubt sind.";
+"Waiting for Input Monitoring. This page moves on by itself once it is allowed." = "Warten auf Eingabeüberwachung. Diese Seite geht von selbst weiter, sobald sie erlaubt ist.";
+"Welcome to VectorScroll" = "Willkommen bei VectorScroll";
+"You're set" = "Alles bereit";

@@ -167,7 +167,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         func label(_ text: String, secondary: Bool = false) -> NSTextField {
             let field = NSTextField(wrappingLabelWithString: text)
             field.font = .systemFont(ofSize: secondary ? 12 : 14)
-            field.preferredMaxLayoutWidth = 556
+            field.preferredMaxLayoutWidth = 520
             field.textColor = secondary ? SettingsStyle.secondary : SettingsStyle.text
             return field
         }

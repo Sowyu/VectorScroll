@@ -227,8 +227,11 @@ final class SettingsButton: NSButton {
         let textRect = NSRect(x: 38, y: 12, width: max(0, bounds.width - 74), height: 19)
         ((displayTitle ?? title) as NSString).draw(in: textRect, withAttributes: [.font: font!, .foregroundColor: foreground, .paragraphStyle: paragraph])
         if let detail {
-            (detail as NSString).draw(in: NSRect(x: 38, y: 35, width: bounds.width - 48, height: 18),
-                                     withAttributes: [.font: NSFont.systemFont(ofSize: 11), .foregroundColor: secondary, .paragraphStyle: paragraph])
+            let detailRect = NSRect(x: 38, y: 35, width: bounds.width - 48, height: 18)
+            // Longer translations step down one point before truncating.
+            let fits = (detail as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: 11)]).width <= detailRect.width
+            (detail as NSString).draw(in: detailRect, withAttributes: [.font: NSFont.systemFont(ofSize: fits ? 11 : 10),
+                                                                       .foregroundColor: secondary, .paragraphStyle: paragraph])
         }
         if selected {
             SettingsStyle.symbol("checkmark", color: foreground)?.draw(in: NSRect(x: bounds.width - 24, y: 14, width: 12, height: 12), from: .zero, operation: .sourceOver, fraction: 1, respectFlipped: true, hints: nil)

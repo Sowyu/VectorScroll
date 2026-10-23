@@ -1,0 +1,4 @@
+/* macOS permission prompt explanation. */
+"NSAccessibilityUsageDescription" = "VectorScroll использует универсальный доступ, чтобы выводить окно под курсором на передний план и от имени пользователя отправлять стандартные события прокрутки.";
+/* macOS permission prompt explanation. */
+"NSInputMonitoringUsageDescription" = "VectorScroll отслеживает нажатия средней и других кнопок мыши, чтобы запускать и останавливать векторную прокрутку.";
