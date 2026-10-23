@@ -995,7 +995,10 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         if type == .leftMouseUp || type == .rightMouseUp || type == .otherMouseUp {
             guard swallowedButtonUps.remove(button) != nil else { return Unmanaged.passUnretained(event) }
             if button == 2, let point = heldMiddleClick {
-                let replay = holdToLockMode ? !isActive : !engaged
+                // A release outside the dead zone was a drag, not a click. This also caps
+                // how far posting the replay can move the pointer.
+                let moved = abs(event.location.x - point.x) > deadZone || abs(event.location.y - point.y) > deadZone
+                let replay = (holdToLockMode ? !isActive : !engaged) && !moved
                 heldMiddleClick = nil
                 if holdToLockMode {
                     cancelArmedHoldToLock()
@@ -1034,7 +1037,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         return Unmanaged.passUnretained(event)
     }
 
-    private func appIsExcluded(at point: CGPoint) -> Bool { false }
+    private func appIsExcluded(at point: CGPoint) -> Bool { ExcludedApps.isExcluded(at: point) }
 
     private func armHoldToLock(at point: CGPoint, target: CGPoint) {
         cancelArmedHoldToLock()
