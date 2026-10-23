@@ -133,8 +133,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         stopScrolling()
         updateLaunchAtStartupItem()
         updatePermissionMenuItem()
-        settingsWindow.makeKeyAndOrderFront(nil)
-        NSApp.activate()
+        SettingsStyle.present(settingsWindow)
     }
 
     private func configureSettingsWindow() {
