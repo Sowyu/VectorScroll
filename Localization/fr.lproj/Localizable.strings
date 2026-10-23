@@ -158,3 +158,7 @@
 "Waiting for Input Monitoring. This page moves on by itself once it is allowed." = "En attente de la surveillance de l’entrée. Cette page continue toute seule une fois l’autorisation accordée.";
 "Welcome to VectorScroll" = "Bienvenue dans VectorScroll";
 "You're set" = "Tout est prêt";
+"Hold or click" = "Maintenir ou cliquer";
+"Hold and drag, or click to keep scrolling" = "Maintenez et faites glisser, ou cliquez pour continuer à défiler";
+"Ready to scroll. macOS didn't allow holding back clicks, so middle-clicks also reach apps." = "Prêt à défiler. macOS n’a pas autorisé la retenue des clics, les clics centraux atteignent donc aussi les apps.";
+"VectorScroll can't watch the mouse. Quit and reopen it. If that doesn't help, remove it from Accessibility and Input Monitoring in System Settings and add it again." = "VectorScroll ne peut pas surveiller la souris. Quittez-le puis rouvrez-le. Si cela ne suffit pas, retirez-le d’Accessibilité et de Surveillance de l’entrée dans Réglages Système, puis ajoutez-le à nouveau.";

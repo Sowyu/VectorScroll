@@ -54,6 +54,8 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
     private let accessibilityQueue = DispatchQueue(label: "local.vectorscroll.accessibility", qos: .userInitiated)
     private var engageWorkItem: DispatchWorkItem?
     private var heldMiddleClick: CGPoint?
+    // Set once the pointer leaves the dead zone. Hold or click uses it to tell a drag from a click.
+    private var leftDeadZone = false
     private var swallowedButtonUps: Set<Int64> = []
     private var excludedMiddleClick = false
     private var scrollingGeneration: UInt64 = 0
@@ -1029,7 +1031,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
                 case .hold:
                     stopScrolling()
                 case .both:
-                    if isActive && !engaged && !moved {
+                    if isActive && !leftDeadZone && !moved {
                         // No held click now means this session stops on the next down.
                         engage()
                     } else {
@@ -1044,6 +1046,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         if type == .otherMouseDragged, button == 2, heldMiddleClick != nil || swallowedButtonUps.contains(button) {
             if let point = heldMiddleClick, isActive,
                abs(event.location.x - point.x) > deadZone || abs(event.location.y - point.y) > deadZone {
+                leftDeadZone = true
                 engage()
             }
             return filteredEvent
@@ -1098,15 +1101,16 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         // middle-click never raises a window or flashes the indicator.
         // Toggle mode already filtered clicks with the delay, so show feedback now.
         engaged = false
+        leftDeadZone = false
         pendingTarget = target
         scrollingGeneration &+= 1
         let generation = scrollingGeneration
-        if holdToLockMode {
-            // Show toggle feedback after returning from the tap callback.
-            DispatchQueue.main.async { [weak self] in
-                guard let self, self.isActive, self.scrollingGeneration == generation else { return }
-                self.engage()
-            }
+        // Toggle shows feedback right after the tap callback returns. Hold and Hold or click
+        // show it after a short hold, so a quick middle-click never flashes the indicator.
+        let feedbackDelay: TimeInterval = holdToLockMode ? 0 : 0.2
+        DispatchQueue.main.asyncAfter(deadline: .now() + feedbackDelay) { [weak self] in
+            guard let self, self.isActive, self.scrollingGeneration == generation else { return }
+            self.engage()
         }
 
         timer?.cancel()
@@ -1156,6 +1160,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         )
 
         guard adjusted.x != 0 || adjusted.y != 0 else { return }
+        leftDeadZone = true
         engage()
         guard let delta = nextScrollDelta(for: adjusted) else { return }
 

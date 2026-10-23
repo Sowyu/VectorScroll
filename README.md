@@ -6,7 +6,7 @@ Middle-button autoscrolling for macOS. Press the middle button, move the pointer
 
 Swift and AppKit only. No Electron, web views, or third-party dependencies. One universal binary runs on Intel and Apple Silicon Macs with macOS 14 or later.
 
-Version 1.10.0, build 20, uses native Liquid Glass controls on macOS 26. macOS 14 and 15 keep the standard AppKit appearance.
+Version 1.11.0, build 21, uses native Liquid Glass controls on macOS 26. macOS 14 and 15 keep the standard AppKit appearance.
 
 <table>
   <tr>
@@ -33,11 +33,12 @@ Later releases can be installed from Check for Updates inside the app. A signing
 
 ### Scrolling
 
-- **Hold to scroll.** Hold the middle button, move the pointer, release to stop.
+- **Hold to scroll.** Hold the middle button, move the pointer, release to stop. The indicator appears as soon as you move, or after a 0.2 s hold.
 - **Toggle scrolling.** Click the middle button once and scrolling continues. Any mouse button stops it, and that click is not passed on, so stopping never activates a link or button.
 - **Speed slider.** 20% to 300% of the default in 10% steps. Applies to both axes.
 - **Reverse vertical and Reverse horizontal.** Flip either axis on its own, for people who expect natural scrolling from autoscroll.
-- **A plain middle-click stays a middle-click.** VectorScroll holds the middle click until it knows what it was. If the pointer never left the 10 pt dead zone, the app under the pointer gets a normal middle-click, so opening a link in a new tab works as before. If you scrolled, the app never sees the click.
+- **Hold or click.** Hold and drag to scroll until you let go, or click once to keep scrolling until the next click, the way autoscroll works on Windows. In this mode a middle-click always starts scrolling, so it never opens links.
+- **A plain middle-click stays a middle-click** in Hold to scroll. VectorScroll holds the middle click until it knows what it was. A quick click that never left the 10 pt dead zone reaches the app under the pointer as a normal middle-click, so opening a link in a new tab works as before. If you scrolled or held, the app never sees the click.
 - **Start delay for toggle mode.** Require a hold of 50 to 1,000 ms before scrolling engages, so an ordinary middle-click still opens links in a new tab. Default 200 ms. Turn it off to start on a plain click.
 - **Direction and speed from pointer distance.** A 10 pt dead zone around the start point. Speed grows a little faster than distance, so small movements stay precise and large ones move quickly, up to 120 px per tick on each axis. Slow speeds keep their fractions, so a crawl is smooth instead of stepped.
 - **Scrolls the window under the pointer.** Accessibility lets VectorScroll post generated scroll events. **Bring window to front** also activates that window's app when scrolling starts. Turn it off to scroll background windows without switching apps.
@@ -57,7 +58,7 @@ Later releases can be installed from Check for Updates inside the app. A signing
 - Opening VectorScroll again from Applications, Spotlight, or `open -a VectorScroll` always shows Settings.
 - **Language.** The globe button next to the version number switches between English, Deutsch, Español, Français, Italiano, Português (Brasil), Русский, 日本語, 한국어, 简体中文, and 繁體中文, then restarts the app. System Language follows macOS.
 - **Setup guide** on first launch. One permission per page, plain-language reasons, live status, and no system prompt until you press the button for it. Reopen it from Settings.
-- Permission status for Input Monitoring and Accessibility refreshes every second. A missing permission shows a button that opens the right System Settings pane. Permission prompts appear only after you press the matching button in the setup guide.
+- Permission status for Input Monitoring and Accessibility refreshes every second. It says Ready to scroll only when VectorScroll is actually receiving the mouse, and explains what to do when it isn't. Only one copy of VectorScroll runs at a time. A missing permission shows a button that opens the right System Settings pane. Permission prompts appear only after you press the matching button in the setup guide.
 - Settings use grouped rows, native switches, and a compact appearance picker. Hover help explains controls, and slider accessibility values include their units.
 - Update checks report their result inline. A busy indicator shows checking and installation phases without interrupting settings with a success dialog.
 

@@ -158,3 +158,7 @@
 "Waiting for Input Monitoring. This page moves on by itself once it is allowed." = "正在等待输入监控权限。允许后，此页面会自动跳转。";
 "Welcome to VectorScroll" = "欢迎使用 VectorScroll";
 "You're set" = "一切就绪";
+"Hold or click" = "按住或单击";
+"Hold and drag, or click to keep scrolling" = "按住并拖移，或单击以持续滚动";
+"Ready to scroll. macOS didn't allow holding back clicks, so middle-clicks also reach apps." = "已可滚动。macOS 不允许拦截点按，因此中键点按也会传给 App。";
+"VectorScroll can't watch the mouse. Quit and reopen it. If that doesn't help, remove it from Accessibility and Input Monitoring in System Settings and add it again." = "VectorScroll 无法监视鼠标。请退出后重新打开。如果仍然无效，请在“系统设置”的“辅助功能”和“输入监控”中移除它，然后重新添加。";
