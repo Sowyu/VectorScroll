@@ -13,6 +13,8 @@ final class SideButtons: NSObject {
     private var consumed = Set<Int>()
     private var backLabel: NSTextField?
     private var forwardLabel: NSTextField?
+    private var enabledSwitch: NSSwitch?
+    private var cancelButton: NSButton?
     private static let eventMarker: Int64 = 0x56534353494445
 
     init(defaults: UserDefaults = .standard) {
@@ -149,22 +151,26 @@ final class SideButtons: NSObject {
         let forward = NSTextField(labelWithString: "")
         backLabel = back
         forwardLabel = forward
+        enabledSwitch = toggle
         let backButton = SettingsStyle.actionButton("Set…", symbol: "computermouse", target: self, action: #selector(captureBack))
         let forwardButton = SettingsStyle.actionButton("Set…", symbol: "computermouse", target: self, action: #selector(captureForward))
         let cancel = SettingsStyle.actionButton("Cancel", symbol: "xmark", target: self, action: #selector(cancelMapping))
+        cancelButton = cancel
         let section = MouseSettingsStyle.group([
             MouseSettingsStyle.row("Back and forward buttons", control: toggle),
             MouseSettingsStyle.row("Back", control: NSStackView(views: [back, backButton])),
             MouseSettingsStyle.row("Forward", control: NSStackView(views: [forward, forwardButton])),
-            cancel,
+            MouseSettingsStyle.row("", control: cancel),
             MouseSettingsStyle.note("Sends ⌘[ and ⌘]. Apps that use those shortcuts for something else can be excluded below.")
         ])
         updateLabels()
         return section
     }
 
-    private func updateLabels() {
+    func updateLabels() {
         let settings = Self.settings(in: defaults)
+        enabledSwitch?.state = settings.enabled ? .on : .off
+        cancelButton?.superview?.isHidden = capture == nil
         backLabel?.stringValue = capture?.0 == .back ? "Press a side button…" : "Button \(settings.back + 1)"
         forwardLabel?.stringValue = capture?.0 == .forward ? "Press a side button…" : "Button \(settings.forward + 1)"
     }

@@ -28,6 +28,9 @@ enum ExcludedApps {
         for window in windows {
             guard let pid = window[kCGWindowOwnerPID as String] as? Int32,
                   pid != ProcessInfo.processInfo.processIdentifier,
+                  // Only normal app windows. Invisible overlays and the menu bar must not hide the app below.
+                  window[kCGWindowLayer as String] as? Int == 0,
+                  (window[kCGWindowAlpha as String] as? Double ?? 1) > 0,
                   let bounds = window[kCGWindowBounds as String] as? [String: Any],
                   let rect = CGRect(dictionaryRepresentation: bounds as CFDictionary),
                   rect.contains(point) else { continue }
