@@ -81,7 +81,7 @@ PYTHON
 if [ "${CODESIGN_DEVELOPER_ID:-false}" = "true" ]; then
     codesign --force --deep --options runtime --timestamp --sign "${CODESIGN_IDENTITY:?Developer ID identity is required}" "$APP_DIR" >/dev/null
 else
-    codesign --force --deep --sign "${CODESIGN_IDENTITY:--}" "$APP_DIR" >/dev/null
+    codesign --force --deep --sign "${CODESIGN_IDENTITY:--}" ${CODESIGN_KEYCHAIN:+--keychain "$CODESIGN_KEYCHAIN"} "$APP_DIR" >/dev/null
 fi
 touch "$APP_DIR"
 
