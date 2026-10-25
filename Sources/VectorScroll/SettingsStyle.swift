@@ -4,11 +4,27 @@ import AppKit
 enum SettingsStyle {
     static let text = NSColor.labelColor
     static let secondary = NSColor.secondaryLabelColor
+    static let border = NSColor.separatorColor
+
+    static func symbol(_ name: String, color: NSColor = secondary) -> NSImage? {
+        NSImage(systemSymbolName: name, accessibilityDescription: nil)?
+            .withSymbolConfiguration(.init(paletteColors: [color]))
+    }
+
+    static func setSymbol(_ name: String, on button: NSButton) {
+        button.image = NSImage(systemSymbolName: name, accessibilityDescription: nil)
+        button.imagePosition = .imageLeading
+        button.imageHugsTitle = true
+    }
 
     static func actionButton(_ title: String, symbol: String, target: AnyObject?, action: Selector?) -> NSButton {
         let button = NSButton(title: title, target: target, action: action)
-        button.font = .systemFont(ofSize: 13)
-        button.bezelStyle = .push
+        button.font = .systemFont(ofSize: 13, weight: .medium)
+        setSymbol(symbol, on: button)
+        button.bezelStyle = .rounded
+        #if compiler(>=6.2)
+        if #available(macOS 26, *) { button.bezelStyle = .glass }
+        #endif
         return button
     }
 
@@ -92,6 +108,34 @@ enum SettingsStyle {
         return row
     }
 
+    static func glassContainer(for content: NSView, cornerRadius: CGFloat = 12) -> NSView {
+        #if compiler(>=6.2)
+        if #available(macOS 26, *) {
+            let glass = NSGlassEffectView()
+            glass.style = .regular
+            glass.cornerRadius = cornerRadius
+            glass.contentView = content
+            return glass
+        }
+        #endif
+
+        let effect = NSVisualEffectView()
+        effect.material = .contentBackground
+        effect.blendingMode = .withinWindow
+        effect.state = NSWorkspace.shared.accessibilityDisplayShouldReduceTransparency ? .inactive : .active
+        effect.wantsLayer = true
+        effect.layer?.cornerRadius = cornerRadius
+        content.translatesAutoresizingMaskIntoConstraints = false
+        effect.addSubview(content)
+        NSLayoutConstraint.activate([
+            content.leadingAnchor.constraint(equalTo: effect.leadingAnchor),
+            content.trailingAnchor.constraint(equalTo: effect.trailingAnchor),
+            content.topAnchor.constraint(equalTo: effect.topAnchor),
+            content.bottomAnchor.constraint(equalTo: effect.bottomAnchor)
+        ])
+        return effect
+    }
+
     static func group(_ rows: [NSView]) -> NSView { SettingsGroup(rows: rows) }
 
     static func footnote(_ text: String) -> NSTextField { label(text, secondary: true) }
@@ -146,41 +190,22 @@ private final class SettingsGroup: NSBox {
             }
             views.append(row)
         }
-        // Liquid Glass on macOS 26 and later, a native grouped box before that.
-        boxType = .primary
+        boxType = .custom
         titlePosition = .noTitle
-        contentViewMargins = NSSize(width: 12, height: 0)
+        cornerRadius = 10
+        fillColor = .controlBackgroundColor
+        borderColor = SettingsStyle.border
+        borderWidth = 1
+        contentViewMargins = NSSize(width: 14, height: 0)
         let stack = SettingsStyle.column(views, spacing: 0)
         stack.translatesAutoresizingMaskIntoConstraints = false
-        var host = contentView!
-        #if compiler(>=6.2)
-        if #available(macOS 26, *) {
-            boxType = .custom
-            borderWidth = 0
-            fillColor = .clear
-            contentViewMargins = .zero
-            let glass = NSGlassEffectView()
-            glass.cornerRadius = 14
-            glass.translatesAutoresizingMaskIntoConstraints = false
-            let inner = NSView()
-            glass.contentView = inner
-            host.addSubview(glass)
-            NSLayoutConstraint.activate([
-                glass.leadingAnchor.constraint(equalTo: host.leadingAnchor),
-                glass.trailingAnchor.constraint(equalTo: host.trailingAnchor),
-                glass.topAnchor.constraint(equalTo: host.topAnchor),
-                glass.bottomAnchor.constraint(equalTo: host.bottomAnchor)
-            ])
-            host = inner
-        }
-        #endif
-        host.addSubview(stack)
-        let inset: CGFloat = host === contentView ? 0 : 14
+        let content = contentView!
+        content.addSubview(stack)
         NSLayoutConstraint.activate([
-            stack.leadingAnchor.constraint(equalTo: host.leadingAnchor, constant: inset),
-            stack.trailingAnchor.constraint(equalTo: host.trailingAnchor, constant: -inset),
-            stack.topAnchor.constraint(equalTo: host.topAnchor),
-            stack.bottomAnchor.constraint(equalTo: host.bottomAnchor)
+            stack.leadingAnchor.constraint(equalTo: content.leadingAnchor),
+            stack.trailingAnchor.constraint(equalTo: content.trailingAnchor),
+            stack.topAnchor.constraint(equalTo: content.topAnchor),
+            stack.bottomAnchor.constraint(equalTo: content.bottomAnchor)
         ])
     }
 
@@ -310,4 +335,109 @@ final class SettingsWindow: NSWindow {
 @MainActor
 final class SettingsDocument: NSView {
     override var isFlipped: Bool { true }
+}
+
+// The mode cards draw beyond a radio cell's native glyph and title, so their
+// whole visible surface needs to track the mouse.
+@MainActor
+private final class SettingsButtonCell: NSButtonCell {
+    override func hitTest(for event: NSEvent, in cellFrame: NSRect, of controlView: NSView) -> NSCell.HitResult {
+        guard isEnabled, cellFrame.contains(controlView.convert(event.locationInWindow, from: nil)) else { return [] }
+        return [.contentArea, .trackableArea]
+    }
+}
+
+// The two mode choices keep their card layout while retaining NSButton's radio
+// semantics. All ordinary actions and checkboxes are plain NSButton instances.
+@MainActor
+final class SettingsButton: NSButton {
+    var symbolName: String { didSet { needsDisplay = true } }
+    var displayTitle: String? { didSet { updateToolTip(); needsDisplay = true } }
+    var detail: String? {
+        didSet {
+            updateToolTip()
+            setAccessibilityHelp(detail)
+            needsDisplay = true
+        }
+    }
+    private func updateToolTip() {
+        toolTip = [displayTitle ?? title, detail].compactMap { $0 }.joined(separator: "\n")
+    }
+    private var hovered = false
+    private var hoverArea: NSTrackingArea?
+
+    init(_ title: String, symbol: String, target: AnyObject?, action: Selector?) {
+        symbolName = symbol
+        super.init(frame: .zero)
+        cell = SettingsButtonCell(textCell: "")
+        self.title = title
+        self.target = target
+        self.action = action
+        setButtonType(.radio)
+        font = .systemFont(ofSize: 13, weight: .medium)
+        isBordered = false
+        focusRingType = .exterior
+    }
+
+    required init?(coder: NSCoder) { fatalError("init(coder:) is unsupported") }
+    override var isFlipped: Bool { true }
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { isEnabled }
+    override var intrinsicContentSize: NSSize {
+        let width = (title as NSString).size(withAttributes: [.font: font!]).width + 56
+        return NSSize(width: width, height: 52)
+    }
+    override var title: String { didSet { invalidateIntrinsicContentSize(); needsDisplay = true } }
+    override var state: NSControl.StateValue { didSet { needsDisplay = true } }
+    override var isEnabled: Bool { didSet { needsDisplay = true } }
+
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+        if let hoverArea { removeTrackingArea(hoverArea) }
+        let area = NSTrackingArea(rect: .zero, options: [.mouseEnteredAndExited, .activeInKeyWindow, .inVisibleRect], owner: self)
+        addTrackingArea(area)
+        hoverArea = area
+    }
+    override func mouseEntered(with event: NSEvent) { hovered = true; needsDisplay = true }
+    override func mouseExited(with event: NSEvent) { hovered = false; needsDisplay = true }
+    override func becomeFirstResponder() -> Bool { needsDisplay = true; return super.becomeFirstResponder() }
+    override func resignFirstResponder() -> Bool { needsDisplay = true; return super.resignFirstResponder() }
+
+    override func draw(_ dirtyRect: NSRect) {
+        let selected = state == .on
+        let pressed = cell?.isHighlighted == true
+        let alpha: CGFloat = isEnabled ? 1 : 0.45
+        let foreground = NSColor.controlTextColor.withAlphaComponent(alpha)
+        let secondary = (selected ? NSColor.controlTextColor : SettingsStyle.secondary).withAlphaComponent(alpha)
+        let box = NSBezierPath(roundedRect: bounds.insetBy(dx: 0.5, dy: 0.5), xRadius: 9, yRadius: 9)
+        let fill = selected ? NSColor.controlAccentColor.withAlphaComponent(0.16) :
+            pressed ? NSColor.selectedControlColor.withAlphaComponent(0.18) :
+            hovered ? NSColor.controlTextColor.withAlphaComponent(0.07) : NSColor.clear
+        fill.withAlphaComponent(fill.alphaComponent * alpha).setFill()
+        box.fill()
+        (selected ? NSColor.controlAccentColor.withAlphaComponent(0.45) : SettingsStyle.border).setStroke()
+        box.lineWidth = 1
+        box.stroke()
+        SettingsStyle.symbol(symbolName, color: secondary)?
+            .draw(in: NSRect(x: 12, y: bounds.midY - 8, width: 16, height: 16), from: .zero, operation: .sourceOver, fraction: 1, respectFlipped: true, hints: nil)
+        let paragraph = NSMutableParagraphStyle()
+        paragraph.lineBreakMode = .byTruncatingTail
+        let textRect = NSRect(x: 38, y: bounds.midY - 18, width: max(0, bounds.width - 74), height: 19)
+        ((displayTitle ?? title) as NSString).draw(in: textRect, withAttributes: [.font: font!, .foregroundColor: foreground, .paragraphStyle: paragraph])
+        if let detail {
+            let detailRect = NSRect(x: 38, y: bounds.midY + 2, width: bounds.width - 48, height: 18)
+            // Longer translations step down one point before truncating.
+            let fits = (detail as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: 11)]).width <= detailRect.width
+            (detail as NSString).draw(in: detailRect, withAttributes: [.font: NSFont.systemFont(ofSize: fits ? 11 : 10),
+                                                                       .foregroundColor: secondary, .paragraphStyle: paragraph])
+        }
+        if selected {
+            SettingsStyle.symbol("checkmark", color: foreground)?.draw(in: NSRect(x: bounds.width - 24, y: bounds.midY - 6, width: 12, height: 12), from: .zero, operation: .sourceOver, fraction: 1, respectFlipped: true, hints: nil)
+        }
+    }
+
+    override var focusRingMaskBounds: NSRect { bounds }
+
+    override func drawFocusRingMask() {
+        NSBezierPath(roundedRect: bounds.insetBy(dx: 1, dy: 1), xRadius: 9, yRadius: 9).fill()
+    }
 }

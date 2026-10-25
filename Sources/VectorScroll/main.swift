@@ -27,7 +27,6 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
     private var holdScrollItem: NSButton!
     private var holdToLockItem: NSButton!
     private var holdOrClickItem: NSButton!
-    private var holdToLockDetailLabel: NSTextField!
     private var launchAtStartupItem: NSSwitch!
     private var launchAtStartupStatusLabel: NSTextField!
     private var hideIconItem: NSSwitch!
@@ -222,7 +221,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
             let control = NSSwitch(frame: .zero)
             control.target = self
             control.action = action
-            control.controlSize = .mini
+            control.controlSize = .small
             control.setAccessibilityLabel(accessibilityLabel)
             return control
         }
@@ -235,47 +234,58 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
             stack.addArrangedSubview(view)
             view.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
         }
-        func sectionHeading(_ title: String) -> NSView {
+        func sectionHeading(_ title: String, _ symbol: String) -> NSView {
+            let icon = NSImageView(image: SettingsStyle.symbol(symbol)!)
+            icon.widthAnchor.constraint(equalToConstant: 17).isActive = true
+            icon.heightAnchor.constraint(equalToConstant: 17).isActive = true
             let heading = label(title)
-            heading.font = .systemFont(ofSize: 13, weight: .semibold)
-            headings.append(heading)
-            return heading
+            heading.font = .systemFont(ofSize: 14, weight: .semibold)
+            let headingRow = row(icon, heading)
+            headings.append(headingRow)
+            return headingRow
         }
         func settingsRow(_ title: String, control: NSView, detail: String? = nil) -> NSView {
             SettingsStyle.row(title, control: control, description: detail.map { label($0, secondary: true) })
         }
         func group(_ views: NSView...) -> NSView { SettingsStyle.group(views) }
-        func modeRow(_ button: NSButton, detail: NSTextField) -> NSView {
-            button.font = .systemFont(ofSize: 13)
-            let description = NSView()
-            detail.translatesAutoresizingMaskIntoConstraints = false
-            description.addSubview(detail)
-            NSLayoutConstraint.activate([
-                detail.leadingAnchor.constraint(equalTo: description.leadingAnchor, constant: 20),
-                detail.trailingAnchor.constraint(equalTo: description.trailingAnchor),
-                detail.topAnchor.constraint(equalTo: description.topAnchor),
-                detail.bottomAnchor.constraint(equalTo: description.bottomAnchor)
-            ])
-            return SettingsStyle.paddedRow(SettingsStyle.column([button, description]))
-        }
         let guideButton = button(L("Setup Guide"), "questionmark.circle", #selector(showOnboarding))
         help(guideButton, L("Review the permissions needed for middle-button scrolling."))
-        fullWidth(sectionHeading(L("Scrolling")))
-        let hold = NSButton(radioButtonWithTitle: L("Hold to scroll"), target: self, action: #selector(selectHoldToScroll))
-        hold.setAccessibilityLabel(L("Scroll while holding the middle button"))
+        let appIcon = NSImageView(image: NSApp.applicationIconImage)
+        appIcon.imageScaling = .scaleProportionallyUpOrDown
+        appIcon.widthAnchor.constraint(equalToConstant: 32).isActive = true
+        appIcon.heightAnchor.constraint(equalToConstant: 32).isActive = true
+        let appTitle = label(L("VectorScroll"))
+        appTitle.font = .systemFont(ofSize: 17, weight: .semibold)
+        let headerSpacer = NSView()
+        headerSpacer.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        guideButton.setContentHuggingPriority(.required, for: .horizontal)
+        fullWidth(row(appIcon, appTitle, headerSpacer, guideButton))
+
+        fullWidth(sectionHeading(L("Scrolling"), "computermouse"))
+        let hold = SettingsButton(L("Scroll while holding the middle button"), symbol: "hand.point.up.left", target: self, action: #selector(selectHoldToScroll))
+        hold.displayTitle = L("Hold to scroll")
+        hold.detail = L("Release the middle button to stop")
         holdScrollItem = hold
-        let click = NSButton(radioButtonWithTitle: L("Toggle scrolling"), target: self, action: #selector(selectHoldToLock))
-        click.setAccessibilityLabel(L("Keep scrolling until the next click"))
+        let click = SettingsButton(L("Keep scrolling until the next click"), symbol: "cursorarrow.click", target: self, action: #selector(selectHoldToLock))
+        click.displayTitle = L("Toggle scrolling")
         holdToLockItem = click
-        let both = NSButton(radioButtonWithTitle: L("Hold or click"), target: self, action: #selector(selectBoth))
-        both.setAccessibilityHelp(L("Hold and drag, or click to keep scrolling"))
+        let both = SettingsButton(L("Hold or click"), symbol: "hand.draw", target: self, action: #selector(selectBoth))
+        both.detail = L("Hold and drag, or click to keep scrolling")
         holdOrClickItem = both
-        holdToLockDetailLabel = label("", secondary: true)
-        fullWidth(group(
-            modeRow(hold, detail: label(L("Release the middle button to stop"), secondary: true)),
-            modeRow(click, detail: holdToLockDetailLabel),
-            modeRow(both, detail: label(L("Hold and drag, or click to keep scrolling"), secondary: true))
-        ))
+        // Cards must not outrank the window's stay-put priority (500), or the
+        // window widens to fit their full accessibility titles.
+        for card in [hold, click, both] { card.setContentCompressionResistancePriority(.defaultLow, for: .horizontal) }
+        let modes = SettingsStyle.column([hold, click, both], spacing: 6)
+        modes.translatesAutoresizingMaskIntoConstraints = false
+        let modesPadding = NSView()
+        modesPadding.addSubview(modes)
+        NSLayoutConstraint.activate([
+            modes.leadingAnchor.constraint(equalTo: modesPadding.leadingAnchor, constant: 8),
+            modes.trailingAnchor.constraint(equalTo: modesPadding.trailingAnchor, constant: -8),
+            modes.topAnchor.constraint(equalTo: modesPadding.topAnchor, constant: 8),
+            modes.bottomAnchor.constraint(equalTo: modesPadding.bottomAnchor, constant: -8)
+        ])
+        fullWidth(SettingsStyle.glassContainer(for: modesPadding, cornerRadius: 12))
         reverseVerticalItem = toggle(L("Reverse vertical"), #selector(toggleReverseVertical))
         help(reverseVerticalItem, L("Drag down to scroll up instead of down."))
         reverseHorizontalItem = toggle(L("Reverse horizontal"), #selector(toggleReverseHorizontal))
@@ -290,8 +300,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         speedSlider.isContinuous = true
         speedSlider.setAccessibilityLabel(L("Scroll speed"))
         help(speedSlider, L("Adjust scrolling speed from 20% to 300% in 10% steps. 100% is the default."))
-        speedSlider.controlSize = .small
-        speedSlider.widthAnchor.constraint(equalToConstant: 200).isActive = true
+        speedSlider.widthAnchor.constraint(equalToConstant: 240).isActive = true
         speedLabel = NSTextField(labelWithString: "")
         speedLabel.font = .monospacedDigitSystemFont(ofSize: 12, weight: .medium)
         let speedControl = row(speedSlider, speedLabel)
@@ -306,8 +315,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         delaySlider.isContinuous = true
         delaySlider.setAccessibilityLabel(L("Hold duration"))
         help(delaySlider, L("How long to hold the middle button before toggle scrolling starts."))
-        delaySlider.controlSize = .small
-        delaySlider.widthAnchor.constraint(equalToConstant: 200).isActive = true
+        delaySlider.widthAnchor.constraint(equalToConstant: 240).isActive = true
         delayLabel = NSTextField(labelWithString: "")
         delayLabel.font = .monospacedDigitSystemFont(ofSize: 12, weight: .medium)
         let delaySeparator = NSBox()
@@ -325,7 +333,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         )
         fullWidth(scrollingGroup)
 
-        fullWidth(sectionHeading(L("Indicator")))
+        fullWidth(sectionHeading(L("Indicator"), "scope"))
         indicatorAppearance = NSSegmentedControl(labels: [L("Light"), L("Dark")], trackingMode: .selectOne,
                                                   target: self, action: #selector(changeIndicatorAppearance(_:)))
         indicatorAppearance.controlSize = .small
@@ -335,7 +343,6 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
             sizePicker.addItem(withTitle: L("%ld pt", size))
             sizePicker.lastItem?.tag = size
         }
-        sizePicker.controlSize = .small
         sizePicker.target = self
         sizePicker.action = #selector(selectMarkerSize(_:))
         sizePicker.setAccessibilityLabel(L("Indicator size"))
@@ -354,10 +361,10 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         let sizeRow = settingsRow(L("Size"), control: sizeAndPreview, detail: L("Actual-size preview"))
         fullWidth(group(appearanceRow, sizeRow))
 
-        fullWidth(sectionHeading(L("Excluded apps")))
+        fullWidth(sectionHeading(L("Excluded apps"), "nosign"))
         fullWidth(ExcludedApps.makeSettingsSection())
 
-        fullWidth(sectionHeading(L("App")))
+        fullWidth(sectionHeading(L("App"), "slider.horizontal.3"))
         openSettingsButton = toggle(L("Open settings on launch"), #selector(toggleOpenSettings))
         hideIconItem = toggle(L("Show menu bar icon"), #selector(toggleMenuBarIcon))
         launchAtStartupItem = toggle(L("Launch at login"), #selector(toggleLaunchAtStartup))
@@ -371,7 +378,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
             settingsRow(L("Open settings on launch"), control: openSettingsButton),
             settingsRow(L("Show menu bar icon"), control: hideIconItem),
             SettingsStyle.row(L("Launch at login"), control: launchAtStartupItem, description: launchAtStartupStatusLabel),
-            SettingsStyle.row(title: permissionStatusLabel, control: SettingsActionBar(actions: [guideButton, permissionItem], maximumWidth: 300))
+            SettingsStyle.row(title: permissionStatusLabel, control: SettingsActionBar(actions: [permissionItem], maximumWidth: 300))
         )
         fullWidth(appGroup)
         stack.setCustomSpacing(20, after: appGroup)
@@ -604,7 +611,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         delayLabel.textColor = holdDelayEnabled ? .labelColor : .secondaryLabelColor
         delayItem.isHidden = !holdToLockMode
         let detail = holdDelayEnabled ? L("Hold to start, click to stop") : L("Click to start, click to stop")
-        holdToLockDetailLabel.stringValue = detail
+        (holdToLockItem as? SettingsButton)?.detail = detail
         holdToLockItem.setAccessibilityHelp(detail)
 
     }

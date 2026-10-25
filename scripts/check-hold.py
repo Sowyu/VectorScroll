@@ -317,7 +317,7 @@ extension VectorScrollApp {
         assert(subject.holdToLockThreshold == 0)
         assert(!subject.delaySlider.isEnabled)
         assert(subject.holdToLockItem.accessibilityHelp() == "Click to start, click to stop")
-        assert(subject.holdToLockItem.title == "Toggle scrolling")
+        assert((subject.holdToLockItem as! SettingsButton).displayTitle == "Toggle scrolling")
         subject.tapState = .filtering
         subject.armHoldToLock(at: .zero, target: .zero)
         assert(subject.isActive && subject.engageWorkItem == nil)
@@ -378,23 +378,27 @@ extension VectorScrollApp {
         let setup = Onboarding()
         for window in [subject.settingsWindow!, setup.window] {
             let views = descendants(window.contentView!)
-            assert(!views.contains { $0 is NSVisualEffectView }, "Settings and setup must have solid content")
+            assert(!(window.contentView is NSVisualEffectView), "Settings and setup must sit on a solid window")
             #if compiler(>=6.2)
             if #available(macOS 26, *), window === subject.settingsWindow {
-                assert(views.contains { $0 is NSGlassEffectView }, "Settings groups must be Liquid Glass")
+                assert(views.contains { $0 is NSGlassEffectView }, "Scrolling modes must sit in Liquid Glass")
             }
             #endif
             assert(window.isOpaque && window.backgroundColor == .windowBackgroundColor, "Window backgrounds must be solid")
             for button in views.compactMap({ $0 as? NSButton }) where button.isBordered && !(button is NSPopUpButton) {
                 if button === subject.holdScrollItem || button === subject.holdToLockItem || button === subject.holdOrClickItem { continue }
-                assert(button.bezelStyle == .push && button.image == nil, "Action buttons must use plain push bezels")
+                var expected = NSButton.BezelStyle.rounded
+                #if compiler(>=6.2)
+                if #available(macOS 26, *) { expected = .glass }
+                #endif
+                assert(button.bezelStyle == expected && button.image != nil, "Action buttons must be glass with a symbol")
             }
             for control in views.compactMap({ $0 as? NSSwitch }) {
-                assert(control.controlSize == .mini, "Settings switches must be mini")
+                assert(control.controlSize == .small, "Settings switches must be small")
             }
         }
         assert(setup.primary.keyEquivalent == "\r", "Setup must keep its default action")
-        print("PASS: solid windows, glass groups, plain push actions, and mini switches")
+        print("PASS: solid windows, glass mode cards and actions, and small switches")
         assert(subject.settingsWindow.standardWindowButton(.closeButton)?.isHidden == false)
         assert(subject.settingsWindow.standardWindowButton(.closeButton)?.isEnabled == true)
         assert(subject.settingsWindow.standardWindowButton(.miniaturizeButton)?.isEnabled == true)
@@ -447,8 +451,9 @@ extension VectorScrollApp {
         }
         subject.updatePermissionMenuItem()
         print("PASS: native close control, Command-W close/reopen, and permission status transitions")
-        assert(type(of: subject.holdScrollItem!) == NSButton.self)
-        assert(type(of: subject.holdToLockItem!) == NSButton.self)
+        for card in [subject.holdScrollItem!, subject.holdToLockItem!, subject.holdOrClickItem!] {
+            assert(card is SettingsButton, "Scrolling modes must be mode cards")
+        }
         func savePreview(_ window: NSWindow, _ name: String, appearance: NSAppearance.Name = .darkAqua) {
             // Scrolling to the top flashes the overlay scroller, so hide it for the capture.
             scroll.hasVerticalScroller = false

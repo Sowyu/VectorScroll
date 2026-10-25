@@ -40,10 +40,10 @@ final class Onboarding: NSObject, NSWindowDelegate {
             field.preferredMaxLayoutWidth = 416
             return field
         }
-        stepLabel = label(11, color: SettingsStyle.secondary)
-        title = label(20, weight: .semibold)
-        body = label(13)
-        status = label(11, weight: .regular, color: SettingsStyle.secondary)
+        stepLabel = label(12, color: SettingsStyle.secondary)
+        title = label(22, weight: .semibold)
+        body = label(14)
+        status = label(12, weight: .medium, color: SettingsStyle.secondary)
         primary = SettingsStyle.actionButton("", symbol: "arrow.right", target: nil, action: nil)
         secondary = SettingsStyle.actionButton("", symbol: "xmark", target: nil, action: nil)
         super.init()
@@ -165,6 +165,8 @@ final class Onboarding: NSObject, NSWindowDelegate {
             primary.title = L("Finish")
             secondary.title = L("Open Settings")
         }
+        SettingsStyle.setSymbol(step == .done ? "checkmark" : (askedInputMonitoring && step == .inputMonitoring) || (askedAccessibility && step == .accessibility) ? "gearshape" : "arrow.right", on: primary)
+        SettingsStyle.setSymbol(step == .done ? "gearshape" : "xmark", on: secondary)
         secondary.keyEquivalent = step == .done ? "" : "\u{1b}"
         primary.needsDisplay = true
         // Measure wrapped content at the fixed window width, allowing longer translations.
