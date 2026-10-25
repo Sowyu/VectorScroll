@@ -49,7 +49,20 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
     private var hideIconItem: NSSwitch!
     private var sizePicker: NSPopUpButton!
     private let markerPreview = ScrollOverlayView(frame: .zero)
-    private var settingsWindow: NSWindow!
+    private var builtSettingsWindow: NSWindow?
+    private var settingsWindow: NSWindow! {
+        if builtSettingsWindow == nil { configureSettingsWindow() }
+        return builtSettingsWindow
+    }
+    private var pendingUpdateStatus = (text: "", busy: false)
+    private var lastPermissionStatus: PermissionStatus?
+    private var lastLaunchAtStartupStatus: SMAppService.Status?
+    private var permissionStatusInterval: Int?
+    private struct PermissionStatus: Equatable {
+        let text: String
+        let title: String
+        let hidden: Bool
+    }
     private var openSettingsButton: NSSwitch!
     private var openSettingsOnLaunch = true
     private var eventTap: CFMachPort?
@@ -197,7 +210,6 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         menu.addItem(.separator())
         menu.addItem(NSMenuItem(title: L("Quit VectorScroll"), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
         self.menu = menu
-        configureSettingsWindow()
         if !menuBarIconHidden { installStatusItem() }
     }
 
@@ -207,13 +219,15 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
 
     @objc private func showSettings() {
         stopScrolling()
-        updateLaunchAtStartupItem()
-        updatePermissionMenuItem()
+        if builtSettingsWindow != nil {
+            updateLaunchAtStartupItem()
+            updatePermissionMenuItem()
+        }
         SettingsStyle.present(settingsWindow)
     }
 
     private func configureSettingsWindow() {
-        settingsWindow = SettingsWindow(contentRect: NSRect(x: 0, y: 0, width: 600, height: 820),
+        builtSettingsWindow = SettingsWindow(contentRect: NSRect(x: 0, y: 0, width: 600, height: 820),
                                   styleMask: [.titled, .closable, .miniaturizable, .resizable], backing: .buffered, defer: false)
         settingsWindow.title = L("VectorScroll Settings")
         SettingsStyle.prepareWindow(settingsWindow)
@@ -466,6 +480,8 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         updateLaunchAtStartupItem()
         updatePermissionMenuItem()
         refreshAccessControls()
+        applyUpdate(availableUpdate)
+        setUpdateStatus(pendingUpdateStatus.text, busy: pendingUpdateStatus.busy)
     }
 
     @objc private func toggleReverseVertical() {
@@ -484,6 +500,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
     }
 
     @objc private func restoreDefaults() {
+        _ = settingsWindow
         stopScrolling()
         for key in Self.restorableDefaultsKeys { defaults.removeObject(forKey: key) }
         holdToLockMode = false
@@ -509,6 +526,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
     }
 
     private func updateSpeedControls() {
+        _ = settingsWindow
         reverseVerticalItem.state = reverseVertical ? .on : .off
         reverseHorizontalItem.state = reverseHorizontal ? .on : .off
         raiseWindowItem.state = raiseWindowOnScroll ? .on : .off
@@ -545,6 +563,8 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
     }
 
     private func setUpdateStatus(_ status: String, busy: Bool) {
+        pendingUpdateStatus = (status, busy)
+        guard builtSettingsWindow != nil else { return }
         updateStatusLabel.stringValue = status
         updateStatusLabel.isHidden = status.isEmpty
         updateProgress.isHidden = !busy
@@ -561,6 +581,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
     private func applyUpdate(_ update: AppUpdate?) {
         guard installTask == nil else { return }
         availableUpdate = update
+        guard builtSettingsWindow != nil else { return }
         downloadItem.isHidden = update == nil
         downloadItem.title = update.map { L("Install Update %@…", $0.version) } ?? L("Install Update…")
         (downloadItem.superview as? SettingsActionBar)?.refresh()
@@ -625,6 +646,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
     }
 
     private func updateDelayMenu() {
+        _ = settingsWindow
         delayToggle.state = holdDelayEnabled ? .on : .off
         delaySlider.isEnabled = holdDelayEnabled
         delaySlider.doubleValue = Double(holdDelayMilliseconds)
@@ -657,6 +679,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
     }
 
     private func refreshAccessControls() {
+        _ = settingsWindow
         hideIconItem.state = menuBarIconHidden ? .off : .on
         openSettingsButton.state = openSettingsOnLaunch ? .on : .off
     }
@@ -741,6 +764,8 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
 
     @objc private func toggleLaunchAtStartup() {
         stopScrolling()
+        // The switch has already changed locally, even if registration leaves the status unchanged.
+        lastLaunchAtStartupStatus = nil
         do {
             switch SMAppService.mainApp.status {
             case .enabled:
@@ -776,7 +801,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
                 guard let self else { return }
                 self.defaults.set(completed, forKey: "onboardingCompleted")
                 self.onboarding = nil
-                if self.openSettingsOnLaunch, !self.settingsWindow.isVisible,
+                if self.openSettingsOnLaunch, self.builtSettingsWindow?.isVisible != true,
                    !CGPreflightListenEventAccess() || !self.hasAccessibilityAccess { self.showSettings() }
             }
             onboarding = guide
@@ -802,6 +827,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
     }
 
     private func updateMarkerMenuItem() {
+        _ = settingsWindow
         indicatorAppearance.selectedSegment = overlay.isDarkMode ? 1 : 0
         updateMarkerPreview()
     }
@@ -815,6 +841,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
     }
 
     private func updateScrollModeMenuItems() {
+        _ = settingsWindow
         holdScrollItem.state = scrollMode == .hold ? .on : .off
         holdToLockItem.state = scrollMode == .toggle ? .on : .off
         holdOrClickItem.state = scrollMode == .both ? .on : .off
@@ -826,13 +853,22 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
     }
 
     private func applyPermissionStatus(canListen: Bool, canAccess: Bool) {
-        let enabled = eventTap.map { (tap: CFMachPort) -> Bool in CGEvent.tapIsEnabled(tap: tap) } ?? false
-        permissionStatusLabel.stringValue = Self.permissionStatusText(
-            canListen: canListen, canAccess: canAccess, tapState: tapState, tapEnabled: enabled)
-        permissionItem.isHidden = canListen && canAccess
-        permissionItem.title = canListen ? L("Accessibility Settings…") : L("Input Monitoring Settings…")
-        (permissionItem.superview as? SettingsActionBar)?.refresh()
         onboarding?.refresh(canListen: canListen, canAccess: canAccess)
+        schedulePermissionStatusTimer(canListen: canListen, canAccess: canAccess)
+        guard builtSettingsWindow != nil else { return }
+        let enabled = eventTap.map { (tap: CFMachPort) -> Bool in CGEvent.tapIsEnabled(tap: tap) } ?? false
+        let status = PermissionStatus(
+            text: Self.permissionStatusText(canListen: canListen, canAccess: canAccess,
+                                            tapState: tapState, tapEnabled: enabled),
+            title: canListen ? L("Accessibility Settings…") : L("Input Monitoring Settings…"),
+            hidden: canListen && canAccess)
+        guard status != lastPermissionStatus else { return }
+        lastPermissionStatus = status
+        if permissionStatusLabel.stringValue != status.text { permissionStatusLabel.stringValue = status.text }
+        let actionsChanged = permissionItem.isHidden != status.hidden || permissionItem.title != status.title
+        if permissionItem.isHidden != status.hidden { permissionItem.isHidden = status.hidden }
+        if permissionItem.title != status.title { permissionItem.title = status.title }
+        if actionsChanged { (permissionItem.superview as? SettingsActionBar)?.refresh() }
     }
 
     private static func permissionStatusText(canListen: Bool, canAccess: Bool,
@@ -853,6 +889,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
     }
 
     private func updateSizeMenuItems() {
+        _ = settingsWindow
         sizePicker.selectItem(withTag: Int(overlay.size))
         updateMarkerPreview()
     }
@@ -862,25 +899,26 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
     }
 
     private func applyLaunchAtStartupStatus(_ status: SMAppService.Status) {
-        launchAtStartupItem.isEnabled = true
-        launchAtStartupItem.toolTip = nil
-        launchAtStartupStatusLabel.stringValue = ""
-        launchAtStartupStatusLabel.isHidden = true
+        guard builtSettingsWindow != nil, status != lastLaunchAtStartupStatus else { return }
+        lastLaunchAtStartupStatus = status
+        var state: NSControl.StateValue = .off
+        var text = ""
+        var toolTip: String?
         switch status {
         case .enabled:
-            launchAtStartupItem.state = .on
+            state = .on
         case .notRegistered, .notFound:
-            launchAtStartupItem.state = .off
+            break
         case .requiresApproval:
-            launchAtStartupItem.state = .off
-            launchAtStartupStatusLabel.stringValue = L("Approval is required in Login Items.")
-            launchAtStartupStatusLabel.isHidden = false
-            launchAtStartupItem.toolTip = L("Open Login Items to allow VectorScroll.")
+            text = L("Approval is required in Login Items.")
+            toolTip = L("Open Login Items to allow VectorScroll.")
         @unknown default:
-            launchAtStartupItem.state = .off
-            launchAtStartupStatusLabel.stringValue = L("Review VectorScroll in Login Items.")
-            launchAtStartupStatusLabel.isHidden = false
+            text = L("Review VectorScroll in Login Items.")
         }
+        if launchAtStartupItem.state != state { launchAtStartupItem.state = state }
+        if launchAtStartupItem.toolTip != toolTip { launchAtStartupItem.toolTip = toolTip }
+        if launchAtStartupStatusLabel.stringValue != text { launchAtStartupStatusLabel.stringValue = text }
+        if launchAtStartupStatusLabel.isHidden != text.isEmpty { launchAtStartupStatusLabel.isHidden = text.isEmpty }
     }
 
     private func restoreSettings() {
@@ -924,8 +962,10 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
     }
 
     private func installEventTap() {
-        defer { updatePermissionMenuItem() }
-        guard CGPreflightListenEventAccess(), hasAccessibilityAccess else {
+        let canListen = CGPreflightListenEventAccess()
+        let canAccess = hasAccessibilityAccess
+        defer { applyPermissionStatus(canListen: canListen, canAccess: canAccess) }
+        guard canListen, canAccess else {
             tearDownEventTap()
             return
         }
@@ -1011,16 +1051,29 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         tapState = .none
     }
 
+    func applicationDidBecomeActive(_ notification: Notification) {
+        installEventTap()
+        if builtSettingsWindow != nil { updateLaunchAtStartupItem() }
+    }
+
     private func startPermissionStatusTimer() {
         permissionStatusTimer?.cancel()
+        permissionStatusInterval = nil
         let timer = DispatchSource.makeTimerSource(queue: .main)
-        timer.schedule(deadline: .now() + .seconds(1), repeating: .seconds(1), leeway: .milliseconds(300))
-        timer.setEventHandler { [weak self] in
-            self?.installEventTap()
-            self?.updateLaunchAtStartupItem()
-        }
+        timer.setEventHandler { [weak self] in self?.installEventTap() }
         permissionStatusTimer = timer
+        schedulePermissionStatusTimer(canListen: CGPreflightListenEventAccess(), canAccess: hasAccessibilityAccess)
         timer.resume()
+    }
+
+    private func schedulePermissionStatusTimer(canListen: Bool, canAccess: Bool) {
+        guard let timer = permissionStatusTimer else { return }
+        // Keep recovery for missed tap-disabled notifications, without waking every second when ready.
+        let interval = canListen && canAccess ? 30 : 1
+        guard interval != permissionStatusInterval else { return }
+        permissionStatusInterval = interval
+        timer.schedule(deadline: .now() + .seconds(interval), repeating: .seconds(interval),
+                       leeway: interval == 1 ? .milliseconds(300) : .seconds(5))
     }
 
     private func handleEvent(type: CGEventType, event: CGEvent) -> Unmanaged<CGEvent>? {

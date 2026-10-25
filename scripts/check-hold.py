@@ -47,6 +47,15 @@ extension VectorScrollApp {
         assert(!subject.reverseVertical && !subject.reverseHorizontal, "A partial migration must not overwrite new settings")
         print("PASS: migration from reverseDirection preserves legacy and existing axis settings")
         subject.configureMenu()
+        assert(subject.builtSettingsWindow == nil, "The menu must not construct settings")
+        subject.setUpdateStatus("Background update status", busy: true)
+        subject.applyPermissionStatus(canListen: true, canAccess: true)
+        subject.applyLaunchAtStartupStatus(.enabled)
+        assert(subject.builtSettingsWindow == nil, "Background status must not construct settings")
+        _ = subject.settingsWindow
+        assert(subject.builtSettingsWindow != nil, "First settings access must construct controls")
+        assert(subject.updateStatusLabel.stringValue == "Background update status" && !subject.updateProgress.isHidden)
+        subject.setUpdateStatus("", busy: false)
         let offset = CGPoint(x: 120, y: 120)
         subject.scrollRemainder = .zero
         let forward = subject.nextScrollDelta(for: offset)!
@@ -159,6 +168,9 @@ extension VectorScrollApp {
         print("PASS: exclusion storage, empty-list fast path, and settings section")
         let subject = VectorScrollApp()
         subject.configureMenu()
+        assert(subject.builtSettingsWindow == nil, "The menu must not construct settings")
+        _ = subject.settingsWindow
+        assert(subject.builtSettingsWindow != nil, "First settings access must construct controls")
         let titles = subject.menu.items.filter { !$0.isHidden }.map(\.title)
         assert(titles.filter { !$0.isEmpty } == ["Settings…", "Donate on Ko-fi", "Quit VectorScroll"])
         assert(subject.menu.items.first?.action == #selector(showSettings))
@@ -256,15 +268,29 @@ extension VectorScrollApp {
         subject.showOnboarding()
         let guide = subject.onboarding!
         assert(guide.window.isVisible && guide.step == .welcome)
+        let welcomeTitle = guide.primary.title
+        guide.primary.title = "Unchanged refresh sentinel"
+        guide.refresh(canListen: false, canAccess: false)
+        assert(guide.primary.title == "Unchanged refresh sentinel", "An unchanged step must not render again")
+        guide.primary.title = welcomeTitle
         guide.refresh(canListen: false, canAccess: false) // Independent of the runner's real TCC state.
         guide.primary.performClick(nil)
         assert(guide.step == .inputMonitoring, "Welcome must lead to Input Monitoring, got \(guide.step)")
         subject.applyPermissionStatus(canListen: true, canAccess: false)
+        let permissionText = subject.permissionStatusLabel.stringValue
+        subject.permissionStatusLabel.stringValue = "Unchanged refresh sentinel"
+        subject.applyPermissionStatus(canListen: true, canAccess: false)
+        assert(subject.permissionStatusLabel.stringValue == "Unchanged refresh sentinel")
+        subject.permissionStatusLabel.stringValue = permissionText
         assert(guide.step == .accessibility, "Granting Input Monitoring must advance the guide")
         guide.secondary.performClick(nil)
         assert(!guide.window.isVisible && subject.onboarding == nil)
         assert(!subject.defaults.bool(forKey: "onboardingCompleted"), "Later must not claim that setup is complete")
         subject.startPermissionStatusTimer()
+        subject.schedulePermissionStatusTimer(canListen: true, canAccess: true)
+        assert(subject.permissionStatusInterval == 30)
+        subject.schedulePermissionStatusTimer(canListen: true, canAccess: false)
+        assert(subject.permissionStatusInterval == 1)
         RunLoop.main.run(until: Date(timeIntervalSinceNow: 1.5))
         subject.permissionStatusTimer?.cancel()
         subject.permissionStatusTimer = nil
@@ -298,6 +324,11 @@ extension VectorScrollApp {
         assert(subject.launchAtStartupItem.isEnabled)
         assert(!subject.launchAtStartupStatusLabel.isHidden)
         assert(subject.launchAtStartupStatusLabel.stringValue.contains("Login Items"))
+        let approvalText = subject.launchAtStartupStatusLabel.stringValue
+        subject.launchAtStartupStatusLabel.stringValue = "Unchanged refresh sentinel"
+        subject.applyLaunchAtStartupStatus(.requiresApproval)
+        assert(subject.launchAtStartupStatusLabel.stringValue == "Unchanged refresh sentinel")
+        subject.launchAtStartupStatusLabel.stringValue = approvalText
         // notFound only means the app has never been registered, so the switch stays usable.
         subject.applyLaunchAtStartupStatus(.notFound)
         assert(subject.launchAtStartupItem.isEnabled && subject.launchAtStartupItem.state == .off)

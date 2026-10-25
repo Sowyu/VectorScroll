@@ -252,26 +252,34 @@ final class SettingsActionBar: NSView {
     }
 
     override var intrinsicContentSize: NSSize {
-        let sizes = actions.filter { !$0.isHidden }.map { $0.fittingSize }
+        let visible = measuredActions()
+        let sizes = visible.map { $0.1 }
         let naturalWidth = sizes.reduce(CGFloat.zero) { $0 + $1.width } + CGFloat(max(0, sizes.count - 1)) * 8
         let width = maximumWidth.map { max(sizes.map(\.width).max() ?? 0, min($0, naturalWidth)) }
         let layoutWidth = bounds.width > 0 ? bounds.width : width ?? 552
-        return NSSize(width: width ?? NSView.noIntrinsicMetric, height: placements(width: layoutWidth).height)
+        return NSSize(width: width ?? NSView.noIntrinsicMetric, height: placements(width: layoutWidth, visible: visible, leadingSize: measuredLeadingSize()).height)
     }
 
-    private func placements(width: CGFloat) -> (frames: [(NSView, NSRect)], height: CGFloat) {
-        let visible = actions.filter { !$0.isHidden }
-        let leadingSize = leading?.fittingSize ?? .zero
-        let actionWidth = visible.reduce(CGFloat.zero) { $0 + $1.fittingSize.width } + CGFloat(max(0, visible.count - 1)) * 8
+    private func measuredActions() -> [(NSView, NSSize)] {
+        actions.filter { !$0.isHidden }.map { ($0, $0.fittingSize) }
+    }
+
+    private func measuredLeadingSize() -> NSSize {
+        guard let leading, !leading.isHidden else { return .zero }
+        return leading.fittingSize
+    }
+
+    private func placements(width: CGFloat, visible: [(NSView, NSSize)],
+                            leadingSize: NSSize) -> (frames: [(NSView, NSRect)], height: CGFloat) {
+        let actionWidth = visible.reduce(CGFloat.zero) { $0 + $1.1.width } + CGFloat(max(0, visible.count - 1)) * 8
         var frames: [(NSView, NSRect)] = []
         var y: CGFloat = 0
-        if let leading {
+        if let leading, !leading.isHidden {
             if leadingSize.width + 16 + actionWidth <= width {
-                let height = max(leadingSize.height, visible.map { $0.fittingSize.height }.max() ?? 0)
+                let height = max(leadingSize.height, visible.map { $0.1.height }.max() ?? 0)
                 frames.append((leading, NSRect(x: 0, y: (height - leadingSize.height) / 2, width: leadingSize.width, height: leadingSize.height)))
                 var x = width - actionWidth
-                for view in visible {
-                    let size = view.fittingSize
+                for (view, size) in visible {
                     frames.append((view, NSRect(x: x, y: (height - size.height) / 2, width: size.width, height: size.height)))
                     x += size.width + 8
                 }
@@ -280,14 +288,13 @@ final class SettingsActionBar: NSView {
             frames.append((leading, NSRect(origin: .zero, size: leadingSize)))
             y = leadingSize.height + 8
         }
-        var line: [NSView] = []
+        var line: [(NSView, NSSize)] = []
         var lineWidth: CGFloat = 0
         func finishLine() {
             guard !line.isEmpty else { return }
-            let height = line.map { $0.fittingSize.height }.max() ?? 0
+            let height = line.map { $0.1.height }.max() ?? 0
             var x = width - lineWidth
-            for view in line {
-                let size = view.fittingSize
+            for (view, size) in line {
                 frames.append((view, NSRect(x: x, y: y + (height - size.height) / 2, width: size.width, height: size.height)))
                 x += size.width + 8
             }
@@ -295,11 +302,10 @@ final class SettingsActionBar: NSView {
             line = []
             lineWidth = 0
         }
-        for view in visible {
-            let size = view.fittingSize
+        for (view, size) in visible {
             if !line.isEmpty, lineWidth + 8 + size.width > width { finishLine() }
             if !line.isEmpty { lineWidth += 8 }
-            line.append(view)
+            line.append((view, size))
             lineWidth += size.width
         }
         finishLine()
@@ -308,7 +314,7 @@ final class SettingsActionBar: NSView {
 
     override func layout() {
         super.layout()
-        for (view, frame) in placements(width: bounds.width).frames { view.frame = frame }
+        for (view, frame) in placements(width: bounds.width, visible: measuredActions(), leadingSize: measuredLeadingSize()).frames { view.frame = frame }
     }
 }
 
