@@ -24,10 +24,9 @@ enum SettingsStyle {
         let button = NSButton(title: title, target: target, action: action)
         button.font = .systemFont(ofSize: 13, weight: .medium)
         setSymbol(symbol, on: button)
-        button.bezelStyle = .rounded
-        #if compiler(>=6.2)
-        if #available(macOS 26, *) { button.bezelStyle = .glass }
-        #endif
+        // Push buttons get the Liquid Glass look on macOS 26 and, unlike .glass, keep their
+        // capsule when the window is in the background.
+        button.bezelStyle = .push
         return button
     }
 

@@ -419,18 +419,14 @@ extension VectorScrollApp {
             assert(window.isOpaque && window.backgroundColor == SettingsStyle.background, "Window backgrounds must be solid")
             for button in views.compactMap({ $0 as? NSButton }) where button.isBordered && !(button is NSPopUpButton) {
                 if button === subject.holdScrollItem || button === subject.holdToLockItem || button === subject.holdOrClickItem { continue }
-                var expected = NSButton.BezelStyle.rounded
-                #if compiler(>=6.2)
-                if #available(macOS 26, *) { expected = .glass }
-                #endif
-                assert(button.bezelStyle == expected && button.image != nil, "Action buttons must be glass with a symbol")
+                assert(button.bezelStyle == .push && button.image != nil, "Action buttons must be push buttons with a symbol")
             }
             for control in views.compactMap({ $0 as? NSSwitch }) {
                 assert(control.controlSize == .small, "Settings switches must be small")
             }
         }
         assert(setup.primary.keyEquivalent == "\r", "Setup must keep its default action")
-        print("PASS: solid windows, glass actions, and small switches")
+        print("PASS: solid windows, push actions with symbols, and small switches")
         assert(subject.settingsWindow.standardWindowButton(.closeButton)?.isHidden == false)
         assert(subject.settingsWindow.standardWindowButton(.closeButton)?.isEnabled == true)
         assert(subject.settingsWindow.standardWindowButton(.miniaturizeButton)?.isEnabled == true)
@@ -607,7 +603,7 @@ extension VectorScrollApp {
         subject.applyPermissionStatus(canListen: true, canAccess: true)
         subject.setUpdateStatus("", busy: false)
         content.layoutSubtreeIfNeeded()
-        scroll.contentView.scroll(to: NSPoint(x: 0, y: 0))
+        scroll.contentView.scroll(to: NSPoint(x: 0, y: -scroll.contentInsets.top))
         scroll.reflectScrolledClipView(scroll.contentView)
         savePreview(subject.settingsWindow, "settings-delay-preview")
         subject.selectHoldToScroll()
