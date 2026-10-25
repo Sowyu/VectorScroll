@@ -388,7 +388,7 @@ final class SettingsButton: NSButton {
     override func becomeFirstResponder() -> Bool { needsDisplay = true; return super.becomeFirstResponder() }
     override func resignFirstResponder() -> Bool { needsDisplay = true; return super.resignFirstResponder() }
 
-    // A System Settings style list row: a symbol tile, title and description,
+    // A System Settings style list row: a symbol, title and description,
     // and a checkmark on the selected mode.
     override func draw(_ dirtyRect: NSRect) {
         let selected = state == .on
@@ -398,14 +398,12 @@ final class SettingsButton: NSButton {
             NSColor.labelColor.withAlphaComponent((pressed ? 0.1 : 0.05) * alpha).setFill()
             NSBezierPath(roundedRect: bounds.insetBy(dx: -6, dy: 4), xRadius: 8, yRadius: 8).fill()
         }
-        let tile = NSRect(x: 0, y: bounds.midY - 13, width: 26, height: 26)
-        (selected ? NSColor.controlAccentColor : NSColor.systemGray).withAlphaComponent(alpha).setFill()
-        NSBezierPath(roundedRect: tile, xRadius: 6, yRadius: 6).fill()
+        let slot = NSRect(x: 0, y: bounds.midY - 13, width: 26, height: 26)
         if let image = NSImage(systemSymbolName: symbolName, accessibilityDescription: nil)?
-            .withSymbolConfiguration(NSImage.SymbolConfiguration(pointSize: 13, weight: .semibold)
-                .applying(.init(paletteColors: [.white]))) {
+            .withSymbolConfiguration(NSImage.SymbolConfiguration(pointSize: 16, weight: .regular)
+                .applying(.init(paletteColors: [selected ? .controlAccentColor : SettingsStyle.secondary]))) {
             let size = image.size
-            image.draw(in: NSRect(x: tile.midX - size.width / 2, y: tile.midY - size.height / 2, width: size.width, height: size.height),
+            image.draw(in: NSRect(x: slot.midX - size.width / 2, y: slot.midY - size.height / 2, width: size.width, height: size.height),
                        from: .zero, operation: .sourceOver, fraction: alpha, respectFlipped: true, hints: nil)
         }
         let paragraph = NSMutableParagraphStyle()
