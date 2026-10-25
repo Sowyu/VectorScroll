@@ -84,7 +84,6 @@ final class Onboarding: NSObject, NSWindowDelegate {
     }
 
     func show() {
-        render()
         SettingsStyle.present(window)
     }
 
@@ -98,8 +97,6 @@ final class Onboarding: NSObject, NSWindowDelegate {
             transition(to: canListen ? .done : .inputMonitoring)
         } else if step == .done, !canListen || !canAccess {
             transition(to: canListen ? .accessibility : .inputMonitoring)
-        } else {
-            render()
         }
     }
 
@@ -137,7 +134,18 @@ final class Onboarding: NSObject, NSWindowDelegate {
         completeOnce()
     }
 
+    private struct RenderState: Equatable {
+        let step: Step
+        let askedInputMonitoring: Bool
+        let askedAccessibility: Bool
+    }
+    private var renderedState: RenderState?
+
     private func render() {
+        let state = RenderState(step: step, askedInputMonitoring: askedInputMonitoring,
+                                askedAccessibility: askedAccessibility)
+        guard state != renderedState else { return }
+        renderedState = state
         stepLabel.stringValue = step == .welcome ? L("Setup") : step == .done ? L("Setup complete") : L("Step %ld of %ld", step.rawValue, 2)
         secondary.isHidden = false
         status.stringValue = ""
@@ -183,7 +191,7 @@ final class Onboarding: NSObject, NSWindowDelegate {
     }
 
     private func transition(to newStep: Step) {
-        guard newStep != step else { render(); return }
+        guard newStep != step else { return }
         step = newStep
         render()
         window.makeFirstResponder(primary)
