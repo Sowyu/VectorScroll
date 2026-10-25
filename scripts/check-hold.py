@@ -348,7 +348,7 @@ extension VectorScrollApp {
         assert(subject.holdToLockThreshold == 0)
         assert(!subject.delaySlider.isEnabled)
         assert(subject.holdToLockItem.accessibilityHelp() == "Click to start, click to stop")
-        assert(subject.holdToLockItem.title == "Toggle scrolling")
+        assert((subject.holdToLockItem.superview as! SettingsChoiceRow).titleLabel.stringValue == "Toggle scrolling")
         subject.tapState = .filtering
         subject.armHoldToLock(at: .zero, target: .zero)
         assert(subject.isActive && subject.engageWorkItem == nil)
@@ -541,14 +541,17 @@ extension VectorScrollApp {
             content.layoutSubtreeIfNeeded()
             button.scrollToVisible(button.bounds)
             content.layoutSubtreeIfNeeded()
-            for point in [NSPoint(x: 7, y: button.bounds.midY), NSPoint(x: 60, y: button.bounds.midY)] {
-                let location = button.convert(point, to: nil)
-                let event = NSEvent.mouseEvent(with: .leftMouseDown, location: location, modifierFlags: [], timestamp: ProcessInfo.processInfo.systemUptime, windowNumber: subject.settingsWindow.windowNumber, context: nil, eventNumber: 1, clickCount: 1, pressure: 1)!
-                let hit = button.cell!.hitTest(for: event, in: button.bounds, of: button)
-                let target = content.hitTest(content.convert(location, from: nil))
-                assert(target === button, "Visible button must receive pointer events")
-                assert(hit.contains(.trackableArea), "Native radio glyph and title must be clickable")
+            let location = button.convert(NSPoint(x: button.bounds.midX, y: button.bounds.midY), to: nil)
+            let event = NSEvent.mouseEvent(with: .leftMouseDown, location: location, modifierFlags: [], timestamp: ProcessInfo.processInfo.systemUptime, windowNumber: subject.settingsWindow.windowNumber, context: nil, eventNumber: 1, clickCount: 1, pressure: 1)!
+            let hit = button.cell!.hitTest(for: event, in: button.bounds, of: button)
+            assert(content.hitTest(content.convert(location, from: nil)) === button, "Visible button must receive pointer events")
+            assert(hit.contains(.trackableArea), "Native radio glyph must be clickable")
+            let row = button.superview as! SettingsChoiceRow
+            for label in [row.titleLabel, row.detailLabel] {
+                let labelLocation = label.convert(NSPoint(x: label.bounds.midX, y: label.bounds.midY), to: nil)
+                assert(content.hitTest(content.convert(labelLocation, from: nil)) === row, "The whole mode row must be clickable")
             }
+            assert(abs(button.convert(button.bounds, to: row).midY - row.bounds.midY) < 1, "Radio must center on its title and description")
         }
         mouseClick(subject.hideIconItem, at: NSPoint(x: subject.hideIconItem.bounds.midX, y: subject.hideIconItem.bounds.midY))
         assert(subject.hideIconItem.state == .on && subject.statusItem != nil, "Native switch clicks must update menu bar access")
@@ -558,9 +561,11 @@ extension VectorScrollApp {
         assert(!subject.overlay.isDarkMode && !subject.markerPreview.isDarkMode)
         mouseClick(subject.holdScrollItem, at: NSPoint(x: 7, y: subject.holdScrollItem.bounds.midY))
         assert(!subject.holdToLockMode && subject.holdScrollItem.state == .on)
-        mouseClick(subject.holdToLockItem, at: NSPoint(x: 60, y: subject.holdToLockItem.bounds.midY))
+        let toggleTitle = (subject.holdToLockItem.superview as! SettingsChoiceRow).titleLabel
+        mouseClick(toggleTitle, at: NSPoint(x: toggleTitle.bounds.midX, y: toggleTitle.bounds.midY))
         assert(subject.holdToLockMode && subject.holdToLockItem.state == .on)
-        mouseClick(subject.holdOrClickItem, at: NSPoint(x: 60, y: subject.holdOrClickItem.bounds.midY))
+        let bothDetail = (subject.holdOrClickItem.superview as! SettingsChoiceRow).detailLabel
+        mouseClick(bothDetail, at: NSPoint(x: bothDetail.bounds.midX, y: bothDetail.bounds.midY))
         assert(subject.scrollMode == .both && subject.holdOrClickItem.state == .on && subject.delayItem.isHidden)
         assert(subject.holdScrollItem.state == .off && subject.holdToLockItem.state == .off)
         let bothRestored = VectorScrollApp()

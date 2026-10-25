@@ -317,20 +317,8 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         fullWidth(row(appIcon, appTitle, headerSpacer, guideButton))
 
         fullWidth(sectionHeading(L("Scrolling"), "arrow.up.and.down.and.arrow.left.and.right"))
-        // Native radio buttons, each with its description starting exactly where AppKit draws the title.
         func modeRow(_ button: NSButton, detail: NSTextField) -> NSView {
-            button.font = .systemFont(ofSize: 13)
-            let titleInset = button.cell!.titleRect(forBounds: NSRect(origin: .zero, size: button.intrinsicContentSize)).minX
-            let description = NSView()
-            detail.translatesAutoresizingMaskIntoConstraints = false
-            description.addSubview(detail)
-            NSLayoutConstraint.activate([
-                detail.leadingAnchor.constraint(equalTo: description.leadingAnchor, constant: titleInset),
-                detail.trailingAnchor.constraint(equalTo: description.trailingAnchor),
-                detail.topAnchor.constraint(equalTo: description.topAnchor),
-                detail.bottomAnchor.constraint(equalTo: description.bottomAnchor)
-            ])
-            return SettingsStyle.paddedRow(SettingsStyle.column([button, description]))
+            SettingsStyle.paddedRow(SettingsChoiceRow(button: button, title: button.title, detail: detail))
         }
         let hold = NSButton(radioButtonWithTitle: L("Hold to scroll"), target: self, action: #selector(selectHoldToScroll))
         hold.setAccessibilityLabel(L("Scroll while holding the middle button"))
@@ -340,6 +328,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         holdToLockItem = click
         let both = NSButton(radioButtonWithTitle: L("Hold or click"), target: self, action: #selector(selectBoth))
         both.setAccessibilityHelp(L("Hold and drag, or click to keep scrolling"))
+        both.setAccessibilityLabel(L("Hold or click"))
         holdOrClickItem = both
         holdToLockDetailLabel = label("", secondary: true)
         fullWidth(group(

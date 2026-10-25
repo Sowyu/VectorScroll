@@ -317,3 +317,47 @@ final class SettingsWindow: NSWindow {
 final class SettingsDocument: NSView {
     override var isFlipped: Bool { true }
 }
+
+// A native radio glyph centered on a title and description. AppKit keeps a
+// radio's glyph on the first line of a multi-line title, so the text lives
+// beside it, and a click anywhere on the row selects it.
+@MainActor
+final class SettingsChoiceRow: NSView {
+    let button: NSButton
+    let titleLabel: NSTextField
+    let detailLabel: NSTextField
+
+    init(button: NSButton, title: String, detail: NSTextField) {
+        self.button = button
+        titleLabel = SettingsStyle.label(title)
+        detailLabel = detail
+        super.init(frame: .zero)
+        button.title = ""
+        button.setContentHuggingPriority(.required, for: .horizontal)
+        button.setAccessibilityLabel(button.accessibilityLabel() ?? title)
+        let text = SettingsStyle.column([titleLabel, detailLabel])
+        for view in [button, text] as [NSView] {
+            view.translatesAutoresizingMaskIntoConstraints = false
+            addSubview(view)
+        }
+        NSLayoutConstraint.activate([
+            button.leadingAnchor.constraint(equalTo: leadingAnchor),
+            button.centerYAnchor.constraint(equalTo: text.centerYAnchor),
+            text.leadingAnchor.constraint(equalTo: button.trailingAnchor, constant: 6),
+            text.trailingAnchor.constraint(equalTo: trailingAnchor),
+            text.topAnchor.constraint(equalTo: topAnchor),
+            text.bottomAnchor.constraint(equalTo: bottomAnchor)
+        ])
+    }
+
+    required init?(coder: NSCoder) { fatalError("init(coder:) is unsupported") }
+
+    override func hitTest(_ point: NSPoint) -> NSView? {
+        guard let hit = super.hitTest(point) else { return nil }
+        return hit === button ? button : self
+    }
+
+    override func mouseDown(with event: NSEvent) {
+        if button.isEnabled { button.performClick(nil) }
+    }
+}
