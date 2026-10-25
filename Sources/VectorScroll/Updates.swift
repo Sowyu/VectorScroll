@@ -66,8 +66,19 @@ struct AppUpdate: Sendable {
                          sha256: hash, downloadSize: asset.size)
     }
 
+    static func automaticCheckDelay(defaults: UserDefaults = .standard, now: Date = Date()) -> TimeInterval {
+        guard let last = defaults.object(forKey: "lastAutomaticUpdateCheck") as? Date else { return 0 }
+        return max(0, min(86400, 86400 - now.timeIntervalSince(last)))
+    }
+
+    static func beginAutomaticCheck(defaults: UserDefaults = .standard, now: Date = Date()) -> Bool {
+        guard automaticCheckDelay(defaults: defaults, now: now) == 0 else { return false }
+        defaults.set(now, forKey: "lastAutomaticUpdateCheck")
+        return true
+    }
+
     static func check(installedVersion: String = AppUpdate.installedVersion, session: URLSession = .shared) async throws -> AppUpdate? {
-        var request = URLRequest(url: endpoint, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 20)
+        var request = URLRequest(url: endpoint, cachePolicy: .useProtocolCachePolicy, timeoutInterval: 20)
         request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
         request.setValue("2022-11-28", forHTTPHeaderField: "X-GitHub-Api-Version")
         request.setValue("VectorScroll/\(installedVersion)", forHTTPHeaderField: "User-Agent")

@@ -18,6 +18,8 @@ ICONSET="$ICONSET/VectorScroll.iconset"
 mkdir -p "$MACOS" "$RESOURCES"
 
 cp "$BIN_DIR/VectorScroll" "$MACOS/VectorScroll"
+dsymutil "$MACOS/VectorScroll" -o "$PWD/dist/VectorScroll.dSYM"
+strip -x "$MACOS/VectorScroll"
 for localization in Localization/*.lproj; do
     [ -d "$localization" ] || continue
     cp -R "$localization" "$RESOURCES/"
