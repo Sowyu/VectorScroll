@@ -67,10 +67,18 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
     private var openSettingsOnLaunch = true
     private var eventTap: CFMachPort?
     private var runLoopSource: CFRunLoopSource?
+    // Pointer movement only matters mid-scroll, so a listen-only tap reports it
+    // while a session is active and never sits in the path of ordinary cursor motion.
+    private var motionTap: CFMachPort?
+    private var motionRunLoopSource: CFRunLoopSource?
     private var timer: DispatchSourceTimer?
     private var permissionStatusTimer: DispatchSourceTimer?
     private var anchor: CGPoint?
-    private var isActive = false
+    private var isActive = false {
+        didSet {
+            if let motionTap, isActive != oldValue { CGEvent.tapEnable(tap: motionTap, enable: isActive) }
+        }
+    }
     private enum TapState { case none, filtering, listenOnly }
     private var tapState: TapState = .none
     private enum ScrollMode: String { case hold, toggle, both }
@@ -992,14 +1000,13 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
             .rightMouseUp,
             .otherMouseDown,
             .otherMouseUp,
-            .otherMouseDragged,
-            .mouseMoved,
-            .leftMouseDragged,
-            .rightMouseDragged
+            .otherMouseDragged
         ]
 
-        let mask = events.reduce(CGEventMask(0)) { (partial: CGEventMask, type: CGEventType) -> CGEventMask in
-            partial | (CGEventMask(1) << CGEventMask(type.rawValue))
+        func mask(_ events: [CGEventType]) -> CGEventMask {
+            events.reduce(CGEventMask(0)) { (partial: CGEventMask, type: CGEventType) -> CGEventMask in
+                partial | (CGEventMask(1) << CGEventMask(type.rawValue))
+            }
         }
 
         let callback: CGEventTapCallBack = { (_, type: CGEventType, event: CGEvent, refcon: UnsafeMutableRawPointer?) -> Unmanaged<CGEvent>? in
@@ -1015,7 +1022,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
                 tap: .cgSessionEventTap,
                 place: .headInsertEventTap,
                 options: options,
-                eventsOfInterest: mask,
+                eventsOfInterest: mask(events),
                 callback: callback,
                 userInfo: Unmanaged.passUnretained(self).toOpaque()
             ) {
@@ -1036,6 +1043,16 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         runLoopSource = source
         CFRunLoopAddSource(CFRunLoopGetMain(), source, .commonModes)
         CGEvent.tapEnable(tap: eventTap, enable: true)
+
+        if let tap = CGEvent.tapCreate(tap: .cgSessionEventTap, place: .tailAppendEventTap, options: .listenOnly,
+                                       eventsOfInterest: mask([.mouseMoved, .leftMouseDragged, .rightMouseDragged]),
+                                       callback: callback, userInfo: Unmanaged.passUnretained(self).toOpaque()),
+           let source = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, tap, 0) {
+            motionTap = tap
+            motionRunLoopSource = source
+            CFRunLoopAddSource(CFRunLoopGetMain(), source, .commonModes)
+            CGEvent.tapEnable(tap: tap, enable: isActive)
+        }
     }
 
     private func clearMouseState() {
@@ -1053,6 +1070,14 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         if let eventTap {
             CFMachPortInvalidate(eventTap)
             self.eventTap = nil
+        }
+        if let motionRunLoopSource {
+            CFRunLoopRemoveSource(CFRunLoopGetMain(), motionRunLoopSource, .commonModes)
+            self.motionRunLoopSource = nil
+        }
+        if let motionTap {
+            CFMachPortInvalidate(motionTap)
+            self.motionTap = nil
         }
         tapState = .none
     }
