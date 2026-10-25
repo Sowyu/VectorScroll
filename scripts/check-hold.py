@@ -665,7 +665,8 @@ extension VectorScrollApp {
 
         replays.removeAll()
         assert(subject.handleEvent(type: .otherMouseDown, event: down) == nil)
-        subject.engaged = true // Simulate the timer engaging after leaving the dead zone, without AX/UI work.
+        subject.engaged = true // Visual engagement alone does not classify the gesture.
+        subject.leftDeadZone = true
         assert(subject.handleEvent(type: .otherMouseDragged, event: drag)?.takeUnretainedValue() === drag)
         assert(subject.handleEvent(type: .otherMouseUp, event: up) == nil)
         assert(!subject.isActive && replays.isEmpty)
@@ -846,12 +847,15 @@ extension VectorScrollApp {
         replays.removeAll()
         // Holding still shows the indicator after 0.2 s, and that long press is not replayed as a click.
         assert(subject.handleEvent(type: .otherMouseDown, event: down) == nil)
-        assert(!subject.engaged)
+        assert(!subject.engaged && subject.timer == nil)
+        subject.middleButtonIsDown = { true }
+        up.timestamp = down.timestamp + 300_000_000
         RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.35))
-        assert(subject.engaged, "Holding still for 0.2 s must show the indicator")
+        assert(subject.engaged && subject.timer == nil, "Holding still must show the indicator without starting ticks")
         assert(subject.handleEvent(type: .otherMouseUp, event: up) == nil)
         assert(!subject.isActive && replays.isEmpty, "A long press is not a click")
         print("PASS: hold mode releases to stop, shows the indicator after a 0.2 s hold, and never enters toggle-style scrolling")
+        up.timestamp = down.timestamp + 100_000_000
 
         subject.tapState = .listenOnly
         for mode in [ScrollMode.hold, .toggle, .both] {
@@ -905,6 +909,156 @@ extension VectorScrollApp {
         return true
     }
 
+    static func checkHotPath() -> Bool {
+        let suite = "local.vectorscroll.hot-path.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        assert(ExcludedApps.cachedBundleIDs(in: defaults).isEmpty)
+        ExcludedApps.add(["com.example.one", "com.example.one"], to: defaults)
+        assert(ExcludedApps.cachedBundleIDs(in: defaults) == ["com.example.one"])
+        ExcludedApps.remove("com.example.one", from: defaults)
+        assert(ExcludedApps.cachedBundleIDs(in: defaults).isEmpty)
+        defaults.set(["com.example.external"], forKey: "excludedBundleIDs")
+        NotificationCenter.default.post(name: UserDefaults.didChangeNotification, object: defaults)
+        assert(ExcludedApps.cachedBundleIDs(in: defaults) == ["com.example.external"])
+        func window(_ pid: Int32, layer: Int = 0, alpha: Double = 1, x: CGFloat = 0) -> [String: Any] {
+            [kCGWindowOwnerPID as String: pid, kCGWindowLayer as String: layer,
+             kCGWindowAlpha as String: alpha,
+             kCGWindowBounds as String: CGRect(x: x, y: 0, width: 100, height: 100).dictionaryRepresentation]
+        }
+        let point = CGPoint(x: 50, y: 50)
+        let windows = [window(10, layer: 1), window(11, alpha: 0), window(12, x: 200),
+                       window(ProcessInfo.processInfo.processIdentifier), window(13), window(14)]
+        assert(ExcludedApps.ownerPID(at: point, in: windows) == 13, "Hit testing must use the frontmost visible normal window under the pointer")
+        assert(ExcludedApps.ownerPID(at: CGPoint(x: 500, y: 500), in: windows) == nil)
+        print("PASS: exclusion Set invalidation and front-to-back pointer targeting through overlays")
+
+        func mouse(_ type: CGEventType, at point: CGPoint = CGPoint(x: 123, y: 234)) -> CGEvent {
+            let event = CGEvent(mouseEventSource: nil, mouseType: type, mouseCursorPosition: point, mouseButton: .center)!
+            event.timestamp = 1_000_000_000
+            return event
+        }
+        let subject = VectorScrollApp()
+        subject.tapState = .filtering
+        subject.raiseWindowOnScroll = false
+        subject.appIsExcluded = { _ in false }
+        var replays = 0
+        subject.postClick = { _ in replays += 1 }
+        let down = mouse(.otherMouseDown)
+        let up = mouse(.otherMouseUp)
+        // The same physical duration gets the same result regardless of feedback delivery order.
+        for milliseconds in [100, 200, 300] {
+            for feedbackRan in [false, true] {
+                let before = replays
+                _ = subject.handleEvent(type: .otherMouseDown, event: down)
+                subject.engaged = feedbackRan
+                up.timestamp = down.timestamp + UInt64(milliseconds) * 1_000_000
+                _ = subject.handleEvent(type: .otherMouseUp, event: up)
+                assert(replays == before + (milliseconds < 200 ? 1 : 0))
+                assert(!subject.isActive && subject.timer == nil)
+            }
+        }
+        _ = subject.handleEvent(type: .otherMouseDown, event: down)
+        subject.middleButtonIsDown = { false }
+        subject.feedbackWorkItem!.perform()
+        assert(!subject.engaged && subject.timer == nil, "Late hold feedback must check the physical button")
+        subject.stopScrolling()
+        print("PASS: 100/200/300 ms hold classification is independent of feedback ordering; physically released holds cannot engage")
+
+        _ = subject.handleEvent(type: .otherMouseDown, event: down)
+        let beforeDrag = replays
+        let far = mouse(.otherMouseDragged, at: CGPoint(x: 200, y: 300))
+        _ = subject.handleEvent(type: .otherMouseDragged, event: far)
+        assert(subject.engaged && subject.leftDeadZone && subject.timer != nil && subject.lastScrollTime != nil)
+        subject.lastScrollTime = -100 // A pause must discard this old clock.
+        subject.scrollRemainder = CGPoint(x: 0.4, y: 0.4)
+        let back = mouse(.otherMouseDragged)
+        _ = subject.handleEvent(type: .otherMouseDragged, event: back)
+        assert(subject.timer == nil && subject.lastScrollTime == nil && subject.scrollRemainder == .zero)
+        _ = subject.handleEvent(type: .otherMouseDragged, event: far)
+        assert(subject.timer != nil && subject.lastScrollTime! > 0)
+        _ = subject.handleEvent(type: .otherMouseDragged, event: back)
+        up.timestamp = down.timestamp + 100_000_000
+        _ = subject.handleEvent(type: .otherMouseUp, event: up)
+        assert(replays == beforeDrag, "A short out-and-back drag must never replay as a click")
+        subject.scrollMode = .toggle
+        subject.holdDelayEnabled = false
+        _ = subject.handleEvent(type: .otherMouseDown, event: down)
+        _ = subject.handleEvent(type: .otherMouseUp, event: up)
+        assert(subject.isActive && subject.timer == nil)
+        _ = subject.handleEvent(type: .mouseMoved, event: mouse(.mouseMoved, at: far.location))
+        assert(subject.timer != nil)
+        _ = subject.handleEvent(type: .mouseMoved, event: mouse(.mouseMoved))
+        assert(subject.isActive && subject.timer == nil)
+        subject.stopScrolling()
+        print("PASS: hold drags and toggle motion start ticks outside the dead zone, stop inside it, and reset timing on resume")
+
+        let offset = CGPoint(x: 120, y: 120)
+        func total(ticks: Int) -> CGPoint {
+            subject.scrollRemainder = .zero
+            var sum = CGPoint.zero
+            for _ in 0..<ticks {
+                let delta = subject.nextScrollDelta(for: offset, elapsed: 1 / Double(ticks))!
+                sum.x += CGFloat(delta.horizontal)
+                sum.y += CGFloat(delta.vertical)
+            }
+            return sum
+        }
+        let sixty = total(ticks: 60)
+        let thirty = total(ticks: 30)
+        assert(sixty == thirty && sixty == CGPoint(x: -3024, y: 3024))
+        subject.scrollRemainder = .zero
+        let stalled = subject.nextScrollDelta(for: offset, elapsed: 10)!
+        subject.scrollRemainder = .zero
+        let capped = subject.nextScrollDelta(for: offset, elapsed: 0.05)!
+        assert(stalled == capped && abs(stalled.vertical) <= 152)
+        subject.scrollRemainder = .zero
+        assert(subject.nextScrollDelta(for: offset, elapsed: 0) == nil)
+        assert(subject.nextScrollDelta(for: offset, elapsed: -1) == nil)
+        print("PASS: 60 and 30 callbacks both integrate 3024 px/second; stalls catch up at most 50 ms")
+
+        // Hold the AX queue so requests can be inspected and cancelled without raising real windows.
+        subject.accessibilityQueue.suspend()
+        subject.raiseWindowOnScroll = true
+        subject.startScrolling(at: down.unflippedLocation, target: down.location)
+        subject.engage()
+        let firstToken = subject.focusCancellation!
+        let firstWork = subject.focusWorkItem!
+        subject.stopScrolling()
+        assert(firstToken.isCancelled && firstWork.isCancelled)
+        subject.startScrolling(at: down.unflippedLocation, target: down.location)
+        subject.engage()
+        let secondToken = subject.focusCancellation!
+        assert(!secondToken.isCancelled && firstToken !== secondToken)
+        subject.stopScrolling()
+        assert(secondToken.isCancelled && subject.focusCancellation == nil && subject.focusWorkItem == nil)
+        subject.accessibilityQueue.resume()
+        subject.accessibilityQueue.sync {} // Cancelled requests must drain without doing AX work.
+        print("PASS: stop invalidates thread-safe focus tokens and cancels pending work across sessions")
+
+        // Overlay ordering happens only after the handler yields; stale generations cannot show.
+        subject.raiseWindowOnScroll = false
+        RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.05))
+        assert(!subject.overlay.probeIsVisible)
+        subject.scrollMode = .both
+        _ = subject.handleEvent(type: .otherMouseDown, event: down)
+        _ = subject.handleEvent(type: .otherMouseUp, event: up)
+        assert(subject.engaged && !subject.overlay.probeIsVisible)
+        subject.stopScrolling()
+        RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.05))
+        assert(!subject.overlay.probeIsVisible, "A stopped generation must never show its queued overlay")
+        _ = subject.handleEvent(type: .otherMouseDown, event: down)
+        _ = subject.handleEvent(type: .otherMouseUp, event: up)
+        RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.05))
+        assert(subject.overlay.probeIsVisible)
+        subject.stopScrolling()
+        assert(subject.overlay.probeIsVisible, "Hiding must also wait until after the tap callback")
+        RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.05))
+        assert(!subject.overlay.probeIsVisible)
+        print("PASS: overlay show/hide is deferred and guarded by the session generation")
+        return true
+    }
+
     static func checkEventRecovery() -> Bool {
         let subject = VectorScrollApp()
         subject.tapState = .filtering
@@ -913,7 +1067,7 @@ extension VectorScrollApp {
         let down = CGEvent(mouseEventSource: nil, mouseType: .otherMouseDown,
                            mouseCursorPosition: CGPoint(x: 123, y: 234), mouseButton: .center)!
         assert(subject.handleEvent(type: .otherMouseDown, event: down) == nil)
-        assert(subject.isActive && subject.timer != nil)
+        assert(subject.isActive && subject.timer == nil, "A stationary press must not start ticks")
         assert(subject.anchor == down.unflippedLocation, "Anchor must come from the press event")
         assert(subject.pendingTarget == down.location, "AX targeting must retain CoreGraphics coordinates")
         _ = subject.handleEvent(type: .tapDisabledByTimeout, event: down)
@@ -942,6 +1096,10 @@ extension VectorScrollApp {
         print("PASS: tap-disabled events clear held clicks and stop-button releases without replay")
         return true
     }
+}
+
+extension ScrollOverlayWindow {
+    var probeIsVisible: Bool { window.isVisible }
 }
 
 setvbuf(stdout, nil, _IONBF, 0)
@@ -976,10 +1134,11 @@ final class AuditAppDelegate: NSObject, NSApplicationDelegate {
         let delayedRelease = VectorScrollApp.checkRelease(delay: 0.3)
         let filtering = VectorScrollApp.checkClickFiltering()
         let recovery = VectorScrollApp.checkEventRecovery()
+        let hotPath = VectorScrollApp.checkHotPath()
         let modes = VectorScrollApp.checkScrollModesAndTapStatus()
         VectorScrollApp.checkScrollingSettings()
         let settings = VectorScrollApp.checkDelaySettings()
-        let passed = promptRelease && delayedRelease && filtering && recovery && modes && settings
+        let passed = promptRelease && delayedRelease && filtering && recovery && hotPath && modes && settings
         if passed {
             try! "PASS".write(toFile: CommandLine.arguments[2], atomically: true, encoding: .utf8)
         }
