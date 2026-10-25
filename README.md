@@ -6,7 +6,7 @@ Middle-button autoscrolling for macOS. Press the middle button, move the pointer
 
 Swift and AppKit only. No Electron, web views, or third-party dependencies. One universal binary runs on Intel and Apple Silicon Macs with macOS 14 or later.
 
-Version 1.12.0, build 24, uses native Liquid Glass controls on macOS 26. macOS 14 and 15 keep the standard AppKit appearance.
+Version 1.13.0, build 25, uses native Liquid Glass controls on macOS 26. macOS 14 and 15 keep the standard AppKit appearance.
 
 <table>
   <tr>
