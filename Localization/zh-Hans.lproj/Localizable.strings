@@ -39,6 +39,7 @@
 /* Dark appearance of the scrolling indicator. */
 "Dark" = "深色";
 "Delay before scrolling starts" = "滚动开始前的延迟";
+"Donate on Ko-fi" = "在 Ko-fi 上捐助";
 /* %@ is the version being downloaded. */
 "Downloading VectorScroll %@…" = "正在下载 VectorScroll %@…";
 "Drag down to scroll up instead of down." = "向下拖移时向上滚动，而不是向下。";

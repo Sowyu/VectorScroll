@@ -39,6 +39,7 @@
 /* Dark appearance of the scrolling indicator. */
 "Dark" = "어둡게";
 "Delay before scrolling starts" = "스크롤 시작 전 지연 시간";
+"Donate on Ko-fi" = "Ko-fi에서 후원하기";
 /* %@ is the version being downloaded. */
 "Downloading VectorScroll %@…" = "VectorScroll %@ 다운로드 중…";
 "Drag down to scroll up instead of down." = "아래로 드래그하면 아래 대신 위로 스크롤합니다.";

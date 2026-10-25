@@ -39,6 +39,7 @@
 /* Dark appearance of the scrolling indicator. */
 "Dark" = "Тёмный";
 "Delay before scrolling starts" = "Задержка перед началом прокрутки";
+"Donate on Ko-fi" = "Поддержать на Ko-fi";
 /* %@ is the version being downloaded. */
 "Downloading VectorScroll %@…" = "Загрузка VectorScroll %@…";
 "Drag down to scroll up instead of down." = "Перетаскивание вниз прокручивает вверх, а не вниз.";

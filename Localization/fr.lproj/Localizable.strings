@@ -39,6 +39,7 @@
 /* Dark appearance of the scrolling indicator. */
 "Dark" = "Foncé";
 "Delay before scrolling starts" = "Délai avant le début du défilement";
+"Donate on Ko-fi" = "Faire un don sur Ko-fi";
 /* %@ is the version being downloaded. */
 "Downloading VectorScroll %@…" = "Téléchargement de VectorScroll %@…";
 "Drag down to scroll up instead of down." = "Faites glisser vers le bas pour défiler vers le haut au lieu du bas.";

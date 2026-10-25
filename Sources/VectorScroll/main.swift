@@ -169,10 +169,19 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         settings.image = NSImage(systemSymbolName: "gearshape", accessibilityDescription: nil)
         menu.addItem(settings)
         menu.addItem(.separator())
+        let donate = NSMenuItem(title: L("Donate on Ko-fi"), action: #selector(openKofi), keyEquivalent: "")
+        donate.target = self
+        donate.image = NSImage(systemSymbolName: "cup.and.saucer", accessibilityDescription: nil)
+        menu.addItem(donate)
+        menu.addItem(.separator())
         menu.addItem(NSMenuItem(title: L("Quit VectorScroll"), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
         self.menu = menu
         configureSettingsWindow()
         if !menuBarIconHidden { installStatusItem() }
+    }
+
+    @objc private func openKofi() {
+        NSWorkspace.shared.open(URL(string: "https://ko-fi.com/anikodev")!)
     }
 
     @objc private func showSettings() {

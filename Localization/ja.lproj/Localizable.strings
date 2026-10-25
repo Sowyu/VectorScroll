@@ -39,6 +39,7 @@
 /* Dark appearance of the scrolling indicator. */
 "Dark" = "ダーク";
 "Delay before scrolling starts" = "スクロール開始までの遅延";
+"Donate on Ko-fi" = "Ko-fiで寄付";
 /* %@ is the version being downloaded. */
 "Downloading VectorScroll %@…" = "VectorScroll %@をダウンロード中…";
 "Drag down to scroll up instead of down." = "下にドラッグすると、下ではなく上にスクロールします。";
