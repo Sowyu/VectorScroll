@@ -14,11 +14,6 @@ enum SettingsStyle {
             ? NSColor.white.withAlphaComponent(0.1) : NSColor.black.withAlphaComponent(0.1)
     })
 
-    static func symbol(_ name: String, color: NSColor = secondary) -> NSImage? {
-        NSImage(systemSymbolName: name, accessibilityDescription: nil)?
-            .withSymbolConfiguration(.init(paletteColors: [color]))
-    }
-
     static func setSymbol(_ name: String, on button: NSButton) {
         button.image = NSImage(systemSymbolName: name, accessibilityDescription: nil)
         button.imagePosition = .imageLeading
@@ -132,7 +127,8 @@ enum SettingsStyle {
     static func prepareWindow(_ window: NSWindow) {
         window.collectionBehavior.insert([.moveToActiveSpace, .fullScreenAuxiliary])
         window.titlebarAppearsTransparent = true
-        window.titleVisibility = .visible
+        // No visible title bar. The title stays for the Window menu and VoiceOver.
+        window.titleVisibility = .hidden
         window.isMovableByWindowBackground = true
         window.isOpaque = true
         window.backgroundColor = background
@@ -337,7 +333,6 @@ private final class SettingsButtonCell: NSButtonCell {
 // semantics. All ordinary actions and checkboxes are plain NSButton instances.
 @MainActor
 final class SettingsButton: NSButton {
-    var symbolName: String { didSet { needsDisplay = true } }
     var displayTitle: String? { didSet { updateToolTip(); needsDisplay = true } }
     var detail: String? {
         didSet {
@@ -352,8 +347,7 @@ final class SettingsButton: NSButton {
     private var hovered = false
     private var hoverArea: NSTrackingArea?
 
-    init(_ title: String, symbol: String, target: AnyObject?, action: Selector?) {
-        symbolName = symbol
+    init(_ title: String, target: AnyObject?, action: Selector?) {
         super.init(frame: .zero)
         cell = SettingsButtonCell(textCell: "")
         self.title = title
@@ -369,7 +363,7 @@ final class SettingsButton: NSButton {
     override var isFlipped: Bool { true }
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { isEnabled }
     override var intrinsicContentSize: NSSize {
-        let width = ((displayTitle ?? title) as NSString).size(withAttributes: [.font: font!]).width + 80
+        let width = ((displayTitle ?? title) as NSString).size(withAttributes: [.font: font!]).width + 40
         return NSSize(width: width, height: 52)
     }
     override var title: String { didSet { invalidateIntrinsicContentSize(); needsDisplay = true } }
@@ -388,7 +382,7 @@ final class SettingsButton: NSButton {
     override func becomeFirstResponder() -> Bool { needsDisplay = true; return super.becomeFirstResponder() }
     override func resignFirstResponder() -> Bool { needsDisplay = true; return super.resignFirstResponder() }
 
-    // A System Settings style list row: a symbol, title and description,
+    // A System Settings style list row: title and description,
     // and a checkmark on the selected mode.
     override func draw(_ dirtyRect: NSRect) {
         let selected = state == .on
@@ -398,21 +392,13 @@ final class SettingsButton: NSButton {
             NSColor.labelColor.withAlphaComponent((pressed ? 0.1 : 0.05) * alpha).setFill()
             NSBezierPath(roundedRect: bounds.insetBy(dx: -6, dy: 4), xRadius: 8, yRadius: 8).fill()
         }
-        let slot = NSRect(x: 0, y: bounds.midY - 13, width: 26, height: 26)
-        if let image = NSImage(systemSymbolName: symbolName, accessibilityDescription: nil)?
-            .withSymbolConfiguration(NSImage.SymbolConfiguration(pointSize: 16, weight: .regular)
-                .applying(.init(paletteColors: [selected ? .controlAccentColor : SettingsStyle.secondary]))) {
-            let size = image.size
-            image.draw(in: NSRect(x: slot.midX - size.width / 2, y: slot.midY - size.height / 2, width: size.width, height: size.height),
-                       from: .zero, operation: .sourceOver, fraction: alpha, respectFlipped: true, hints: nil)
-        }
         let paragraph = NSMutableParagraphStyle()
         paragraph.lineBreakMode = .byTruncatingTail
-        let textWidth = max(0, bounds.width - 38 - 28)
-        ((displayTitle ?? title) as NSString).draw(in: NSRect(x: 38, y: bounds.midY - 18, width: textWidth, height: 18), withAttributes: [
+        let textWidth = max(0, bounds.width - 28)
+        ((displayTitle ?? title) as NSString).draw(in: NSRect(x: 0, y: bounds.midY - 18, width: textWidth, height: 18), withAttributes: [
             .font: NSFont.systemFont(ofSize: 13), .foregroundColor: NSColor.labelColor.withAlphaComponent(alpha), .paragraphStyle: paragraph])
         if let detail {
-            (detail as NSString).draw(in: NSRect(x: 38, y: bounds.midY + 1, width: textWidth, height: 16), withAttributes: [
+            (detail as NSString).draw(in: NSRect(x: 0, y: bounds.midY + 1, width: textWidth, height: 16), withAttributes: [
                 .font: NSFont.systemFont(ofSize: 11), .foregroundColor: SettingsStyle.secondary.withAlphaComponent(alpha), .paragraphStyle: paragraph])
         }
         if selected, let check = NSImage(systemSymbolName: "checkmark", accessibilityDescription: nil)?

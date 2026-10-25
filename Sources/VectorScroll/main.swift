@@ -285,15 +285,11 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
             stack.addArrangedSubview(view)
             view.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
         }
-        func sectionHeading(_ title: String, _ symbol: String) -> NSView {
-            let icon = NSImageView(image: SettingsStyle.symbol(symbol)!)
-            icon.widthAnchor.constraint(equalToConstant: 17).isActive = true
-            icon.heightAnchor.constraint(equalToConstant: 17).isActive = true
+        func sectionHeading(_ title: String) -> NSView {
             let heading = label(title)
             heading.font = .systemFont(ofSize: 14, weight: .semibold)
-            let headingRow = row(icon, heading)
-            headings.append(headingRow)
-            return headingRow
+            headings.append(heading)
+            return heading
         }
         func settingsRow(_ title: String, control: NSView, detail: String? = nil) -> NSView {
             SettingsStyle.row(title, control: control, description: detail.map { label($0, secondary: true) })
@@ -312,15 +308,15 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         guideButton.setContentHuggingPriority(.required, for: .horizontal)
         fullWidth(row(appIcon, appTitle, headerSpacer, guideButton))
 
-        fullWidth(sectionHeading(L("Scrolling"), "computermouse"))
-        let hold = SettingsButton(L("Scroll while holding the middle button"), symbol: "hand.point.up.left", target: self, action: #selector(selectHoldToScroll))
+        fullWidth(sectionHeading(L("Scrolling")))
+        let hold = SettingsButton(L("Scroll while holding the middle button"), target: self, action: #selector(selectHoldToScroll))
         hold.displayTitle = L("Hold to scroll")
         hold.detail = L("Release the middle button to stop")
         holdScrollItem = hold
-        let click = SettingsButton(L("Keep scrolling until the next click"), symbol: "cursorarrow.click", target: self, action: #selector(selectHoldToLock))
+        let click = SettingsButton(L("Keep scrolling until the next click"), target: self, action: #selector(selectHoldToLock))
         click.displayTitle = L("Toggle scrolling")
         holdToLockItem = click
-        let both = SettingsButton(L("Hold or click"), symbol: "hand.draw", target: self, action: #selector(selectBoth))
+        let both = SettingsButton(L("Hold or click"), target: self, action: #selector(selectBoth))
         both.detail = L("Hold and drag, or click to keep scrolling")
         holdOrClickItem = both
         // Cards must not outrank the window's stay-put priority (500), or the
@@ -374,7 +370,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         )
         fullWidth(scrollingGroup)
 
-        fullWidth(sectionHeading(L("Indicator"), "scope"))
+        fullWidth(sectionHeading(L("Indicator")))
         indicatorAppearance = NSSegmentedControl(labels: [L("Light"), L("Dark")], trackingMode: .selectOne,
                                                   target: self, action: #selector(changeIndicatorAppearance(_:)))
         indicatorAppearance.controlSize = .small
@@ -402,10 +398,10 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         let sizeRow = settingsRow(L("Size"), control: sizeAndPreview, detail: L("Actual-size preview"))
         fullWidth(group(appearanceRow, sizeRow))
 
-        fullWidth(sectionHeading(L("Excluded apps"), "nosign"))
+        fullWidth(sectionHeading(L("Excluded apps")))
         fullWidth(ExcludedApps.makeSettingsSection())
 
-        fullWidth(sectionHeading(L("App"), "slider.horizontal.3"))
+        fullWidth(sectionHeading(L("App")))
         openSettingsButton = toggle(L("Open settings on launch"), #selector(toggleOpenSettings))
         hideIconItem = toggle(L("Show menu bar icon"), #selector(toggleMenuBarIcon))
         launchAtStartupItem = toggle(L("Launch at login"), #selector(toggleLaunchAtStartup))
@@ -475,7 +471,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
             document.widthAnchor.constraint(equalTo: scroll.contentView.widthAnchor),
             stack.leadingAnchor.constraint(equalTo: document.leadingAnchor, constant: 24),
             stack.trailingAnchor.constraint(equalTo: document.trailingAnchor, constant: -24),
-            stack.topAnchor.constraint(equalTo: document.topAnchor, constant: 20),
+            stack.topAnchor.constraint(equalTo: document.topAnchor, constant: 6),
             stack.bottomAnchor.constraint(equalTo: document.bottomAnchor, constant: -24)
         ])
         updateMarkerMenuItem()
