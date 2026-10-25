@@ -415,7 +415,7 @@ extension VectorScrollApp {
                 assert(views.contains { $0 is NSGlassEffectView }, "Scrolling modes must sit in Liquid Glass")
             }
             #endif
-            assert(window.isOpaque && window.backgroundColor == .windowBackgroundColor, "Window backgrounds must be solid")
+            assert(window.isOpaque && window.backgroundColor == SettingsStyle.background, "Window backgrounds must be solid")
             for button in views.compactMap({ $0 as? NSButton }) where button.isBordered && !(button is NSPopUpButton) {
                 if button === subject.holdScrollItem || button === subject.holdToLockItem || button === subject.holdOrClickItem { continue }
                 var expected = NSButton.BezelStyle.rounded

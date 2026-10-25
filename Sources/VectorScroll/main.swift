@@ -326,7 +326,10 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         // Cards must not outrank the window's stay-put priority (500), or the
         // window widens to fit their full accessibility titles.
         for card in [hold, click, both] { card.setContentCompressionResistancePriority(.defaultLow, for: .horizontal) }
-        let modes = SettingsStyle.column([hold, click, both], spacing: 6)
+        let modes = NSStackView(views: [hold, click, both])
+        modes.orientation = .horizontal
+        modes.distribution = .fillEqually
+        modes.spacing = 8
         modes.translatesAutoresizingMaskIntoConstraints = false
         let modesPadding = NSView()
         modesPadding.addSubview(modes)

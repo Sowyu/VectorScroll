@@ -4,6 +4,15 @@ import AppKit
 enum SettingsStyle {
     static let text = NSColor.labelColor
     static let secondary = NSColor.secondaryLabelColor
+    // Solid colors matching the 1.8 look: groups share the window color and
+    // only a light edge separates them, so the glass parts read darker.
+    static let background = NSColor(name: "SettingsBackground", dynamicProvider: { (appearance: NSAppearance) -> NSColor in
+        NSColor(white: appearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua ? 40 / 255 : 236 / 255, alpha: 1)
+    })
+    static let groupBorder = NSColor(name: "SettingsGroupBorder", dynamicProvider: { (appearance: NSAppearance) -> NSColor in
+        appearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua
+            ? NSColor.white.withAlphaComponent(0.1) : NSColor.black.withAlphaComponent(0.1)
+    })
     static let border = NSColor.separatorColor
 
     static func symbol(_ name: String, color: NSColor = secondary) -> NSImage? {
@@ -155,7 +164,7 @@ enum SettingsStyle {
         window.titleVisibility = .visible
         window.isMovableByWindowBackground = true
         window.isOpaque = true
-        window.backgroundColor = .windowBackgroundColor
+        window.backgroundColor = background
     }
 }
 
@@ -193,8 +202,8 @@ private final class SettingsGroup: NSBox {
         boxType = .custom
         titlePosition = .noTitle
         cornerRadius = 10
-        fillColor = .controlBackgroundColor
-        borderColor = SettingsStyle.border
+        fillColor = .clear
+        borderColor = SettingsStyle.groupBorder
         borderWidth = 1
         contentViewMargins = NSSize(width: 14, height: 0)
         let stack = SettingsStyle.column(views, spacing: 0)
@@ -390,7 +399,7 @@ final class SettingsButton: NSButton {
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { isEnabled }
     override var intrinsicContentSize: NSSize {
         let width = (title as NSString).size(withAttributes: [.font: font!]).width + 56
-        return NSSize(width: width, height: 52)
+        return NSSize(width: width, height: 76)
     }
     override var title: String { didSet { invalidateIntrinsicContentSize(); needsDisplay = true } }
     override var state: NSControl.StateValue { didSet { needsDisplay = true } }
@@ -424,20 +433,26 @@ final class SettingsButton: NSButton {
         box.lineWidth = 1
         box.stroke()
         SettingsStyle.symbol(symbolName, color: secondary)?
-            .draw(in: NSRect(x: 12, y: bounds.midY - 8, width: 16, height: 16), from: .zero, operation: .sourceOver, fraction: 1, respectFlipped: true, hints: nil)
+            .draw(in: NSRect(x: 12, y: 13, width: 16, height: 16), from: .zero, operation: .sourceOver, fraction: 1, respectFlipped: true, hints: nil)
         let paragraph = NSMutableParagraphStyle()
         paragraph.lineBreakMode = .byTruncatingTail
-        let textRect = NSRect(x: 38, y: bounds.midY - 18, width: max(0, bounds.width - 74), height: 19)
+        let textRect = NSRect(x: 38, y: 12, width: max(0, bounds.width - 62), height: 19)
         ((displayTitle ?? title) as NSString).draw(in: textRect, withAttributes: [.font: font!, .foregroundColor: foreground, .paragraphStyle: paragraph])
         if let detail {
-            let detailRect = NSRect(x: 38, y: bounds.midY + 2, width: bounds.width - 48, height: 18)
-            // Longer translations step down one point before truncating.
-            let fits = (detail as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: 11)]).width <= detailRect.width
-            (detail as NSString).draw(in: detailRect, withAttributes: [.font: NSFont.systemFont(ofSize: fits ? 11 : 10),
-                                                                       .foregroundColor: secondary, .paragraphStyle: paragraph])
+            // The detail wraps under the title. Longer translations step down one point before truncating.
+            let detailRect = NSRect(x: 38, y: 33, width: max(0, bounds.width - 46), height: 38)
+            let wrapping = NSMutableParagraphStyle()
+            wrapping.lineBreakMode = .byWordWrapping
+            wrapping.lineBreakStrategy = .standard
+            let fits = (detail as NSString).boundingRect(with: NSSize(width: detailRect.width, height: .greatestFiniteMagnitude),
+                                                         options: .usesLineFragmentOrigin,
+                                                         attributes: [.font: NSFont.systemFont(ofSize: 11), .paragraphStyle: wrapping]).height <= detailRect.height
+            (detail as NSString).draw(with: detailRect, options: [.usesLineFragmentOrigin, .truncatesLastVisibleLine],
+                                      attributes: [.font: NSFont.systemFont(ofSize: fits ? 11 : 10),
+                                                   .foregroundColor: secondary, .paragraphStyle: wrapping])
         }
         if selected {
-            SettingsStyle.symbol("checkmark", color: foreground)?.draw(in: NSRect(x: bounds.width - 24, y: bounds.midY - 6, width: 12, height: 12), from: .zero, operation: .sourceOver, fraction: 1, respectFlipped: true, hints: nil)
+            SettingsStyle.symbol("checkmark", color: foreground)?.draw(in: NSRect(x: bounds.width - 22, y: 15, width: 12, height: 12), from: .zero, operation: .sourceOver, fraction: 1, respectFlipped: true, hints: nil)
         }
     }
 
