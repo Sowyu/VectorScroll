@@ -191,7 +191,8 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         let updateTimer = DispatchSource.makeTimerSource(queue: .main)
         updateTimer.schedule(wallDeadline: .now() + AppUpdate.automaticCheckDelay(defaults: defaults),
                              repeating: .seconds(86400), leeway: .seconds(60))
-        updateTimer.setEventHandler(handler: checkAutomatically)
+        // The timer fires on the main queue. Handing Dispatch the @MainActor closure itself crashes release builds.
+        updateTimer.setEventHandler { MainActor.assumeIsolated { checkAutomatically() } }
         self.updateTimer = updateTimer
         updateTimer.resume()
         _ = try? UpdateInstaller.acknowledgeLaunch()
