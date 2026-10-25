@@ -317,14 +317,15 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         fullWidth(row(appIcon, appTitle, headerSpacer, guideButton))
 
         fullWidth(sectionHeading(L("Scrolling"), "arrow.up.and.down.and.arrow.left.and.right"))
-        // Native radio buttons, each with its description indented under the title.
+        // Native radio buttons, each with its description starting exactly where AppKit draws the title.
         func modeRow(_ button: NSButton, detail: NSTextField) -> NSView {
             button.font = .systemFont(ofSize: 13)
+            let titleInset = button.cell!.titleRect(forBounds: NSRect(origin: .zero, size: button.intrinsicContentSize)).minX
             let description = NSView()
             detail.translatesAutoresizingMaskIntoConstraints = false
             description.addSubview(detail)
             NSLayoutConstraint.activate([
-                detail.leadingAnchor.constraint(equalTo: description.leadingAnchor, constant: 20),
+                detail.leadingAnchor.constraint(equalTo: description.leadingAnchor, constant: titleInset),
                 detail.trailingAnchor.constraint(equalTo: description.trailingAnchor),
                 detail.topAnchor.constraint(equalTo: description.topAnchor),
                 detail.bottomAnchor.constraint(equalTo: description.bottomAnchor)
