@@ -361,3 +361,20 @@ final class SettingsChoiceRow: NSView {
         if button.isEnabled { button.performClick(nil) }
     }
 }
+
+// Content scrolls under the transparent title bar. This keeps the bar the
+// window's color and fades content out below it instead of cutting it off.
+@MainActor
+final class SettingsTopFade: NSView {
+    var fadeHeight: CGFloat = 24 { didSet { needsDisplay = true } }
+    override var isFlipped: Bool { true }
+    override func hitTest(_ point: NSPoint) -> NSView? { nil }
+
+    override func draw(_ dirtyRect: NSRect) {
+        let solid = max(0, bounds.height - fadeHeight)
+        SettingsStyle.background.setFill()
+        NSRect(x: 0, y: 0, width: bounds.width, height: solid).fill()
+        NSGradient(starting: SettingsStyle.background, ending: SettingsStyle.background.withAlphaComponent(0))?
+            .draw(in: NSRect(x: 0, y: solid, width: bounds.width, height: fadeHeight), angle: 90)
+    }
+}

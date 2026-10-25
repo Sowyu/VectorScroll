@@ -403,6 +403,12 @@ extension VectorScrollApp {
             [view] + view.subviews.flatMap { descendants($0) }
         }
         let scroll = descendants(content).compactMap { $0 as? NSScrollView }.first!
+        let fade = descendants(content).compactMap { $0 as? SettingsTopFade }.first!
+        scroll.contentView.scroll(to: NSPoint(x: 0, y: -scroll.contentInsets.top))
+        assert(fade.alphaValue == 0, "The title bar fade must be hidden at rest")
+        scroll.contentView.scroll(to: NSPoint(x: 0, y: 120))
+        assert(fade.alphaValue == 1, "Content scrolled under the title bar must fade out")
+        scroll.contentView.scroll(to: NSPoint(x: 0, y: -scroll.contentInsets.top))
         let stack = descendants(scroll.documentView!).compactMap { $0 as? NSStackView }.first!
         assert(stack.bounds.width <= scroll.contentView.bounds.width, "Settings must fit horizontally")
         assert(scroll.hasVerticalScroller, "All settings must remain reachable on smaller screens")

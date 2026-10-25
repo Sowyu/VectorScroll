@@ -247,6 +247,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
                                   styleMask: [.titled, .closable, .miniaturizable, .resizable], backing: .buffered, defer: false)
         settingsWindow.title = L("VectorScroll Settings")
         SettingsStyle.prepareWindow(settingsWindow)
+        settingsWindow.styleMask.insert(.fullSizeContentView)
         settingsWindow.isReleasedWhenClosed = false
         settingsWindow.minSize = NSSize(width: 520, height: 500)
         if !settingsWindow.setFrameUsingName("VectorScrollSettingsV6") { settingsWindow.center() }
@@ -475,11 +476,31 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         stack.translatesAutoresizingMaskIntoConstraints = false
         document.addSubview(stack)
         content.addSubview(scroll)
+        let fade = SettingsTopFade()
+        fade.translatesAutoresizingMaskIntoConstraints = false
+        content.addSubview(fade)
+        NSLayoutConstraint.activate([
+            fade.leadingAnchor.constraint(equalTo: content.leadingAnchor),
+            fade.trailingAnchor.constraint(equalTo: content.trailingAnchor),
+            fade.topAnchor.constraint(equalTo: content.topAnchor),
+            NSLayoutConstraint(item: fade, attribute: .bottom, relatedBy: .equal,
+                               toItem: settingsWindow.contentLayoutGuide, attribute: .top, multiplier: 1, constant: fade.fadeHeight)
+        ])
+        // At rest nothing sits under the title bar, so the fade only appears once content scrolls there.
+        fade.alphaValue = 0
+        scroll.contentView.postsBoundsChangedNotifications = true
+        _ = NotificationCenter.default.addObserver(forName: NSView.boundsDidChangeNotification, object: scroll.contentView,
+                                                   queue: .main) { [weak fade, weak scroll] _ in
+            MainActor.assumeIsolated {
+                guard let fade, let scroll else { return }
+                fade.alphaValue = min(1, max(0, (scroll.contentView.bounds.minY + scroll.contentInsets.top) / 12))
+            }
+        }
         NSLayoutConstraint.activate([
             scroll.leadingAnchor.constraint(equalTo: content.leadingAnchor),
             scroll.trailingAnchor.constraint(equalTo: content.trailingAnchor),
-            NSLayoutConstraint(item: scroll, attribute: .top, relatedBy: .equal,
-                               toItem: settingsWindow.contentLayoutGuide, attribute: .top, multiplier: 1, constant: 0),
+            // Content scrolls under the title bar and fades out there instead of being cut off.
+            scroll.topAnchor.constraint(equalTo: content.topAnchor),
             scroll.bottomAnchor.constraint(equalTo: content.bottomAnchor),
             document.widthAnchor.constraint(equalTo: scroll.contentView.widthAnchor),
             stack.leadingAnchor.constraint(equalTo: document.leadingAnchor, constant: 24),
