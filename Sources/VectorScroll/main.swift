@@ -44,6 +44,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
     private var holdScrollItem: NSButton!
     private var holdToLockItem: NSButton!
     private var holdOrClickItem: NSButton!
+    private var holdToLockDetailLabel: NSTextField!
     private var launchAtStartupItem: NSSwitch!
     private var launchAtStartupStatusLabel: NSTextField!
     private var hideIconItem: NSSwitch!
@@ -316,20 +317,35 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         fullWidth(row(appIcon, appTitle, headerSpacer, guideButton))
 
         fullWidth(sectionHeading(L("Scrolling"), "arrow.up.and.down.and.arrow.left.and.right"))
-        let hold = SettingsButton(L("Scroll while holding the middle button"), target: self, action: #selector(selectHoldToScroll))
-        hold.displayTitle = L("Hold to scroll")
-        hold.detail = L("Release the middle button to stop")
+        // Native radio buttons, each with its description indented under the title.
+        func modeRow(_ button: NSButton, detail: NSTextField) -> NSView {
+            button.font = .systemFont(ofSize: 13)
+            let description = NSView()
+            detail.translatesAutoresizingMaskIntoConstraints = false
+            description.addSubview(detail)
+            NSLayoutConstraint.activate([
+                detail.leadingAnchor.constraint(equalTo: description.leadingAnchor, constant: 20),
+                detail.trailingAnchor.constraint(equalTo: description.trailingAnchor),
+                detail.topAnchor.constraint(equalTo: description.topAnchor),
+                detail.bottomAnchor.constraint(equalTo: description.bottomAnchor)
+            ])
+            return SettingsStyle.paddedRow(SettingsStyle.column([button, description]))
+        }
+        let hold = NSButton(radioButtonWithTitle: L("Hold to scroll"), target: self, action: #selector(selectHoldToScroll))
+        hold.setAccessibilityLabel(L("Scroll while holding the middle button"))
         holdScrollItem = hold
-        let click = SettingsButton(L("Keep scrolling until the next click"), target: self, action: #selector(selectHoldToLock))
-        click.displayTitle = L("Toggle scrolling")
+        let click = NSButton(radioButtonWithTitle: L("Toggle scrolling"), target: self, action: #selector(selectHoldToLock))
+        click.setAccessibilityLabel(L("Keep scrolling until the next click"))
         holdToLockItem = click
-        let both = SettingsButton(L("Hold or click"), target: self, action: #selector(selectBoth))
-        both.detail = L("Hold and drag, or click to keep scrolling")
+        let both = NSButton(radioButtonWithTitle: L("Hold or click"), target: self, action: #selector(selectBoth))
+        both.setAccessibilityHelp(L("Hold and drag, or click to keep scrolling"))
         holdOrClickItem = both
-        // Cards must not outrank the window's stay-put priority (500), or the
-        // window widens to fit their full accessibility titles.
-        for card in [hold, click, both] { card.setContentCompressionResistancePriority(.defaultLow, for: .horizontal) }
-        fullWidth(group(hold, click, both))
+        holdToLockDetailLabel = label("", secondary: true)
+        fullWidth(group(
+            modeRow(hold, detail: label(L("Release the middle button to stop"), secondary: true)),
+            modeRow(click, detail: holdToLockDetailLabel),
+            modeRow(both, detail: label(L("Hold and drag, or click to keep scrolling"), secondary: true))
+        ))
         reverseVerticalItem = toggle(L("Reverse vertical"), #selector(toggleReverseVertical))
         help(reverseVerticalItem, L("Drag down to scroll up instead of down."))
         reverseHorizontalItem = toggle(L("Reverse horizontal"), #selector(toggleReverseHorizontal))
@@ -454,7 +470,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
             if let index = stack.arrangedSubviews.firstIndex(of: heading), index > 0 {
                 stack.setCustomSpacing(20, after: stack.arrangedSubviews[index - 1])
             }
-            stack.setCustomSpacing(6, after: heading)
+            stack.setCustomSpacing(10, after: heading)
         }
         let content = settingsWindow.contentView!
         let scroll = NSScrollView()
@@ -663,7 +679,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         delayLabel.textColor = holdDelayEnabled ? .labelColor : .secondaryLabelColor
         delayItem.isHidden = !holdToLockMode
         let detail = holdDelayEnabled ? L("Hold to start, click to stop") : L("Click to start, click to stop")
-        (holdToLockItem as? SettingsButton)?.detail = detail
+        holdToLockDetailLabel.stringValue = detail
         holdToLockItem.setAccessibilityHelp(detail)
 
     }

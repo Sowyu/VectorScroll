@@ -9,9 +9,9 @@ enum SettingsStyle {
     static let background = NSColor(name: "SettingsBackground", dynamicProvider: { (appearance: NSAppearance) -> NSColor in
         NSColor(white: appearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua ? 40 / 255 : 236 / 255, alpha: 1)
     })
-    static let groupBorder = NSColor(name: "SettingsGroupBorder", dynamicProvider: { (appearance: NSAppearance) -> NSColor in
+    static let groupFill = NSColor(name: "SettingsGroupFill", dynamicProvider: { (appearance: NSAppearance) -> NSColor in
         appearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua
-            ? NSColor.white.withAlphaComponent(0.1) : NSColor.black.withAlphaComponent(0.1)
+            ? NSColor.white.withAlphaComponent(0.04) : NSColor.white.withAlphaComponent(0.7)
     })
 
     static func setSymbol(_ name: String, on button: NSButton) {
@@ -169,9 +169,8 @@ private final class SettingsGroup: NSBox {
         boxType = .custom
         titlePosition = .noTitle
         cornerRadius = 10
-        fillColor = .clear
-        borderColor = SettingsStyle.groupBorder
-        borderWidth = 1
+        fillColor = SettingsStyle.groupFill
+        borderWidth = 0
         contentViewMargins = NSSize(width: 14, height: 0)
         let stack = SettingsStyle.column(views, spacing: 0)
         stack.translatesAutoresizingMaskIntoConstraints = false
@@ -317,102 +316,4 @@ final class SettingsWindow: NSWindow {
 @MainActor
 final class SettingsDocument: NSView {
     override var isFlipped: Bool { true }
-}
-
-// The mode cards draw beyond a radio cell's native glyph and title, so their
-// whole visible surface needs to track the mouse.
-@MainActor
-private final class SettingsButtonCell: NSButtonCell {
-    override func hitTest(for event: NSEvent, in cellFrame: NSRect, of controlView: NSView) -> NSCell.HitResult {
-        guard isEnabled, cellFrame.contains(controlView.convert(event.locationInWindow, from: nil)) else { return [] }
-        return [.contentArea, .trackableArea]
-    }
-}
-
-// The two mode choices keep their card layout while retaining NSButton's radio
-// semantics. All ordinary actions and checkboxes are plain NSButton instances.
-@MainActor
-final class SettingsButton: NSButton {
-    var displayTitle: String? { didSet { updateToolTip(); needsDisplay = true } }
-    var detail: String? {
-        didSet {
-            updateToolTip()
-            setAccessibilityHelp(detail)
-            needsDisplay = true
-        }
-    }
-    private func updateToolTip() {
-        toolTip = [displayTitle ?? title, detail].compactMap { $0 }.joined(separator: "\n")
-    }
-    private var hovered = false
-    private var hoverArea: NSTrackingArea?
-
-    init(_ title: String, target: AnyObject?, action: Selector?) {
-        super.init(frame: .zero)
-        cell = SettingsButtonCell(textCell: "")
-        self.title = title
-        self.target = target
-        self.action = action
-        setButtonType(.radio)
-        font = .systemFont(ofSize: 13, weight: .medium)
-        isBordered = false
-        focusRingType = .exterior
-    }
-
-    required init?(coder: NSCoder) { fatalError("init(coder:) is unsupported") }
-    override var isFlipped: Bool { true }
-    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { isEnabled }
-    override var intrinsicContentSize: NSSize {
-        let width = ((displayTitle ?? title) as NSString).size(withAttributes: [.font: font!]).width + 40
-        return NSSize(width: width, height: 52)
-    }
-    override var title: String { didSet { invalidateIntrinsicContentSize(); needsDisplay = true } }
-    override var state: NSControl.StateValue { didSet { needsDisplay = true } }
-    override var isEnabled: Bool { didSet { needsDisplay = true } }
-
-    override func updateTrackingAreas() {
-        super.updateTrackingAreas()
-        if let hoverArea { removeTrackingArea(hoverArea) }
-        let area = NSTrackingArea(rect: .zero, options: [.mouseEnteredAndExited, .activeInKeyWindow, .inVisibleRect], owner: self)
-        addTrackingArea(area)
-        hoverArea = area
-    }
-    override func mouseEntered(with event: NSEvent) { hovered = true; needsDisplay = true }
-    override func mouseExited(with event: NSEvent) { hovered = false; needsDisplay = true }
-    override func becomeFirstResponder() -> Bool { needsDisplay = true; return super.becomeFirstResponder() }
-    override func resignFirstResponder() -> Bool { needsDisplay = true; return super.resignFirstResponder() }
-
-    // A System Settings style list row: title and description,
-    // and a checkmark on the selected mode.
-    override func draw(_ dirtyRect: NSRect) {
-        let selected = state == .on
-        let pressed = cell?.isHighlighted == true
-        let alpha: CGFloat = isEnabled ? 1 : 0.45
-        if pressed || hovered {
-            NSColor.labelColor.withAlphaComponent((pressed ? 0.1 : 0.05) * alpha).setFill()
-            NSBezierPath(roundedRect: bounds.insetBy(dx: -6, dy: 4), xRadius: 8, yRadius: 8).fill()
-        }
-        let paragraph = NSMutableParagraphStyle()
-        paragraph.lineBreakMode = .byTruncatingTail
-        let textWidth = max(0, bounds.width - 28)
-        ((displayTitle ?? title) as NSString).draw(in: NSRect(x: 0, y: bounds.midY - 18, width: textWidth, height: 18), withAttributes: [
-            .font: NSFont.systemFont(ofSize: 13), .foregroundColor: NSColor.labelColor.withAlphaComponent(alpha), .paragraphStyle: paragraph])
-        if let detail {
-            (detail as NSString).draw(in: NSRect(x: 0, y: bounds.midY + 1, width: textWidth, height: 16), withAttributes: [
-                .font: NSFont.systemFont(ofSize: 11), .foregroundColor: SettingsStyle.secondary.withAlphaComponent(alpha), .paragraphStyle: paragraph])
-        }
-        if selected, let check = NSImage(systemSymbolName: "checkmark", accessibilityDescription: nil)?
-            .withSymbolConfiguration(NSImage.SymbolConfiguration(pointSize: 13, weight: .semibold)
-                .applying(.init(paletteColors: [.controlAccentColor]))) {
-            let size = check.size
-            check.draw(in: NSRect(x: bounds.width - size.width, y: bounds.midY - size.height / 2, width: size.width, height: size.height),
-                       from: .zero, operation: .sourceOver, fraction: alpha, respectFlipped: true, hints: nil)
-        }
-    }
-
-    override var focusRingMaskBounds: NSRect { bounds }
-
-    override func drawFocusRingMask() {
-        NSBezierPath(roundedRect: bounds.insetBy(dx: -6, dy: 4), xRadius: 8, yRadius: 8).fill()
-    }
 }

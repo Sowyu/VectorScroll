@@ -348,7 +348,7 @@ extension VectorScrollApp {
         assert(subject.holdToLockThreshold == 0)
         assert(!subject.delaySlider.isEnabled)
         assert(subject.holdToLockItem.accessibilityHelp() == "Click to start, click to stop")
-        assert((subject.holdToLockItem as! SettingsButton).displayTitle == "Toggle scrolling")
+        assert(subject.holdToLockItem.title == "Toggle scrolling")
         subject.tapState = .filtering
         subject.armHoldToLock(at: .zero, target: .zero)
         assert(subject.isActive && subject.engageWorkItem == nil)
@@ -477,8 +477,8 @@ extension VectorScrollApp {
         }
         subject.updatePermissionMenuItem()
         print("PASS: native close control, Command-W close/reopen, and permission status transitions")
-        for card in [subject.holdScrollItem!, subject.holdToLockItem!, subject.holdOrClickItem!] {
-            assert(card is SettingsButton, "Scrolling modes must be mode cards")
+        for mode in [subject.holdScrollItem!, subject.holdToLockItem!, subject.holdOrClickItem!] {
+            assert(type(of: mode) == NSButton.self, "Scrolling modes must be native radio buttons")
         }
         func savePreview(_ window: NSWindow, _ name: String, appearance: NSAppearance.Name = .darkAqua) {
             // Scrolling to the top flashes the overlay scroller, so hide it for the capture.
