@@ -34,8 +34,13 @@ private final class FixtureURLProtocol: URLProtocol, @unchecked Sendable {
 
 @main
 struct CheckInstaller {
-    static func rejects(_ action: () throws -> Void) {
-        do { try action(); fatalError("Expected installation to be rejected") } catch { }
+    static func expect(_ condition: @autoclosure () -> Bool, _ message: @autoclosure () -> String = "Fixture assertion failed") throws {
+        guard condition() else { throw UpdateInstaller.Failure(message: message()) }
+    }
+
+    static func rejects(_ action: () throws -> Void) throws {
+        do { try action() } catch { return }
+        throw UpdateInstaller.Failure(message: "Expected installation to be rejected")
     }
 
     static func phase(_ message: String) {
@@ -99,6 +104,9 @@ struct CheckInstaller {
         try runFixture("import \(name)", "/usr/bin/security",
                        ["import", archive.path, "-k", keychain.path, "-P", "test",
                         "-T", "/usr/bin/codesign", "-T", "/usr/bin/security"])
+        try runFixture("export \(name) certificate", "/usr/bin/openssl",
+                       ["x509", "-in", certificate.path, "-outform", "DER",
+                        "-out", folder.appendingPathComponent("certificate.der").path])
         try runFixture("trust \(name)", "/usr/bin/sudo",
                        ["-n", "/usr/bin/security", "add-trusted-cert", "-d", "-r", "trustRoot",
                         "-p", "codeSign", "-k", "/Library/Keychains/System.keychain", certificate.path])
@@ -107,15 +115,6 @@ struct CheckInstaller {
     static func sign(_ app: URL, as identity: String, keychain: URL) throws {
         try runFixture("sign \(app.lastPathComponent) as \(identity)", "/usr/bin/codesign",
                        ["--force", "--deep", "--sign", identity, "--keychain", keychain.path, app.path])
-    }
-
-    static func atomicSwap(_ first: URL, _ second: URL) throws {
-        let result = first.path.withCString { firstPath in
-            second.path.withCString { secondPath in
-                renameatx_np(AT_FDCWD, firstPath, AT_FDCWD, secondPath, UInt32(RENAME_SWAP))
-            }
-        }
-        guard result == 0 else { throw UpdateInstaller.Failure(message: "Test atomic swap failed") }
     }
 
     static func runReplacementBoundaryChild() throws {
@@ -131,10 +130,19 @@ struct CheckInstaller {
         }
         if boundary == "before-swap" {
             try UpdateInstaller.replace(plan, swap: { _, _ in try pause() },
-                                        launch: { _, _ in fatalError("Boundary test must not launch") })
+                                        launch: { _, _ in throw UpdateInstaller.Failure(message: "Boundary test must not launch") })
         } else if boundary == "after-swap" {
             try UpdateInstaller.replace(plan, move: { _, _ in try pause() },
-                                        launch: { _, _ in fatalError("Boundary test must not launch") })
+                                        launch: { _, _ in throw UpdateInstaller.Failure(message: "Boundary test must not launch") })
+        } else if boundary == "after-backup" || boundary == "after-health" {
+            try UpdateInstaller.replace(plan, launch: { _, arguments in
+                if boundary == "after-health" {
+                    _ = try UpdateInstaller.acknowledgeLaunch(arguments: arguments,
+                        bundleURL: URL(fileURLWithPath: try UpdateInstaller.readPlan(plan).destination))
+                }
+                try pause()
+                throw UpdateInstaller.Failure(message: "Boundary test must be stopped")
+            })
         } else {
             throw UpdateInstaller.Failure(message: "Unknown boundary test")
         }
@@ -166,20 +174,28 @@ struct CheckInstaller {
 
     static func checkStaleUpdateFolders() throws {
         let files = FileManager.default
-        let root = files.temporaryDirectory.appendingPathComponent("VectorScroll cleanup test \(UUID().uuidString)")
+        let fixtureRoot = files.temporaryDirectory.appendingPathComponent("VectorScroll cleanup test \(UUID().uuidString)")
+        let root = fixtureRoot.appendingPathComponent(".VectorScroll-updates")
         try files.createDirectory(at: root, withIntermediateDirectories: true)
-        defer { try? files.removeItem(at: root) }
+        defer { try? files.removeItem(at: fixtureRoot) }
 
         func folder(_ name: String, plan: Bool = true) throws -> URL {
             let url = root.appendingPathComponent(name)
             try files.createDirectory(at: url, withIntermediateDirectories: false)
             if plan { try Data("{}".utf8).write(to: url.appendingPathComponent("plan.json")) }
+            try Data().write(to: url.appendingPathComponent("transaction.lock"))
+            try files.setAttributes([.modificationDate: Date().addingTimeInterval(-172800)], ofItemAtPath: url.path)
             return url
         }
 
-        let stale = try (0..<3).map { _ in try folder(".VectorScroll-update-\(UUID().uuidString)") }
+        var stale = try (0..<3).map { _ in try folder(".VectorScroll-update-\(UUID().uuidString)") }
         let current = try folder(".VectorScroll-update-\(UUID().uuidString)")
-        _ = try folder(".VectorScroll-update-\(UUID().uuidString)", plan: false)
+        stale.append(try folder(".VectorScroll-update-\(UUID().uuidString)", plan: false))
+        let recent = try folder(".VectorScroll-update-\(UUID().uuidString)", plan: false)
+        try files.setAttributes([.modificationDate: Date()], ofItemAtPath: recent.path)
+        let pending = try folder(".VectorScroll-update-\(UUID().uuidString)")
+        try Data("{}".utf8).write(to: pending.appendingPathComponent("transaction.json"))
+        try files.setAttributes([.modificationDate: Date().addingTimeInterval(-172800)], ofItemAtPath: pending.path)
         _ = try folder(".VectorScroll-update-not-a-uuid")
         try files.createSymbolicLink(at: root.appendingPathComponent(".VectorScroll-update-\(UUID().uuidString)"),
                                      withDestinationURL: stale[0])
@@ -191,19 +207,19 @@ struct CheckInstaller {
         let count = UpdateInstaller.trashStaleUpdateFolders(keeping: current.appendingPathComponent("."), in: root) {
             selected.append($0.standardizedFileURL)
         }
-        assert(count == 3 && selected.count == 3 && Set(selected) == expected)
+        try expect(count == 4 && selected.count == 4 && Set(selected) == expected)
 
         var attempted: [URL] = []
         let partialCount = UpdateInstaller.trashStaleUpdateFolders(keeping: current, in: root) {
             attempted.append($0.standardizedFileURL)
             if attempted.count == 1 { throw UpdateInstaller.Failure(message: "Simulated Trash failure") }
         }
-        assert(partialCount == 2 && attempted.count == 3 && Set(attempted) == expected)
+        try expect(partialCount == 3 && attempted.count == 4 && Set(attempted) == expected)
         let missingCount = UpdateInstaller.trashStaleUpdateFolders(keeping: current, in: root.appendingPathComponent("missing")) {
-            _ in fatalError("Must not trash anything when the directory cannot be listed")
+            _ in throw UpdateInstaller.Failure(message: "Must not trash anything when the directory cannot be listed")
         }
-        assert(missingCount == 0)
-        print("PASS: stale update cleanup selects only three valid folders, keeps current, skips symlinks, and continues after Trash errors")
+        try expect(missingCount == 0)
+        print("PASS: stale cleanup includes old incomplete folders, keeps current/recent/pending folders, skips symlinks, and continues after Trash errors")
     }
 
     static func main() async throws {
@@ -215,24 +231,53 @@ struct CheckInstaller {
         if CommandLine.arguments.dropFirst().first == "--cleanup-only" { return }
         let files = FileManager.default
         let root = files.temporaryDirectory.appendingPathComponent("VectorScroll install test's \(UUID().uuidString)")
-        try files.createDirectory(at: root, withIntermediateDirectories: true)
         let keychain = root.appendingPathComponent("test-signing.keychain-db")
+        let releaseIdentity = "VectorScroll Release Test \(UUID().uuidString)"
+        let foreignIdentity = "VectorScroll Foreign Test \(UUID().uuidString)"
+        var previousKeychains: [String]?
+        // Register before creating keys, changing search lists, or trusting certificates.
+        defer {
+            for identity in [releaseIdentity, foreignIdentity] {
+                let folder = root.appendingPathComponent(identity)
+                let certificate = folder.appendingPathComponent("certificate.pem")
+                guard let der = try? Data(contentsOf: folder.appendingPathComponent("certificate.der")) else { continue }
+                do {
+                    try runFixture("remove \(identity) trust", "/usr/bin/sudo",
+                                   ["-n", "/usr/bin/security", "remove-trusted-cert", "-d", certificate.path])
+                } catch { FileHandle.standardError.write(Data("Cleanup: \(error)\n".utf8)) }
+                let fingerprint = Insecure.SHA1.hash(data: der).map { String(format: "%02x", $0) }.joined()
+                do {
+                    try runFixture("delete \(identity) System certificate", "/usr/bin/sudo",
+                                   ["-n", "/usr/bin/security", "delete-certificate", "-Z", fingerprint,
+                                    "/Library/Keychains/System.keychain"])
+                } catch { FileHandle.standardError.write(Data("Cleanup: \(error)\n".utf8)) }
+            }
+            if let previousKeychains {
+                do {
+                    try runFixture("restore keychain search list", "/usr/bin/security",
+                                   ["list-keychains", "-d", "user", "-s"] + previousKeychains)
+                } catch { FileHandle.standardError.write(Data("Cleanup: \(error)\n".utf8)) }
+            }
+            if files.fileExists(atPath: keychain.path) {
+                do {
+                    try runFixture("delete fixture keychain", "/usr/bin/security", ["delete-keychain", keychain.path])
+                } catch { FileHandle.standardError.write(Data("Cleanup: \(error)\n".utf8)) }
+            }
+            do { try files.removeItem(at: root) }
+            catch { FileHandle.standardError.write(Data("Cleanup: \(error)\n".utf8)) }
+        }
+        try files.createDirectory(at: root, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
         let searchList = Pipe()
         try runFixture("read keychain search list", "/usr/bin/security", ["list-keychains", "-d", "user"], output: searchList)
-        let previousKeychains = String(data: searchList.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8)!
+        let savedKeychains = String(data: searchList.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8)!
             .split(separator: "\n").map { $0.trimmingCharacters(in: .whitespaces).trimmingCharacters(in: CharacterSet(charactersIn: "\"")) }
+        previousKeychains = savedKeychains
         try runFixture("create fixture keychain", "/usr/bin/security",
                        ["create-keychain", "-p", "test", keychain.path])
         try runFixture("unlock fixture keychain", "/usr/bin/security",
                        ["unlock-keychain", "-p", "test", keychain.path])
         try runFixture("add fixture keychain to search list", "/usr/bin/security",
-                       ["list-keychains", "-d", "user", "-s", keychain.path] + previousKeychains)
-        defer {
-            try? runFixture("restore keychain search list", "/usr/bin/security",
-                            ["list-keychains", "-d", "user", "-s"] + previousKeychains)
-        }
-        let releaseIdentity = "VectorScroll Release Test \(UUID().uuidString)"
-        let foreignIdentity = "VectorScroll Foreign Test \(UUID().uuidString)"
+                       ["list-keychains", "-d", "user", "-s", keychain.path] + savedKeychains)
         try makeIdentity(releaseIdentity, at: root, keychain: keychain)
         try makeIdentity(foreignIdentity, at: root, keychain: keychain)
         try runFixture("allow codesign key access", "/usr/bin/security",
@@ -293,48 +338,62 @@ struct CheckInstaller {
         try runFixture("create fixture disk image", "/usr/bin/hdiutil",
                        ["create", "-volname", "VectorScrollTest", "-srcfolder", sourceFolder.path,
                         "-format", "UDZO", imageURL.path])
-        let image = try Data(contentsOf: imageURL)
-        let digest = SHA256.hash(data: image).map { String(format: "%02x", $0) }.joined()
+        let imageData = try Data(contentsOf: imageURL)
+        let image = UpdateInstaller.Image(url: imageURL)
+        let digest = SHA256.hash(data: imageData).map { String(format: "%02x", $0) }.joined()
         let update = AppUpdate(version: "2.0.0", downloadURL: URL(string: "https://github.com/Sowyu/VectorScroll/releases/download/2.0.0/VectorScroll.dmg")!,
-                               sha256: digest, downloadSize: image.count)
+                               sha256: digest, downloadSize: imageData.count)
         let helper = URL(fileURLWithPath: "dist/VectorScroll.app/Contents/MacOS/VectorScroll")
-        rejects {
-            _ = try UpdateInstaller.prepare(update, image: image + Data([0]), destination: destination,
+        let oversizedImageURL = root.appendingPathComponent("Oversized.dmg")
+        try (imageData + Data([0])).write(to: oversizedImageURL)
+        let oversizedImage = UpdateInstaller.Image(url: oversizedImageURL)
+        try rejects {
+            _ = try UpdateInstaller.prepare(update, image: oversizedImage, destination: destination,
                                             helperSource: helper, parentPID: getpid())
         }
-        rejects { try UpdateInstaller.validateCandidate(source, version: "9.0.0", matching: destination) }
-        rejects { try UpdateInstaller.validateCandidate(foreign, version: "2.0.0", matching: destination) }
-        rejects { try UpdateInstaller.validateCandidate(adHoc, version: "2.0.0", matching: destination) }
-        rejects { try UpdateInstaller.validateCandidate(incompatible, version: "2.0.0", matching: destination) }
+        let wrongChecksum = AppUpdate(version: update.version, downloadURL: update.downloadURL,
+                                      sha256: String(repeating: "0", count: 64), downloadSize: update.downloadSize)
+        try rejects {
+            _ = try UpdateInstaller.prepare(wrongChecksum, image: image, destination: destination,
+                                            helperSource: helper, parentPID: getpid())
+        }
+        let failedPreparations = try files.contentsOfDirectory(
+            atPath: destination.deletingLastPathComponent().appendingPathComponent(".VectorScroll-updates").path)
+        try expect(failedPreparations.isEmpty, "Failed preparations must remove their work folders")
+        try rejects { try UpdateInstaller.validateCandidate(source, version: "9.0.0", matching: destination) }
+        try rejects { try UpdateInstaller.validateCandidate(foreign, version: "2.0.0", matching: destination) }
+        try rejects { try UpdateInstaller.validateCandidate(adHoc, version: "2.0.0", matching: destination) }
+        try rejects { try UpdateInstaller.validateCandidate(incompatible, version: "2.0.0", matching: destination) }
 
         let oversizedConfiguration = URLSessionConfiguration.ephemeral
         oversizedConfiguration.protocolClasses = [FixtureURLProtocol.self]
         FixtureURLProtocol.response.set(Data([1, 2, 3, 4]))
         let oversizedUpdate = AppUpdate(version: "2.0.0", downloadURL: URL(string: "https://example.test/update")!,
                                         sha256: String(repeating: "0", count: 64), downloadSize: 3)
+        var rejectedOversizedDownload = false
         do {
             _ = try await UpdateInstaller.download(oversizedUpdate, session: URLSession(configuration: oversizedConfiguration))
-            fatalError("Expected oversized download to be rejected")
-        } catch { }
+        } catch { rejectedOversizedDownload = true }
+        try expect(rejectedOversizedDownload, "Expected oversized download to be rejected")
 
         phase("exercise installer rejection and rollback paths")
         let plan = try UpdateInstaller.prepare(update, image: image, destination: destination,
                                               helperSource: helper, parentPID: getpid())
-        rejects {
+        try rejects {
             try UpdateInstaller.replace(plan, swap: { _, _ in
                 throw UpdateInstaller.Failure(message: "Simulated atomic swap failure")
-            }, launch: { _, _ in fatalError("Must not launch a failed replacement") })
+            }, launch: { _, _ in throw UpdateInstaller.Failure(message: "Must not launch a failed replacement") })
         }
         let versionAfterSwapFailure = try UpdateInstaller.appVersion(destination)
-        assert(versionAfterSwapFailure == "1.0.0")
-        rejects {
+        try expect(versionAfterSwapFailure == "1.0.0")
+        try rejects {
             try UpdateInstaller.replace(plan, launch: { _, _ in throw UpdateInstaller.Failure(message: "Simulated launch failure") })
         }
         let versionAfterLaunchFailure = try UpdateInstaller.appVersion(destination)
-        assert(versionAfterLaunchFailure == "1.0.0")
+        try expect(versionAfterLaunchFailure == "1.0.0")
 
         var stalled: Process?
-        rejects {
+        try rejects {
             try UpdateInstaller.replace(plan, launch: { _, _ in
                 let process = Process()
                 process.executableURL = URL(fileURLWithPath: "/bin/sleep")
@@ -344,11 +403,11 @@ struct CheckInstaller {
                 return process
             }, healthTimeout: 0.2)
         }
-        guard let stalled else { fatalError("Health timeout must launch the fixture process") }
+        guard let stalled else { throw UpdateInstaller.Failure(message: "Health timeout must launch the fixture process") }
         stalled.waitUntilExit()
-        assert(stalled.terminationStatus != 0)
+        try expect(stalled.terminationStatus != 0)
         let versionAfterHealthFailure = try UpdateInstaller.appVersion(destination)
-        assert(versionAfterHealthFailure == "1.0.0")
+        try expect(versionAfterHealthFailure == "1.0.0")
 
         phase("exercise abrupt termination at replacement boundaries")
         let staged = plan.deletingLastPathComponent().appendingPathComponent("VectorScroll.app")
@@ -356,22 +415,48 @@ struct CheckInstaller {
         try stopAtBoundary("before-swap", plan: plan, signal: beforeSwapSignal)
         let oldBeforeSwap = try UpdateInstaller.appVersion(destination)
         let updateBeforeSwap = try UpdateInstaller.appVersion(staged)
-        assert(oldBeforeSwap == "1.0.0" && updateBeforeSwap == "2.0.0")
+        try expect(oldBeforeSwap == "1.0.0" && updateBeforeSwap == "2.0.0")
+
+        let recoveredBeforeSwap = try UpdateInstaller.recoverPendingUpdates(for: destination)
+        try expect(!recoveredBeforeSwap)
 
         let afterSwapSignal = root.appendingPathComponent("after swap reached")
         try stopAtBoundary("after-swap", plan: plan, signal: afterSwapSignal)
         let updateAfterSwap = try UpdateInstaller.appVersion(destination)
         let oldAfterSwap = try UpdateInstaller.appVersion(staged)
-        assert(updateAfterSwap == "2.0.0" && oldAfterSwap == "1.0.0")
-        try atomicSwap(destination, staged)
+        try expect(updateAfterSwap == "2.0.0" && oldAfterSwap == "1.0.0")
+        let recovered = try UpdateInstaller.recoverPendingUpdates(for: destination)
+        try expect(recovered)
         let restoredAfterKill = try UpdateInstaller.appVersion(destination)
-        assert(restoredAfterKill == "1.0.0")
+        try expect(restoredAfterKill == "1.0.0")
+        let recoveredAgain = try UpdateInstaller.recoverPendingUpdates(for: destination)
+        try expect(!recoveredAgain)
+
+        let afterBackupSignal = root.appendingPathComponent("after backup reached")
+        try stopAtBoundary("after-backup", plan: plan, signal: afterBackupSignal)
+        let recoveredBackup = try UpdateInstaller.recoverPendingUpdates(for: destination)
+        try expect(recoveredBackup)
+        let restoredBackup = try UpdateInstaller.appVersion(destination)
+        try expect(restoredBackup == "1.0.0")
+
+        let healthPlan = try UpdateInstaller.prepare(update, image: image, destination: destination,
+                                                    helperSource: helper, parentPID: getpid())
+        let afterHealthSignal = root.appendingPathComponent("after health reached")
+        try stopAtBoundary("after-health", plan: healthPlan, signal: afterHealthSignal)
+        let recoveredHealthy = try UpdateInstaller.recoverPendingUpdates(for: destination)
+        try expect(!recoveredHealthy)
+        let healthyVersion = try UpdateInstaller.appVersion(destination)
+        let healthyBackup = healthPlan.deletingLastPathComponent().appendingPathComponent("Previous.app")
+        try expect(healthyVersion == "2.0.0" && files.fileExists(atPath: healthyBackup.path))
+        // Reset only this confirmed test fixture for the remaining helper checks.
+        try files.removeItem(at: destination)
+        try files.copyItem(at: healthyBackup, to: destination)
 
         info["CFBundleShortVersionString"] = "2.0.0"
         info["NSHumanReadableCopyright"] = "Modified after signing"
         try PropertyListSerialization.data(fromPropertyList: info, format: .xml, options: 0)
             .write(to: staged.appendingPathComponent("Contents/Info.plist"))
-        rejects { try UpdateInstaller.validateCandidate(staged, version: "2.0.0", matching: destination) }
+        try rejects { try UpdateInstaller.validateCandidate(staged, version: "2.0.0", matching: destination) }
         print("PASS: size cap, checksum, signer, OS, tampering, atomic swap, abrupt-stop, launch, and health rollback checks")
 
         // Run the shipped executable's helper against an inert signed fixture app.
@@ -389,7 +474,7 @@ struct CheckInstaller {
         try JSONEncoder().encode(launchPlan).write(to: helperPlan)
         try UpdateInstaller.launchHelper(helperPlan)
         let beforeExit = try UpdateInstaller.appVersion(destination)
-        assert(beforeExit == "1.0.0" && parent.isRunning)
+        try expect(beforeExit == "1.0.0" && parent.isRunning)
         parent.terminate()
         parent.waitUntilExit()
         let result = helperPlan.deletingLastPathComponent().appendingPathComponent("result")
@@ -397,11 +482,11 @@ struct CheckInstaller {
         while Date() < deadline && (!files.fileExists(atPath: marker.path) || !files.fileExists(atPath: result.path)) {
             try await Task.sleep(for: .milliseconds(100))
         }
-        assert(files.fileExists(atPath: marker.path), "New app must relaunch: \(UserDefaults(suiteName: "local.vectorscroll.app")!.string(forKey: "updateInstallError") ?? "no helper error")")
+        try expect(files.fileExists(atPath: marker.path), "New app must relaunch: \(UserDefaults(suiteName: "local.vectorscroll.app")!.string(forKey: "updateInstallError") ?? "no helper error")")
         let status = try String(contentsOf: result, encoding: .utf8)
         let installed = try UpdateInstaller.appVersion(destination)
         let backup = try UpdateInstaller.appVersion(helperPlan.deletingLastPathComponent().appendingPathComponent("Previous.app"))
-        assert(status == "success" && installed == "2.0.0" && backup == "1.0.0")
+        try expect(status == "success" && installed == "2.0.0" && backup == "1.0.0")
         print("PASS: production helper waits for exit, installs, relaunches, preserves backup, and handles spaces/apostrophes in paths")
 
         phase("exercise live release download")
@@ -410,10 +495,10 @@ struct CheckInstaller {
             configuration.httpAdditionalHeaders = ["Authorization": "Bearer \(token)"]
         }
         let session = URLSession(configuration: configuration)
-        guard let live = try await AppUpdate.check(installedVersion: "0.0.0", session: session) else { fatalError("Missing live release") }
+        guard let live = try await AppUpdate.check(installedVersion: "0.0.0", session: session) else { throw UpdateInstaller.Failure(message: "Missing live release") }
         let downloaded = try await UpdateInstaller.download(live)
-        let actualHash = SHA256.hash(data: downloaded).map { String(format: "%02x", $0) }.joined()
-        assert(actualHash == live.sha256)
+        let actualHash = SHA256.hash(data: try Data(contentsOf: downloaded.url)).map { String(format: "%02x", $0) }.joined()
+        try expect(actualHash == live.sha256)
         print("PASS: live GitHub DMG download matches the release checksum")
     }
 }

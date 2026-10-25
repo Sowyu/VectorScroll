@@ -174,10 +174,16 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
                 MainActor.assumeIsolated { self?.stopScrolling() }
             }
         }
-        checkForUpdates(manual: false)
+        let checkAutomatically: @MainActor () -> Void = { [weak self] in
+            guard let self, self.installTask == nil, self.updateTask == nil,
+                  AppUpdate.beginAutomaticCheck(defaults: self.defaults) else { return }
+            self.checkForUpdates(manual: false)
+        }
+        checkAutomatically()
         let updateTimer = DispatchSource.makeTimerSource(queue: .main)
-        updateTimer.schedule(wallDeadline: .now() + .seconds(86400), repeating: .seconds(86400), leeway: .seconds(60))
-        updateTimer.setEventHandler { [weak self] in self?.checkForUpdates(manual: false) }
+        updateTimer.schedule(wallDeadline: .now() + AppUpdate.automaticCheckDelay(defaults: defaults),
+                             repeating: .seconds(86400), leeway: .seconds(60))
+        updateTimer.setEventHandler(handler: checkAutomatically)
         self.updateTimer = updateTimer
         updateTimer.resume()
         _ = try? UpdateInstaller.acknowledgeLaunch()

@@ -18,6 +18,20 @@ enum UpdateInstaller {
         var relaunchArguments: [String] = []
     }
 
+    final class Image: Sendable {
+        let url: URL
+        init(url: URL) { self.url = url }
+        deinit { try? FileManager.default.removeItem(at: url) }
+    }
+
+    private struct Transaction: Codable {
+        let attempt: String
+    }
+
+    private static func workRoot(for destination: URL) -> URL {
+        destination.deletingLastPathComponent().appendingPathComponent(".VectorScroll-updates")
+    }
+
     private static let healthArgument = "--vector-scroll-update-health"
     private static let healthFilePrefix = "healthy-"
 
@@ -60,33 +74,52 @@ enum UpdateInstaller {
         return version
     }
 
-    static func download(_ update: AppUpdate, session: URLSession = .shared) async throws -> Data {
+    static func download(_ update: AppUpdate, session: URLSession = .shared) async throws -> Image {
         guard (1...(100 * 1024 * 1024)).contains(update.downloadSize) else {
             throw Failure(message: "GitHub reported an invalid update size.")
         }
+        let image = Image(url: FileManager.default.temporaryDirectory.appendingPathComponent("VectorScroll-\(UUID().uuidString).dmg"))
+        guard FileManager.default.createFile(atPath: image.url.path, contents: nil, attributes: [.posixPermissions: 0o600]) else {
+            throw Failure(message: "The update download could not be saved.")
+        }
+        let output = try FileHandle(forWritingTo: image.url)
+        defer { try? output.close() }
         var request = URLRequest(url: update.downloadURL, timeoutInterval: 120)
         request.setValue("VectorScroll/\(AppUpdate.installedVersion)", forHTTPHeaderField: "User-Agent")
         let (bytes, response) = try await session.bytes(for: request)
+        defer { bytes.task.cancel() }
         guard (response as? HTTPURLResponse)?.statusCode == 200 else {
-            bytes.task.cancel()
             throw Failure(message: "The update download was incomplete. Please try again.")
         }
-        var data = Data()
-        data.reserveCapacity(update.downloadSize)
+        var chunk = Data()
+        var count = 0
+        var hash = SHA256()
         for try await byte in bytes {
-            guard data.count < update.downloadSize else {
-                bytes.task.cancel()
+            guard count < update.downloadSize else {
                 throw Failure(message: "The update download was larger than GitHub reported. Nothing was installed.")
             }
-            data.append(byte)
+            chunk.append(byte)
+            count += 1
+            if chunk.count == 64 * 1024 {
+                hash.update(data: chunk)
+                try output.write(contentsOf: chunk)
+                chunk.removeAll(keepingCapacity: true)
+            }
         }
-        guard data.count == update.downloadSize else {
-            throw Failure(message: "The update download was incomplete. Please try again.")
-        }
-        return data
+        hash.update(data: chunk)
+        try output.write(contentsOf: chunk)
+        try verifyImage(update, count: count, hash: hash)
+        return image
     }
 
-    static func prepare(_ update: AppUpdate, image: Data, destination: URL,
+    private static func verifyImage(_ update: AppUpdate, count: Int, hash: SHA256) throws {
+        guard count == update.downloadSize,
+              hash.finalize().map({ String(format: "%02x", $0) }).joined() == update.sha256 else {
+            throw Failure(message: "The update did not match GitHub's size or SHA-256 checksum. Nothing was installed.")
+        }
+    }
+
+    static func prepare(_ update: AppUpdate, image: Image, destination: URL,
                         helperSource: URL, parentPID: Int32) throws -> URL {
         let original = try validateDestination(destination)
         let trust = try signingTrust(for: destination)
@@ -94,19 +127,49 @@ enum UpdateInstaller {
               old.lexicographicallyPrecedes(new) else {
             throw Failure(message: "This update is not newer than the installed app.")
         }
-        let hash = SHA256.hash(data: image).map { String(format: "%02x", $0) }.joined()
-        guard image.count == update.downloadSize, hash == update.sha256 else {
-            throw Failure(message: "The update did not match GitHub's SHA-256 checksum. Nothing was installed.")
+        guard (1...(100 * 1024 * 1024)).contains(update.downloadSize) else {
+            throw Failure(message: "GitHub reported an invalid update size.")
         }
         let files = FileManager.default
-        let work = destination.deletingLastPathComponent().appendingPathComponent(".VectorScroll-update-\(UUID().uuidString)")
+        let root = workRoot(for: destination)
+        try files.createDirectory(at: root, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
+        guard try root.resourceValues(forKeys: [.isSymbolicLinkKey]).isSymbolicLink == false else {
+            throw Failure(message: "Invalid update work folder.")
+        }
+        let work = root.appendingPathComponent(".VectorScroll-update-\(UUID().uuidString)")
         try files.createDirectory(at: work, withIntermediateDirectories: false, attributes: [.posixPermissions: 0o700])
-        let imageURL = work.appendingPathComponent("Update.dmg")
-        try image.write(to: imageURL, options: .withoutOverwriting)
         let mount = work.appendingPathComponent("mount")
+        var prepared = false
+        defer {
+            // Attach can mount the image even if hdiutil subsequently reports an error.
+            if files.fileExists(atPath: mount.path) {
+                do { try run("/usr/bin/hdiutil", ["detach", mount.path]) }
+                catch { try? run("/usr/bin/hdiutil", ["detach", "-force", mount.path]) }
+            }
+            if !prepared { try? files.removeItem(at: work) }
+        }
+        let imageURL = work.appendingPathComponent("Update.dmg")
+        guard files.createFile(atPath: imageURL.path, contents: nil, attributes: [.posixPermissions: 0o600]) else {
+            throw Failure(message: "The update image could not be saved.")
+        }
+        let input = try FileHandle(forReadingFrom: image.url)
+        defer { try? input.close() }
+        let output = try FileHandle(forWritingTo: imageURL)
+        defer { try? output.close() }
+        var count = 0
+        var hash = SHA256()
+        while let chunk = try input.read(upToCount: 64 * 1024), !chunk.isEmpty {
+            count += chunk.count
+            guard count <= update.downloadSize else {
+                throw Failure(message: "The update download was larger than GitHub reported. Nothing was installed.")
+            }
+            hash.update(data: chunk)
+            try output.write(contentsOf: chunk)
+        }
+        try output.close()
+        try verifyImage(update, count: count, hash: hash)
         try files.createDirectory(at: mount, withIntermediateDirectories: false)
         try run("/usr/bin/hdiutil", ["attach", "-readonly", "-nobrowse", "-noautoopen", "-mountpoint", mount.path, imageURL.path])
-        defer { try? run("/usr/bin/hdiutil", ["detach", mount.path]) }
         let candidate = mount.appendingPathComponent("VectorScroll.app")
         let stage = work.appendingPathComponent("VectorScroll.app")
         try files.copyItem(at: candidate, to: stage)
@@ -117,6 +180,7 @@ enum UpdateInstaller {
                         parentPID: parentPID, healthToken: UUID().uuidString)
         let planURL = work.appendingPathComponent("plan.json")
         try JSONEncoder().encode(plan).write(to: planURL, options: .withoutOverwriting)
+        prepared = true
         return planURL
     }
 
@@ -241,7 +305,9 @@ enum UpdateInstaller {
         let work = planURL.deletingLastPathComponent().standardizedFileURL
         let destination = URL(fileURLWithPath: plan.destination).standardizedFileURL
         guard work.lastPathComponent.hasPrefix(".VectorScroll-update-"),
-              destination.deletingLastPathComponent() == work.deletingLastPathComponent(),
+              workRoot(for: destination) == work.deletingLastPathComponent(),
+              try work.resourceValues(forKeys: [.isSymbolicLinkKey]).isSymbolicLink == false,
+              try work.deletingLastPathComponent().resourceValues(forKeys: [.isSymbolicLinkKey]).isSymbolicLink == false,
               plan.parentPID > 1, UUID(uuidString: plan.healthToken) != nil else {
             throw Failure(message: "Invalid update plan.")
         }
@@ -251,7 +317,13 @@ enum UpdateInstaller {
     @discardableResult
     static func acknowledgeLaunch(arguments: [String] = CommandLine.arguments,
                                   bundleURL: URL = Bundle.main.bundleURL) throws -> Bool {
-        guard let index = arguments.firstIndex(of: healthArgument) else { return false }
+        guard let index = arguments.firstIndex(of: healthArgument) else {
+            if try recoverPendingUpdates(for: bundleURL) {
+                try run("/usr/bin/open", ["-n", bundleURL.path])
+                exit(EXIT_SUCCESS)
+            }
+            return false
+        }
         guard arguments.count == index + 3,
               UUID(uuidString: arguments[index + 2]) != nil else {
             throw Failure(message: "Invalid update health check.")
@@ -263,6 +335,9 @@ enum UpdateInstaller {
         guard bundleURL.resolvingSymlinksInPath().standardizedFileURL == destination else {
             throw Failure(message: "Invalid update health check destination.")
         }
+        let transaction = try JSONDecoder().decode(Transaction.self, from: Data(contentsOf:
+            planURL.deletingLastPathComponent().appendingPathComponent("transaction.json")))
+        guard transaction.attempt == attempt else { throw Failure(message: "Invalid update health attempt.") }
         try Data(plan.healthToken.utf8).write(
             to: planURL.deletingLastPathComponent().appendingPathComponent(healthFilePrefix + attempt),
             options: .withoutOverwriting
@@ -320,6 +395,8 @@ enum UpdateInstaller {
                         healthTimeout: TimeInterval = 10) throws {
         let plan = try readPlan(planURL)
         let work = planURL.deletingLastPathComponent()
+        let lock = try lockTransaction(work)
+        defer { _ = flock(lock, LOCK_UN); close(lock) }
         let destination = URL(fileURLWithPath: plan.destination)
         let staged = work.appendingPathComponent("VectorScroll.app")
         let backup = work.appendingPathComponent("Previous.app")
@@ -328,32 +405,94 @@ enum UpdateInstaller {
             throw Failure(message: "The installed app changed while updating. Please check for updates again.")
         }
         try validateCandidate(staged, version: plan.version, trust: trust)
+        let attempt = UUID().uuidString
+        let transactionURL = work.appendingPathComponent("transaction.json")
+        let confirmed = work.appendingPathComponent("confirmed")
+        if FileManager.default.fileExists(atPath: confirmed.path) { try FileManager.default.removeItem(at: confirmed) }
+        try JSONEncoder().encode(Transaction(attempt: attempt)).write(to: transactionURL, options: .atomic)
         try swap(destination, staged)
         var previous = staged
         var launchedProcess: Process?
         do {
             try move(staged, backup)
             previous = backup
-            let attempt = UUID().uuidString
             let arguments = plan.relaunchArguments + [healthArgument, planURL.path, attempt]
             launchedProcess = try launch(destination, arguments)
             try waitForHealth(planURL, token: plan.healthToken, attempt: attempt,
                               process: launchedProcess!, timeout: healthTimeout)
+            try Data(plan.healthToken.utf8).write(to: work.appendingPathComponent("confirmed"), options: .atomic)
         } catch {
             if let launchedProcess { stopProcess(launchedProcess) }
             try swap(destination, previous)
             if previous == backup {
                 try? move(backup, staged)
             }
+            try FileManager.default.removeItem(at: transactionURL)
             throw error
         }
+    }
+
+    private static func lockTransaction(_ work: URL) throws -> Int32 {
+        let descriptor = open(work.appendingPathComponent("transaction.lock").path, O_CREAT | O_RDWR | O_NOFOLLOW | O_CLOEXEC, 0o600)
+        guard descriptor >= 0 else { throw Failure(message: "The update transaction could not be opened.") }
+        guard flock(descriptor, LOCK_EX | LOCK_NB) == 0 else {
+            close(descriptor)
+            throw Failure(message: "An update transaction is still running.")
+        }
+        return descriptor
+    }
+
+    // A killed helper releases its lock. Version checks distinguish either side
+    // of the atomic swap, including a stop before the old app is renamed.
+    @discardableResult
+    static func recoverPendingUpdates(for app: URL) throws -> Bool {
+        let files = FileManager.default
+        let destination = app.resolvingSymlinksInPath().standardizedFileURL
+        let root = workRoot(for: destination)
+        guard (try? root.resourceValues(forKeys: [.isSymbolicLinkKey]).isSymbolicLink) == false,
+              let entries = try? files.contentsOfDirectory(at: root, includingPropertiesForKeys: nil) else { return false }
+        var restored = false
+        for work in entries.sorted(by: { $0.lastPathComponent < $1.lastPathComponent }) {
+            let planURL = work.appendingPathComponent("plan.json")
+            guard let plan = try? readPlan(planURL),
+                  URL(fileURLWithPath: plan.destination).standardizedFileURL == destination,
+                  files.fileExists(atPath: work.appendingPathComponent("transaction.json").path),
+                  let lock = try? lockTransaction(work) else { continue }
+            defer { _ = flock(lock, LOCK_UN); close(lock) }
+            let confirmed = work.appendingPathComponent("confirmed")
+            if (try? Data(contentsOf: confirmed)) == Data(plan.healthToken.utf8) { continue }
+            let transactionURL = work.appendingPathComponent("transaction.json")
+            let transaction = try JSONDecoder().decode(Transaction.self, from: Data(contentsOf: transactionURL))
+            if try appVersion(destination) == plan.originalVersion {
+                try files.removeItem(at: transactionURL)
+                continue
+            }
+            let backup = work.appendingPathComponent("Previous.app")
+            let previous = files.fileExists(atPath: backup.path) ? backup : work.appendingPathComponent("VectorScroll.app")
+            try validateCandidate(destination, version: plan.version, matching: previous)
+            guard try appVersion(previous) == plan.originalVersion else {
+                throw Failure(message: "The previous update backup could not be verified.")
+            }
+            let healthy = work.appendingPathComponent(healthFilePrefix + transaction.attempt)
+            if (try? Data(contentsOf: healthy)) == Data(plan.healthToken.utf8) {
+                try Data(plan.healthToken.utf8).write(to: confirmed, options: .atomic)
+            } else {
+                try atomicSwap(destination, previous)
+                if previous == backup { try? files.moveItem(at: backup, to: work.appendingPathComponent("VectorScroll.app")) }
+                try files.removeItem(at: transactionURL)
+                restored = true
+            }
+        }
+        return restored
     }
 
     static func trashStaleUpdateFolders(keeping current: URL, in directory: URL,
                                         trash: (URL) throws -> Void = { try FileManager.default.trashItem(at: $0, resultingItemURL: nil) }) -> Int {
         let files = FileManager.default
-        let keys: Set<URLResourceKey> = [.isDirectoryKey, .isSymbolicLinkKey]
-        guard let entries = try? files.contentsOfDirectory(at: directory, includingPropertiesForKeys: Array(keys)) else {
+        let keys: Set<URLResourceKey> = [.isDirectoryKey, .isSymbolicLinkKey, .contentModificationDateKey]
+        guard directory.lastPathComponent == ".VectorScroll-updates",
+              (try? directory.resourceValues(forKeys: [.isSymbolicLinkKey]).isSymbolicLink) == false,
+              let entries = try? files.contentsOfDirectory(at: directory, includingPropertiesForKeys: Array(keys)) else {
             return 0
         }
         let prefix = ".VectorScroll-update-"
@@ -364,8 +503,18 @@ enum UpdateInstaller {
                   entry.lastPathComponent != current.standardizedFileURL.lastPathComponent else { continue }
             do {
                 let values = try entry.resourceValues(forKeys: keys)
-                guard values.isDirectory == true, values.isSymbolicLink == false,
-                      files.fileExists(atPath: entry.appendingPathComponent("plan.json").path) else { continue }
+                guard values.isDirectory == true, values.isSymbolicLink == false else { continue }
+                let lock = try lockTransaction(entry)
+                defer { _ = flock(lock, LOCK_UN); close(lock) }
+                let hasTransaction = files.fileExists(atPath: entry.appendingPathComponent("transaction.json").path)
+                if hasTransaction {
+                    guard let plan = try? readPlan(entry.appendingPathComponent("plan.json")),
+                          (try? Data(contentsOf: entry.appendingPathComponent("confirmed"))) == Data(plan.healthToken.utf8) else { continue }
+                } else {
+                    guard !files.fileExists(atPath: entry.appendingPathComponent("Previous.app").path),
+                          let modified = values.contentModificationDate,
+                          modified < Date().addingTimeInterval(-86400) else { continue }
+                }
                 try trash(entry)
                 trashed += 1
             } catch { }
@@ -387,7 +536,7 @@ enum UpdateInstaller {
             guard kill(plan.parentPID, 0) != 0 else { throw Failure(message: "VectorScroll did not quit in time. Please try again.") }
             try replace(planURL)
             try Data("success".utf8).write(to: work.appendingPathComponent("result"), options: .withoutOverwriting)
-            _ = trashStaleUpdateFolders(keeping: work, in: destination.deletingLastPathComponent())
+            _ = trashStaleUpdateFolders(keeping: work, in: workRoot(for: destination))
             return 0
         } catch {
             let preferences = UserDefaults(suiteName: "local.vectorscroll.app")!

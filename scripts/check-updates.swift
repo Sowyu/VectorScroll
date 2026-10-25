@@ -19,6 +19,18 @@ struct CheckUpdates {
     }
 
     static func main() async throws {
+        let suite = "VectorScroll.update-check-test.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let now = Date()
+        assert(AppUpdate.automaticCheckDelay(defaults: defaults, now: now) == 0)
+        assert(AppUpdate.beginAutomaticCheck(defaults: defaults, now: now))
+        let relaunchedDefaults = UserDefaults(suiteName: suite)!
+        assert(!AppUpdate.beginAutomaticCheck(defaults: relaunchedDefaults, now: now.addingTimeInterval(60)))
+        assert(AppUpdate.automaticCheckDelay(defaults: relaunchedDefaults, now: now.addingTimeInterval(60)) == 86340)
+        assert(AppUpdate.beginAutomaticCheck(defaults: relaunchedDefaults, now: now.addingTimeInterval(86400)))
+        print("PASS: automatic checks persist across launches and wait a full day")
+
         let newer = try payload()
         let update = try AppUpdate.parse(newer, statusCode: 200, installedVersion: "1.2.0")
         assert(update?.version == "v1.10.0")
