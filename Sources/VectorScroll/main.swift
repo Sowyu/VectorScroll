@@ -484,7 +484,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
             fade.trailingAnchor.constraint(equalTo: content.trailingAnchor),
             fade.topAnchor.constraint(equalTo: content.topAnchor),
             NSLayoutConstraint(item: fade, attribute: .bottom, relatedBy: .equal,
-                               toItem: settingsWindow.contentLayoutGuide, attribute: .top, multiplier: 1, constant: fade.fadeHeight)
+                               toItem: settingsWindow.contentLayoutGuide, attribute: .top, multiplier: 1, constant: 16)
         ])
         // At rest nothing sits under the title bar, so the fade only appears once content scrolls there.
         fade.alphaValue = 0
