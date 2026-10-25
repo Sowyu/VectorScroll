@@ -18,6 +18,10 @@ ICONSET="$ICONSET/VectorScroll.iconset"
 mkdir -p "$MACOS" "$RESOURCES"
 
 cp "$BIN_DIR/VectorScroll" "$MACOS/VectorScroll"
+# SwiftPM records the deployment target as the SDK version. macOS then runs the app in
+# macOS 14 compatibility mode, where Liquid Glass controls lose their full-size metrics.
+vtool -set-build-version macos 14.0 "$(xcrun --sdk macosx --show-sdk-version)" -replace \
+    -output "$MACOS/VectorScroll" "$MACOS/VectorScroll"
 dsymutil "$MACOS/VectorScroll" -o "$PWD/dist/VectorScroll.dSYM"
 strip -x "$MACOS/VectorScroll"
 for localization in Localization/*.lproj; do
@@ -50,9 +54,9 @@ cat > "$CONTENTS/Info.plist" <<'PLIST'
     <key>LSApplicationCategoryType</key>
     <string>public.app-category.utilities</string>
     <key>CFBundleShortVersionString</key>
-    <string>1.13.2</string>
+    <string>1.13.3</string>
     <key>CFBundleVersion</key>
-    <string>27</string>
+    <string>28</string>
     <key>LSMinimumSystemVersion</key>
     <string>14.0</string>
     <key>LSUIElement</key>
