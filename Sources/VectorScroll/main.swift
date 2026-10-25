@@ -285,11 +285,18 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
             stack.addArrangedSubview(view)
             view.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
         }
-        func sectionHeading(_ title: String) -> NSView {
+        func sectionHeading(_ title: String, _ symbol: String) -> NSView {
+            let icon = NSImageView(image: NSImage(systemSymbolName: symbol, accessibilityDescription: nil)!)
+            icon.symbolConfiguration = NSImage.SymbolConfiguration(pointSize: 13, weight: .medium)
+            icon.contentTintColor = SettingsStyle.secondary
+            // A fixed slot keeps every heading's text on the same line, whatever the symbol's width.
+            icon.widthAnchor.constraint(equalToConstant: 18).isActive = true
             let heading = label(title)
             heading.font = .systemFont(ofSize: 14, weight: .semibold)
-            headings.append(heading)
-            return heading
+            let headingRow = row(icon, heading)
+            headingRow.spacing = 7
+            headings.append(headingRow)
+            return headingRow
         }
         func settingsRow(_ title: String, control: NSView, detail: String? = nil) -> NSView {
             SettingsStyle.row(title, control: control, description: detail.map { label($0, secondary: true) })
@@ -308,7 +315,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         guideButton.setContentHuggingPriority(.required, for: .horizontal)
         fullWidth(row(appIcon, appTitle, headerSpacer, guideButton))
 
-        fullWidth(sectionHeading(L("Scrolling")))
+        fullWidth(sectionHeading(L("Scrolling"), "arrow.up.and.down.and.arrow.left.and.right"))
         let hold = SettingsButton(L("Scroll while holding the middle button"), target: self, action: #selector(selectHoldToScroll))
         hold.displayTitle = L("Hold to scroll")
         hold.detail = L("Release the middle button to stop")
@@ -370,7 +377,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         )
         fullWidth(scrollingGroup)
 
-        fullWidth(sectionHeading(L("Indicator")))
+        fullWidth(sectionHeading(L("Indicator"), "dot.circle.and.cursorarrow"))
         indicatorAppearance = NSSegmentedControl(labels: [L("Light"), L("Dark")], trackingMode: .selectOne,
                                                   target: self, action: #selector(changeIndicatorAppearance(_:)))
         indicatorAppearance.controlSize = .small
@@ -398,10 +405,10 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         let sizeRow = settingsRow(L("Size"), control: sizeAndPreview, detail: L("Actual-size preview"))
         fullWidth(group(appearanceRow, sizeRow))
 
-        fullWidth(sectionHeading(L("Excluded apps")))
+        fullWidth(sectionHeading(L("Excluded apps"), "xmark.app"))
         fullWidth(ExcludedApps.makeSettingsSection())
 
-        fullWidth(sectionHeading(L("App")))
+        fullWidth(sectionHeading(L("App"), "gearshape"))
         openSettingsButton = toggle(L("Open settings on launch"), #selector(toggleOpenSettings))
         hideIconItem = toggle(L("Show menu bar icon"), #selector(toggleMenuBarIcon))
         launchAtStartupItem = toggle(L("Launch at login"), #selector(toggleLaunchAtStartup))
