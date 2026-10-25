@@ -410,11 +410,6 @@ extension VectorScrollApp {
         for window in [subject.settingsWindow!, setup.window] {
             let views = descendants(window.contentView!)
             assert(!(window.contentView is NSVisualEffectView), "Settings and setup must sit on a solid window")
-            #if compiler(>=6.2)
-            if #available(macOS 26, *), window === subject.settingsWindow {
-                assert(views.contains { $0 is NSGlassEffectView }, "Scrolling modes must sit in Liquid Glass")
-            }
-            #endif
             assert(window.isOpaque && window.backgroundColor == SettingsStyle.background, "Window backgrounds must be solid")
             for button in views.compactMap({ $0 as? NSButton }) where button.isBordered && !(button is NSPopUpButton) {
                 if button === subject.holdScrollItem || button === subject.holdToLockItem || button === subject.holdOrClickItem { continue }
@@ -429,7 +424,7 @@ extension VectorScrollApp {
             }
         }
         assert(setup.primary.keyEquivalent == "\r", "Setup must keep its default action")
-        print("PASS: solid windows, glass mode cards and actions, and small switches")
+        print("PASS: solid windows, glass actions, and small switches")
         assert(subject.settingsWindow.standardWindowButton(.closeButton)?.isHidden == false)
         assert(subject.settingsWindow.standardWindowButton(.closeButton)?.isEnabled == true)
         assert(subject.settingsWindow.standardWindowButton(.miniaturizeButton)?.isEnabled == true)

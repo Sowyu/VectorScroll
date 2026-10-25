@@ -326,20 +326,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         // Cards must not outrank the window's stay-put priority (500), or the
         // window widens to fit their full accessibility titles.
         for card in [hold, click, both] { card.setContentCompressionResistancePriority(.defaultLow, for: .horizontal) }
-        let modes = NSStackView(views: [hold, click, both])
-        modes.orientation = .horizontal
-        modes.distribution = .fillEqually
-        modes.spacing = 8
-        modes.translatesAutoresizingMaskIntoConstraints = false
-        let modesPadding = NSView()
-        modesPadding.addSubview(modes)
-        NSLayoutConstraint.activate([
-            modes.leadingAnchor.constraint(equalTo: modesPadding.leadingAnchor, constant: 8),
-            modes.trailingAnchor.constraint(equalTo: modesPadding.trailingAnchor, constant: -8),
-            modes.topAnchor.constraint(equalTo: modesPadding.topAnchor, constant: 8),
-            modes.bottomAnchor.constraint(equalTo: modesPadding.bottomAnchor, constant: -8)
-        ])
-        fullWidth(SettingsStyle.glassContainer(for: modesPadding, cornerRadius: 12))
+        fullWidth(group(hold, click, both))
         reverseVerticalItem = toggle(L("Reverse vertical"), #selector(toggleReverseVertical))
         help(reverseVerticalItem, L("Drag down to scroll up instead of down."))
         reverseHorizontalItem = toggle(L("Reverse horizontal"), #selector(toggleReverseHorizontal))
