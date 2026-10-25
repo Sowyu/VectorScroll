@@ -2,6 +2,23 @@
 @preconcurrency import ApplicationServices
 @preconcurrency import ServiceManagement
 
+private final class FocusCancellation: @unchecked Sendable {
+    private let lock = NSLock()
+    private var cancelled = false
+
+    var isCancelled: Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        return cancelled
+    }
+
+    func cancel() {
+        lock.lock()
+        cancelled = true
+        lock.unlock()
+    }
+}
+
 @MainActor
 private final class VectorScrollApp: NSObject, NSApplicationDelegate {
     private static let restorableDefaultsKeys: [String] = [
@@ -52,7 +69,12 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
     }
     private let accessibilityQueue = DispatchQueue(label: "local.vectorscroll.accessibility", qos: .userInitiated)
     private var engageWorkItem: DispatchWorkItem?
+    private var feedbackWorkItem: DispatchWorkItem?
+    private var focusWorkItem: DispatchWorkItem?
+    private var focusCancellation: FocusCancellation?
+    private var lastScrollTime: TimeInterval?
     private var heldMiddleClick: CGPoint?
+    private var middleDownTimestamp: CGEventTimestamp?
     // Set once the pointer leaves the dead zone. Hold or click uses it to tell a drag from a click.
     private var leftDeadZone = false
     // Pointer position from the latest middle-button drag. With a real mouse, NSEvent.mouseLocation
@@ -916,6 +938,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
             tearDownEventTap()
         }
 
+        ExcludedApps.prepare()
         let events: [CGEventType] = [
             .leftMouseDown,
             .leftMouseUp,
@@ -923,7 +946,10 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
             .rightMouseUp,
             .otherMouseDown,
             .otherMouseUp,
-            .otherMouseDragged
+            .otherMouseDragged,
+            .mouseMoved,
+            .leftMouseDragged,
+            .rightMouseDragged
         ]
 
         let mask = events.reduce(CGEventMask(0)) { (partial: CGEventMask, type: CGEventType) -> CGEventMask in
@@ -1035,9 +1061,13 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
                 // A release outside the dead zone was a drag, not a click. This also caps
                 // how far posting the replay can move the pointer.
                 let moved = abs(event.location.x - point.x) > deadZone || abs(event.location.y - point.y) > deadZone
+                let shortPress = middleDownTimestamp.map {
+                    event.timestamp >= $0 && Double(event.timestamp - $0) / 1_000_000_000 < 0.2
+                } ?? false
                 let replay = tapState == .filtering && scrollMode != .both
-                    && (scrollMode == .toggle ? !isActive : !engaged) && !moved
+                    && (scrollMode == .toggle ? !isActive : shortPress && !leftDeadZone) && !moved
                 heldMiddleClick = nil
+                middleDownTimestamp = nil
                 heldPointer = nil
                 switch scrollMode {
                 case .toggle:
@@ -1057,13 +1087,11 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
             return filteredEvent
         }
 
-        if type == .otherMouseDragged, button == 2, heldMiddleClick != nil || swallowedButtonUps.contains(button) {
-            if heldMiddleClick != nil { heldPointer = event.unflippedLocation }
-            if let point = heldMiddleClick, isActive,
-               abs(event.location.x - point.x) > deadZone || abs(event.location.y - point.y) > deadZone {
-                leftDeadZone = true
-                engage()
+        if type == .mouseMoved || type == .leftMouseDragged || type == .rightMouseDragged || type == .otherMouseDragged {
+            if type == .otherMouseDragged, button == 2, heldMiddleClick != nil {
+                heldPointer = event.unflippedLocation
             }
+            if isActive { updateScrollMotion(at: event.unflippedLocation) }
             // Drags pass through. Holding them back keeps macOS from updating its pointer position.
             return Unmanaged.passUnretained(event)
         }
@@ -1072,6 +1100,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
 
         if type == .otherMouseDown, button == 2 {
             heldMiddleClick = event.location
+            middleDownTimestamp = event.timestamp
             heldPointer = nil
             if tapState == .filtering { swallowedButtonUps.insert(button) }
             if holdToLockMode {
@@ -1114,27 +1143,54 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         scrollRemainder = .zero
         anchor = point
         isActive = true
-        // Hold mode engages once the pointer leaves the dead zone, so a plain
+        // Hold mode shows feedback after movement or a short hold, so a plain
         // middle-click never raises a window or flashes the indicator.
         // Toggle mode already filtered clicks with the delay, so show feedback now.
         engaged = false
         leftDeadZone = false
         pendingTarget = target
         scrollingGeneration &+= 1
+        updateOverlay()
         let generation = scrollingGeneration
         // Toggle shows feedback right after the tap callback returns. Hold and Hold or click
         // show it after a short hold, so a quick middle-click never flashes the indicator.
         let feedbackDelay: TimeInterval = holdToLockMode ? 0 : 0.2
-        DispatchQueue.main.asyncAfter(deadline: .now() + feedbackDelay) { [weak self] in
+        let feedback = DispatchWorkItem { [weak self] in
             guard let self, self.isActive, self.scrollingGeneration == generation else { return }
+            self.feedbackWorkItem = nil
+            guard self.holdToLockMode || self.heldMiddleClick == nil || self.middleButtonIsDown() else { return }
             self.engage()
         }
+        feedbackWorkItem = feedback
+        DispatchQueue.main.asyncAfter(deadline: .now() + feedbackDelay, execute: feedback)
+        stopScrollTimer()
+        if let heldPointer { updateScrollMotion(at: heldPointer) }
+    }
 
+    private func stopScrollTimer() {
         timer?.cancel()
+        timer = nil
+        lastScrollTime = nil
+        scrollRemainder = .zero
+    }
+
+    private func updateScrollMotion(at pointer: CGPoint) {
+        guard isActive, let anchor else { return }
+        let adjusted = CGPoint(x: applyDeadZone(pointer.x - anchor.x), y: applyDeadZone(pointer.y - anchor.y))
+        guard adjusted.x != 0 || adjusted.y != 0 else {
+            stopScrollTimer()
+            return
+        }
+        leftDeadZone = true
+        engage()
+        guard timer == nil else { return }
+        lastScrollTime = ProcessInfo.processInfo.systemUptime
+        let generation = scrollingGeneration
         let timer = DispatchSource.makeTimerSource(queue: .main)
-        timer.schedule(deadline: .now(), repeating: .milliseconds(16), leeway: .milliseconds(2))
+        timer.schedule(deadline: .now() + .milliseconds(16), repeating: .milliseconds(16), leeway: .milliseconds(2))
         timer.setEventHandler { [weak self] in
-            self?.emitScrollTick()
+            guard let self, self.scrollingGeneration == generation else { return }
+            self.emitScrollTick()
         }
         self.timer = timer
         timer.resume()
@@ -1142,45 +1198,65 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
 
     private func stopScrolling() {
         cancelArmedHoldToLock()
+        feedbackWorkItem?.cancel()
+        feedbackWorkItem = nil
+        focusCancellation?.cancel()
+        focusCancellation = nil
+        focusWorkItem?.cancel()
+        focusWorkItem = nil
         // Discard replay eligibility, but still swallow any matching releases.
         heldMiddleClick = nil
+        middleDownTimestamp = nil
         heldPointer = nil
         scrollingGeneration &+= 1
-        scrollRemainder = .zero
-        guard isActive else { return }
-        timer?.cancel()
-        timer = nil
+        stopScrollTimer()
         anchor = nil
         isActive = false
         engaged = false
         pendingTarget = nil
-        overlay.hide()
+        updateOverlay()
+    }
+
+    private func updateOverlay() {
+        let generation = scrollingGeneration
+        DispatchQueue.main.async { [weak self] in
+            guard let self, self.scrollingGeneration == generation else { return }
+            if self.isActive, self.engaged, let anchor = self.anchor {
+                self.overlay.show(at: anchor)
+            } else {
+                self.overlay.hide()
+            }
+        }
     }
 
     private func engage() {
-        guard !engaged, let anchor else { return }
+        guard !engaged, anchor != nil else { return }
         engaged = true
-        overlay.show(at: anchor)
+        updateOverlay()
         if raiseWindowOnScroll, let target = pendingTarget {
-            // Only the Sendable point crosses queues. AX objects stay on this queue.
-            accessibilityQueue.async { Self.focusTarget(at: target) }
+            focusCancellation?.cancel()
+            focusWorkItem?.cancel()
+            let cancellation = FocusCancellation()
+            let work = DispatchWorkItem { Self.focusTarget(at: target, cancellation: cancellation) }
+            focusCancellation = cancellation
+            focusWorkItem = work
+            // AX objects stay on this queue; cancelled pending requests never perform AX work.
+            accessibilityQueue.async(execute: work)
         }
     }
 
     private func emitScrollTick() {
-        guard let anchor else { return }
-
+        guard isActive, timer != nil, let anchor else { return }
         let pointer = heldMiddleClick != nil ? heldPointer ?? NSEvent.mouseLocation : NSEvent.mouseLocation
-        let offset = CGPoint(x: pointer.x - anchor.x, y: pointer.y - anchor.y)
-        let adjusted = CGPoint(
-            x: applyDeadZone(offset.x),
-            y: applyDeadZone(offset.y)
-        )
-
-        guard adjusted.x != 0 || adjusted.y != 0 else { return }
-        leftDeadZone = true
-        engage()
-        guard let delta = nextScrollDelta(for: adjusted) else { return }
+        let adjusted = CGPoint(x: applyDeadZone(pointer.x - anchor.x), y: applyDeadZone(pointer.y - anchor.y))
+        guard adjusted.x != 0 || adjusted.y != 0 else {
+            stopScrollTimer()
+            return
+        }
+        let now = ProcessInfo.processInfo.systemUptime
+        let elapsed = lastScrollTime.map { now - $0 } ?? 0
+        lastScrollTime = now
+        guard let delta = nextScrollDelta(for: adjusted, elapsed: elapsed) else { return }
 
         guard let scrollEvent = CGEvent(
             scrollWheelEvent2Source: nil,
@@ -1196,13 +1272,16 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         scrollEvent.post(tap: .cgSessionEventTap)
     }
 
-    private func nextScrollDelta(for adjusted: CGPoint) -> (vertical: Int32, horizontal: Int32)? {
+    private func nextScrollDelta(for adjusted: CGPoint, elapsed: TimeInterval = 1.0 / 60) -> (vertical: Int32, horizontal: Int32)? {
         guard adjusted.x != 0 || adjusted.y != 0 else { return nil }
         func curved(_ value: CGFloat) -> CGFloat {
             value * pow(abs(value) / 120, 0.35)
         }
-        scrollRemainder.y += clamp(curved(adjusted.y) * scrollScale * (reverseVertical ? -1 : 1))
-        scrollRemainder.x += clamp(-curved(adjusted.x) * scrollScale * (reverseHorizontal ? -1 : 1))
+        // Preserve the nominal 60 Hz curve and cap, integrating its pixels/second over time.
+        // At most 50 ms is caught up after a busy main queue; resuming starts a new clock.
+        let ticks = CGFloat(min(max(elapsed, 0), 0.05) * 60)
+        scrollRemainder.y += clamp(curved(adjusted.y) * scrollScale * (reverseVertical ? -1 : 1)) * ticks
+        scrollRemainder.x += clamp(-curved(adjusted.x) * scrollScale * (reverseHorizontal ? -1 : 1)) * ticks
         let vertical = Int32(scrollRemainder.y.rounded())
         let horizontal = Int32(scrollRemainder.x.rounded())
         scrollRemainder.y -= CGFloat(vertical)
@@ -1244,17 +1323,23 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         return pid
     }
 
-    nonisolated private static func focusTarget(at point: CGPoint) {
-        guard AXIsProcessTrusted(), let element = element(at: point), let pid = pid(of: element) else { return }
-        NSRunningApplication(processIdentifier: pid)?.activate()
+    nonisolated private static func focusTarget(at point: CGPoint, cancellation: FocusCancellation) {
+        guard !cancellation.isCancelled, AXIsProcessTrusted(),
+              !cancellation.isCancelled, let element = element(at: point),
+              !cancellation.isCancelled, let pid = pid(of: element),
+              !cancellation.isCancelled else { return }
+        let application = NSRunningApplication(processIdentifier: pid)
+        guard !cancellation.isCancelled else { return }
+        application?.activate()
         var current: AXUIElement? = element
         for _ in 0..<10 {
-            guard let candidate = current else { return }
+            guard !cancellation.isCancelled, let candidate = current else { return }
             AXUIElementSetMessagingTimeout(candidate, 0.25)
-            if AXUIElementPerformAction(candidate, "AXRaise" as CFString) == .success {
-                return
-            }
+            guard !cancellation.isCancelled else { return }
+            let result = AXUIElementPerformAction(candidate, "AXRaise" as CFString)
+            guard !cancellation.isCancelled, result != .success else { return }
             current = parent(of: candidate)
+            guard !cancellation.isCancelled else { return }
         }
     }
 }

@@ -3,6 +3,53 @@ import UniformTypeIdentifiers
 
 @MainActor
 enum ExcludedApps {
+    @MainActor
+    private final class ExclusionCache {
+        let defaults: UserDefaults
+        var ids: Set<String>?
+        var observer: NSObjectProtocol?
+
+        init(defaults: UserDefaults) {
+            self.defaults = defaults
+            observer = NotificationCenter.default.addObserver(forName: UserDefaults.didChangeNotification, object: defaults, queue: .main) { [weak self] _ in
+                MainActor.assumeIsolated { self?.ids = nil }
+            }
+        }
+    }
+
+    private static var caches: [ObjectIdentifier: ExclusionCache] = [:]
+    private static var bundleIDsByPID: [pid_t: String] = [:]
+    private static var workspaceObservers: [NSObjectProtocol] = []
+
+    static func prepare() {
+        _ = cachedBundleIDs(in: .standard)
+        guard workspaceObservers.isEmpty else { return }
+        for app in NSWorkspace.shared.runningApplications {
+            bundleIDsByPID[app.processIdentifier] = app.bundleIdentifier
+        }
+        let center = NSWorkspace.shared.notificationCenter
+        for name in [NSWorkspace.didLaunchApplicationNotification, NSWorkspace.didTerminateApplicationNotification] {
+            workspaceObservers.append(center.addObserver(forName: name, object: nil, queue: .main) { notification in
+                guard let app = notification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication else { return }
+                let pid = app.processIdentifier
+                let id = app.bundleIdentifier
+                MainActor.assumeIsolated {
+                    bundleIDsByPID[pid] = name == NSWorkspace.didTerminateApplicationNotification ? nil : id
+                }
+            })
+        }
+    }
+
+    static func cachedBundleIDs(in defaults: UserDefaults) -> Set<String> {
+        let key = ObjectIdentifier(defaults)
+        let cache = caches[key] ?? ExclusionCache(defaults: defaults)
+        caches[key] = cache
+        if let ids = cache.ids { return ids }
+        let ids = Set(bundleIDs(in: defaults))
+        cache.ids = ids
+        return ids
+    }
+
     static func bundleIDs(in defaults: UserDefaults = .standard) -> [String] {
         defaults.stringArray(forKey: "excludedBundleIDs") ?? []
     }
@@ -11,10 +58,12 @@ enum ExcludedApps {
         var stored = Self.bundleIDs(in: defaults)
         for id in bundleIDs where !id.isEmpty && !stored.contains(id) { stored.append(id) }
         defaults.set(stored, forKey: "excludedBundleIDs")
+        caches[ObjectIdentifier(defaults)]?.ids = nil
     }
 
     static func remove(_ bundleID: String, from defaults: UserDefaults = .standard) {
         defaults.set(bundleIDs(in: defaults).filter { $0 != bundleID }, forKey: "excludedBundleIDs")
+        caches[ObjectIdentifier(defaults)]?.ids = nil
     }
 
     static func isExcluded(at point: CGPoint) -> Bool {
@@ -22,9 +71,17 @@ enum ExcludedApps {
     }
 
     static func isExcluded(at point: CGPoint, defaults: UserDefaults) -> Bool {
-        let excluded = bundleIDs(in: defaults)
+        let excluded = cachedBundleIDs(in: defaults)
         guard !excluded.isEmpty else { return false }
         guard let windows = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID) as? [[String: Any]] else { return false }
+        guard let pid = ownerPID(at: point, in: windows) else { return false }
+        let id = bundleIDsByPID[pid] ?? NSRunningApplication(processIdentifier: pid)?.bundleIdentifier
+        guard let id else { return false }
+        bundleIDsByPID[pid] = id
+        return excluded.contains(id)
+    }
+
+    static func ownerPID(at point: CGPoint, in windows: [[String: Any]]) -> pid_t? {
         for window in windows {
             guard let pid = window[kCGWindowOwnerPID as String] as? Int32,
                   pid != ProcessInfo.processInfo.processIdentifier,
@@ -34,10 +91,9 @@ enum ExcludedApps {
                   let bounds = window[kCGWindowBounds as String] as? [String: Any],
                   let rect = CGRect(dictionaryRepresentation: bounds as CFDictionary),
                   rect.contains(point) else { continue }
-            guard let id = NSRunningApplication(processIdentifier: pid)?.bundleIdentifier else { return false }
-            return excluded.contains(id)
+            return pid
         }
-        return false
+        return nil
     }
 
     static func makeSettingsSection(defaults: UserDefaults = .standard) -> NSView {
