@@ -160,7 +160,7 @@ extension VectorScrollApp {
         let subject = VectorScrollApp()
         subject.configureMenu()
         let titles = subject.menu.items.filter { !$0.isHidden }.map(\.title)
-        assert(titles.filter { !$0.isEmpty } == ["Settings…", "Quit VectorScroll"])
+        assert(titles.filter { !$0.isEmpty } == ["Settings…", "Donate on Ko-fi", "Quit VectorScroll"])
         assert(subject.menu.items.first?.action == #selector(showSettings))
         assert(subject.holdScrollItem.action == #selector(selectHoldToScroll))
         assert(subject.holdToLockItem.action == #selector(selectHoldToLock))
@@ -380,11 +380,11 @@ extension VectorScrollApp {
             let views = descendants(window.contentView!)
             assert(!views.contains { $0 is NSVisualEffectView }, "Settings and setup must have solid content")
             #if compiler(>=6.2)
-            if #available(macOS 26, *) {
-                assert(!views.contains { $0 is NSGlassEffectView }, "Groups must not use glass containers")
+            if #available(macOS 26, *), window === subject.settingsWindow {
+                assert(views.contains { $0 is NSGlassEffectView }, "Settings groups must be Liquid Glass")
             }
             #endif
-            assert(window.isOpaque && window.backgroundColor.alphaComponent == 1, "Window backgrounds must be solid")
+            assert(window.isOpaque && window.backgroundColor == .windowBackgroundColor, "Window backgrounds must be solid")
             for button in views.compactMap({ $0 as? NSButton }) where button.isBordered && !(button is NSPopUpButton) {
                 if button === subject.holdScrollItem || button === subject.holdToLockItem || button === subject.holdOrClickItem { continue }
                 assert(button.bezelStyle == .push && button.image == nil, "Action buttons must use plain push bezels")
@@ -394,13 +394,7 @@ extension VectorScrollApp {
             }
         }
         assert(setup.primary.keyEquivalent == "\r", "Setup must keep its default action")
-        for (name, component) in [(NSAppearance.Name.aqua, CGFloat(236) / 255), (.darkAqua, CGFloat(30) / 255)] {
-            NSAppearance(named: name)!.performAsCurrentDrawingAppearance {
-                let color = SettingsStyle.background.usingColorSpace(.sRGB)!
-                assert(abs(color.redComponent - component) < 0.001 && color.alphaComponent == 1)
-            }
-        }
-        print("PASS: solid settings and setup backgrounds, plain push actions, and mini switches")
+        print("PASS: solid windows, glass groups, plain push actions, and mini switches")
         assert(subject.settingsWindow.standardWindowButton(.closeButton)?.isHidden == false)
         assert(subject.settingsWindow.standardWindowButton(.closeButton)?.isEnabled == true)
         assert(subject.settingsWindow.standardWindowButton(.miniaturizeButton)?.isEnabled == true)

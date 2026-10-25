@@ -2,18 +2,6 @@ import AppKit
 
 @MainActor
 enum SettingsStyle {
-    static let background = NSColor(name: "SettingsBackground", dynamicProvider: { (appearance: NSAppearance) -> NSColor in
-        let dark = appearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua
-        return NSColor(srgbRed: dark ? 30 / 255 : 236 / 255, green: dark ? 30 / 255 : 236 / 255,
-                       blue: dark ? 30 / 255 : 236 / 255, alpha: 1)
-    })
-    static let groupFill = NSColor(name: "SettingsGroupFill", dynamicProvider: { (appearance: NSAppearance) -> NSColor in
-        NSColor(white: appearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua ? 42 / 255 : 1, alpha: 1)
-    })
-    static let groupBorder = NSColor(name: "SettingsGroupBorder", dynamicProvider: { (appearance: NSAppearance) -> NSColor in
-        appearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua
-            ? NSColor.white.withAlphaComponent(0.06) : NSColor.black.withAlphaComponent(0.07)
-    })
     static let text = NSColor.labelColor
     static let secondary = NSColor.secondaryLabelColor
 
@@ -123,8 +111,7 @@ enum SettingsStyle {
         window.titleVisibility = .visible
         window.isMovableByWindowBackground = true
         window.isOpaque = true
-        window.backgroundColor = background
-        window.contentView = SettingsBackgroundView()
+        window.backgroundColor = .windowBackgroundColor
     }
 }
 
@@ -142,16 +129,7 @@ private final class SettingsLabel: NSTextField {
 }
 
 @MainActor
-private final class SettingsBackgroundView: NSView {
-    override var isOpaque: Bool { true }
-    override func draw(_ dirtyRect: NSRect) {
-        SettingsStyle.background.setFill()
-        dirtyRect.fill()
-    }
-}
-
-@MainActor
-private final class SettingsGroup: NSView {
+private final class SettingsGroup: NSBox {
     private let rows: [NSView]
     private var separators: [NSBox] = []
 
@@ -168,14 +146,41 @@ private final class SettingsGroup: NSView {
             }
             views.append(row)
         }
+        // Liquid Glass on macOS 26 and later, a native grouped box before that.
+        boxType = .primary
+        titlePosition = .noTitle
+        contentViewMargins = NSSize(width: 12, height: 0)
         let stack = SettingsStyle.column(views, spacing: 0)
         stack.translatesAutoresizingMaskIntoConstraints = false
-        addSubview(stack)
+        var host = contentView!
+        #if compiler(>=6.2)
+        if #available(macOS 26, *) {
+            boxType = .custom
+            borderWidth = 0
+            fillColor = .clear
+            contentViewMargins = .zero
+            let glass = NSGlassEffectView()
+            glass.cornerRadius = 14
+            glass.translatesAutoresizingMaskIntoConstraints = false
+            let inner = NSView()
+            glass.contentView = inner
+            host.addSubview(glass)
+            NSLayoutConstraint.activate([
+                glass.leadingAnchor.constraint(equalTo: host.leadingAnchor),
+                glass.trailingAnchor.constraint(equalTo: host.trailingAnchor),
+                glass.topAnchor.constraint(equalTo: host.topAnchor),
+                glass.bottomAnchor.constraint(equalTo: host.bottomAnchor)
+            ])
+            host = inner
+        }
+        #endif
+        host.addSubview(stack)
+        let inset: CGFloat = host === contentView ? 0 : 14
         NSLayoutConstraint.activate([
-            stack.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 12),
-            stack.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -12),
-            stack.topAnchor.constraint(equalTo: topAnchor),
-            stack.bottomAnchor.constraint(equalTo: bottomAnchor)
+            stack.leadingAnchor.constraint(equalTo: host.leadingAnchor, constant: inset),
+            stack.trailingAnchor.constraint(equalTo: host.trailingAnchor, constant: -inset),
+            stack.topAnchor.constraint(equalTo: host.topAnchor),
+            stack.bottomAnchor.constraint(equalTo: host.bottomAnchor)
         ])
     }
 
@@ -188,16 +193,6 @@ private final class SettingsGroup: NSView {
             if !row.isHidden { hasVisibleRow = true }
         }
         super.layout()
-    }
-
-    override func draw(_ dirtyRect: NSRect) {
-        let pixel = 1 / (window?.backingScaleFactor ?? 2)
-        let shape = NSBezierPath(roundedRect: bounds.insetBy(dx: pixel / 2, dy: pixel / 2), xRadius: 10, yRadius: 10)
-        SettingsStyle.groupFill.setFill()
-        shape.fill()
-        SettingsStyle.groupBorder.setStroke()
-        shape.lineWidth = pixel
-        shape.stroke()
     }
 }
 
@@ -315,9 +310,4 @@ final class SettingsWindow: NSWindow {
 @MainActor
 final class SettingsDocument: NSView {
     override var isFlipped: Bool { true }
-    override var isOpaque: Bool { true }
-    override func draw(_ dirtyRect: NSRect) {
-        SettingsStyle.background.setFill()
-        dirtyRect.fill()
-    }
 }
