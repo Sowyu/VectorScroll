@@ -304,8 +304,9 @@ enum UpdateInstaller {
         let plan = try JSONDecoder().decode(Plan.self, from: Data(contentsOf: planURL))
         let work = planURL.deletingLastPathComponent().standardizedFileURL
         let destination = URL(fileURLWithPath: plan.destination).standardizedFileURL
+        // Installers before 1.13.0 keep their work folder beside the app rather than in the updates folder.
         guard work.lastPathComponent.hasPrefix(".VectorScroll-update-"),
-              workRoot(for: destination) == work.deletingLastPathComponent(),
+              [workRoot(for: destination), destination.deletingLastPathComponent()].contains(work.deletingLastPathComponent()),
               try work.resourceValues(forKeys: [.isSymbolicLinkKey]).isSymbolicLink == false,
               try work.deletingLastPathComponent().resourceValues(forKeys: [.isSymbolicLinkKey]).isSymbolicLink == false,
               plan.parentPID > 1, UUID(uuidString: plan.healthToken) != nil else {
@@ -335,9 +336,13 @@ enum UpdateInstaller {
         guard bundleURL.resolvingSymlinksInPath().standardizedFileURL == destination else {
             throw Failure(message: "Invalid update health check destination.")
         }
-        let transaction = try JSONDecoder().decode(Transaction.self, from: Data(contentsOf:
-            planURL.deletingLastPathComponent().appendingPathComponent("transaction.json")))
-        guard transaction.attempt == attempt else { throw Failure(message: "Invalid update health attempt.") }
+        // Installers before 1.13.0 write no transaction file. Their own attempt and
+        // token checks still apply, so only a transaction that exists has to match.
+        let transactionURL = planURL.deletingLastPathComponent().appendingPathComponent("transaction.json")
+        if FileManager.default.fileExists(atPath: transactionURL.path) {
+            let transaction = try JSONDecoder().decode(Transaction.self, from: Data(contentsOf: transactionURL))
+            guard transaction.attempt == attempt else { throw Failure(message: "Invalid update health attempt.") }
+        }
         try Data(plan.healthToken.utf8).write(
             to: planURL.deletingLastPathComponent().appendingPathComponent(healthFilePrefix + attempt),
             options: .withoutOverwriting

@@ -50,6 +50,35 @@ SWIFT
 swiftc -parse-as-library "$WORK/Updates.swift" "$WORK/UpdateInstaller.swift" "$WORK/check.swift" -o "$WORK/check" 2>/dev/null
 "$WORK/check"
 echo "The $PREVIOUS updater accepts $VERSION."
+
+# Install this build over a copy of the previous release with that release's own
+# installer: swap, launch, and wait for the new app to confirm a healthy start.
+# A signature check alone missed 1.13.0, which every 1.12.0 updater rolled back.
+mkdir "$WORK/Apps"
+cp -R "$WORK/Old.app" "$WORK/Apps/VectorScroll.app"
+cat > "$WORK/e2e.swift" <<SWIFT
+import CryptoKit
+import Foundation
+@main struct EndToEnd { static func main() throws {
+    let dmg = URL(fileURLWithPath: "$PWD/dist/VectorScroll.dmg")
+    let copy = URL(fileURLWithPath: "$WORK/Update.dmg")
+    try FileManager.default.copyItem(at: dmg, to: copy)
+    let data = try Data(contentsOf: copy)
+    let update = AppUpdate(version: "$VERSION", downloadURL: URL(string: "https://example.invalid/VectorScroll.dmg")!,
+                           sha256: SHA256.hash(data: data).map { String(format: "%02x", \$0) }.joined(), downloadSize: data.count)
+    let destination = URL(fileURLWithPath: "$WORK/Apps/VectorScroll.app")
+    let plan = try UpdateInstaller.prepare(update, image: UpdateInstaller.Image(url: copy), destination: destination,
+                                           helperSource: destination.appendingPathComponent("Contents/MacOS/VectorScroll"),
+                                           parentPID: getpid())
+    try UpdateInstaller.replace(plan)
+    guard try UpdateInstaller.appVersion(destination) == "$VERSION" else { throw CocoaError(.fileWriteUnknown) }
+}}
+SWIFT
+# If the previous release's installer API changed, adapt the harness above rather than skipping it.
+swiftc -parse-as-library "$WORK/Updates.swift" "$WORK/UpdateInstaller.swift" "$WORK/e2e.swift" -o "$WORK/e2e" 2>/dev/null
+"$WORK/e2e"
+pkill -f "$WORK/Apps/VectorScroll.app" || true
+echo "The $PREVIOUS installer updates to $VERSION and $VERSION starts."
 rm -rf "$WORK"
 
 "$GH" release create "$VERSION" dist/VectorScroll.dmg --target "$(git rev-parse HEAD)" \
