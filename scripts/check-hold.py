@@ -113,6 +113,15 @@ extension VectorScrollApp {
             assert(restored.raiseWindowOnScroll == enabled)
         }
         print("PASS: bring window to front switch persists")
+        assert(!VectorScrollApp().middleClickLinksAndTabs, "Links and tabs must be off until chosen")
+        for enabled in [true, false] {
+            subject.linksAndTabsItem.state = enabled ? .on : .off
+            subject.toggleLinksAndTabs()
+            let restored = VectorScrollApp()
+            restored.restoreSettings()
+            assert(restored.middleClickLinksAndTabs == enabled)
+        }
+        print("PASS: links and tabs switch is off by default and persists")
         subject.selectHoldToLock()
         subject.holdDelayEnabled = false
         subject.holdDelayMilliseconds = 950
@@ -120,6 +129,7 @@ extension VectorScrollApp {
         subject.reverseVertical = true
         subject.reverseHorizontal = true
         subject.raiseWindowOnScroll = false
+        subject.middleClickLinksAndTabs = true
         subject.selectDarkMode()
         subject.sizePicker.selectItem(withTag: 48)
         subject.selectMarkerSize(subject.sizePicker)
@@ -140,6 +150,7 @@ extension VectorScrollApp {
         assert(subject.delayToggle.state == .on && subject.delaySlider.isEnabled && subject.delaySlider.doubleValue == 200)
         assert(subject.delayLabel.stringValue == "200 ms" && subject.speedLabel.stringValue == "100%" && subject.speedSlider.doubleValue == 100)
         assert(subject.reverseVerticalItem.state == .off && subject.reverseHorizontalItem.state == .off && subject.raiseWindowItem.state == .on)
+        assert(!subject.middleClickLinksAndTabs && subject.linksAndTabsItem.state == .off)
         assert(subject.indicatorAppearance.selectedSegment == 0 && subject.sizePicker.selectedItem?.tag == 32)
         assert(!subject.markerPreview.isDarkMode && subject.markerPreview.frame.width == 32)
         assert(subject.defaults.bool(forKey: "openSettingsOnLaunch") && !subject.defaults.bool(forKey: "showMenuBarIcon"))
@@ -692,12 +703,41 @@ extension VectorScrollApp {
         assert(!subject.isActive && subject.swallowedButtonUps.isEmpty)
         assert(subject.handleEvent(type: .otherMouseDragged, event: drag)?.takeUnretainedValue() === drag)
         assert(subject.handleEvent(type: .otherMouseUp, event: up)?.takeUnretainedValue() === up)
-        assert(!subject.isActive && replays.isEmpty && !subject.excludedMiddleClick)
+        assert(!subject.isActive && replays.isEmpty && !subject.passedMiddleClick)
         subject.appIsExcluded = { _ in false }
         assert(subject.handleEvent(type: .otherMouseDown, event: down) == nil && subject.isActive)
         assert(subject.handleEvent(type: .otherMouseUp, event: up) == nil)
         replays.removeAll()
         print("PASS: excluded apps get middle down, drag, and up untouched, and other apps are filtered again afterwards")
+
+        // With the switch on, a press on a link or tab reaches the app untouched in every mode.
+        var lookups = 0
+        subject.isLinkOrTab = { _ in lookups += 1; return true }
+        assert(subject.handleEvent(type: .otherMouseDown, event: down) == nil && lookups == 0, "The switch is off, so nothing may ask what is under the pointer")
+        assert(subject.handleEvent(type: .otherMouseUp, event: up) == nil)
+        replays.removeAll()
+        subject.middleClickLinksAndTabs = true
+        for mode in [ScrollMode.hold, .toggle, .both] {
+            subject.scrollMode = mode
+            subject.holdDelayEnabled = false
+            assert(subject.handleEvent(type: .otherMouseDown, event: down)?.takeUnretainedValue() === down)
+            assert(!subject.isActive && subject.swallowedButtonUps.isEmpty && subject.engageWorkItem == nil)
+            assert(subject.handleEvent(type: .otherMouseDragged, event: drag)?.takeUnretainedValue() === drag)
+            assert(subject.handleEvent(type: .otherMouseUp, event: up)?.takeUnretainedValue() === up)
+            assert(!subject.isActive && replays.isEmpty && !subject.passedMiddleClick)
+        }
+        // Elsewhere on the page scrolling starts as usual, and a click on a link still stops toggle scrolling.
+        subject.scrollMode = .toggle
+        subject.isLinkOrTab = { _ in false }
+        assert(subject.handleEvent(type: .otherMouseDown, event: down) == nil && subject.isActive)
+        assert(subject.handleEvent(type: .otherMouseUp, event: up) == nil && subject.isActive)
+        subject.isLinkOrTab = { _ in true }
+        assert(subject.handleEvent(type: .otherMouseDown, event: down) == nil && !subject.isActive)
+        assert(subject.handleEvent(type: .otherMouseUp, event: up) == nil && replays.isEmpty)
+        subject.middleClickLinksAndTabs = false
+        subject.holdDelayEnabled = true
+        subject.scrollMode = .hold
+        print("PASS: links and tabs get the middle button untouched in all modes when the switch is on; a click on one still stops toggle scrolling")
 
         replays.removeAll()
         assert(subject.handleEvent(type: .otherMouseDown, event: down) == nil)
@@ -1198,7 +1238,7 @@ generated = output / "main.swift"
 generated.write_text(source.split(entry)[0] + harness)
 binary = output / "check-hold"
 subprocess.run(["swiftc", "-swift-version", "6", "-warnings-as-errors",
-                str(generated), str(root / "Sources/VectorScroll/Localization.swift"), str(root / "Sources/VectorScroll/ExcludedApps.swift"), str(root / "Sources/VectorScroll/SettingsStyle.swift"), str(root / "Sources/VectorScroll/Onboarding.swift"), str(root / "Sources/VectorScroll/Updates.swift"), str(root / "Sources/VectorScroll/UpdateInstaller.swift"), "-o", str(binary), "-framework", "AppKit",
+                str(generated), str(root / "Sources/VectorScroll/Localization.swift"), str(root / "Sources/VectorScroll/ExcludedApps.swift"), str(root / "Sources/VectorScroll/ClickTargets.swift"), str(root / "Sources/VectorScroll/SettingsStyle.swift"), str(root / "Sources/VectorScroll/Onboarding.swift"), str(root / "Sources/VectorScroll/Updates.swift"), str(root / "Sources/VectorScroll/UpdateInstaller.swift"), "-o", str(binary), "-framework", "AppKit",
                 "-framework", "ApplicationServices", "-framework", "ServiceManagement"], check=True)
 # LaunchServices registers the probe as a real foreground app. macOS 26 will
 # not activate an unbundled command-line process for native control tracking.

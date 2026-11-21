@@ -12,6 +12,7 @@
 "%ld pt" = "%ld pt";
 /* Scroll speed percentage shown beside the slider. %% displays a literal percent sign. */
 "%ld%%" = "%ld%%";
+"A middle-click on a link or a browser tab goes to the app, so it opens the link or closes the tab. Scrolling starts everywhere else." = "リンクやブラウザのタブを中クリックするとAppに渡され、リンクが開くかタブが閉じます。それ以外の場所ではスクロールが始まります。";
 "Accessibility Settings…" = "アクセシビリティ設定…";
 "Accessibility is required" = "アクセシビリティの許可が必要です";
 "Accessibility lets VectorScroll bring the window under your pointer forward and send scroll events to it. Vector scrolling stays off until this permission is allowed." = "アクセシビリティにより、VectorScrollはポインタの下にあるウインドウを前面に表示し、スクロールイベントを送信できます。この権限を許可するまで、ベクトルスクロールはオフのままです。";
@@ -76,6 +77,7 @@
 /* Light appearance of the scrolling indicator. */
 "Light" = "ライト";
 "Middle-button scrolling is off in these apps. Useful for apps that pan with the middle button, like Blender or Figma." = "これらのAppでは、中ボタンスクロールがオフになります。BlenderやFigmaなど、中ボタンでパンするAppに便利です。";
+"Middle-click links and tabs" = "リンクとタブを中クリック";
 "No excluded apps" = "除外するAppはありません";
 "OK" = "OK";
 "Open Login Items" = "ログイン項目を開く";
@@ -83,6 +85,7 @@
 "Open Settings" = "設定を開く";
 "Open System Settings" = "システム設定を開く";
 "Open settings on launch" = "起動時に設定を開く";
+"Open the link or close the tab instead of scrolling" = "スクロールせずにリンクを開く、またはタブを閉じる";
 "Quit VectorScroll" = "VectorScrollを終了";
 "Ready to scroll" = "スクロールの準備完了";
 "Release the middle button to stop" = "中ボタンを離すと停止";

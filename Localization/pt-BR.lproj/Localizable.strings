@@ -12,6 +12,7 @@
 "%ld pt" = "%ld pt";
 /* Scroll speed percentage shown beside the slider. %% displays a literal percent sign. */
 "%ld%%" = "%ld%%";
+"A middle-click on a link or a browser tab goes to the app, so it opens the link or closes the tab. Scrolling starts everywhere else." = "Um clique do meio em um link ou em uma aba do navegador vai para o app, então abre o link ou fecha a aba. No restante, a rolagem começa.";
 "Accessibility Settings…" = "Ajustes de Acessibilidade…";
 "Accessibility is required" = "Acessibilidade necessária";
 "Accessibility lets VectorScroll bring the window under your pointer forward and send scroll events to it. Vector scrolling stays off until this permission is allowed." = "A Acessibilidade permite que o VectorScroll traga para a frente a janela sob o ponteiro e envie eventos de rolagem a ela. A rolagem vetorial fica desativada até que essa permissão seja concedida.";
@@ -76,6 +77,7 @@
 /* Light appearance of the scrolling indicator. */
 "Light" = "Claro";
 "Middle-button scrolling is off in these apps. Useful for apps that pan with the middle button, like Blender or Figma." = "A rolagem com o botão do meio fica desativada nestes apps. Útil para apps que se movem com o botão do meio, como Blender ou Figma.";
+"Middle-click links and tabs" = "Clique do meio em links e abas";
 "No excluded apps" = "Nenhum app excluído";
 "OK" = "OK";
 "Open Login Items" = "Abrir Itens de Login";
@@ -83,6 +85,7 @@
 "Open Settings" = "Abrir Ajustes";
 "Open System Settings" = "Abrir Ajustes do Sistema";
 "Open settings on launch" = "Abrir ajustes ao iniciar";
+"Open the link or close the tab instead of scrolling" = "Abrir o link ou fechar a aba em vez de rolar";
 "Quit VectorScroll" = "Encerrar o VectorScroll";
 "Ready to scroll" = "Pronto para rolar";
 "Release the middle button to stop" = "Solte o botão do meio para parar";

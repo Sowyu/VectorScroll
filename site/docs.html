@@ -26,9 +26,10 @@
     <img src="onboarding.png" alt="Setup guide, Input Monitoring step" width="500" height="352">
     <h2 id="scrolling">Scrolling</h2>
     <p><b>Hold to scroll</b> is the default. Hold the middle button, move, release to stop. The indicator appears as soon as you move, or after a 0.2 s hold. VectorScroll holds the click until it knows what it was. A quick click that never left the 10 pt dead zone reaches the app as a normal middle click, so it still opens a link in a new tab. If you scrolled or held, the app never sees the click.</p>
-    <p><b>Hold or click</b> works like autoscroll on Windows. Hold and drag to scroll until you let go, or click once to keep scrolling until the next click. In this mode a middle click always starts scrolling, so it never opens links.</p>
+    <p><b>Hold or click</b> works like autoscroll on Windows. Hold and drag to scroll until you let go, or click once to keep scrolling until the next click. In this mode a middle click always starts scrolling, so it never opens links unless <b>Middle-click links and tabs</b> is on.</p>
     <p><b>Toggle scrolling</b> keeps going after you let go. Any mouse button stops it, and that click is not passed on, so stopping never activates a link or button.</p>
     <p><b>Start delay</b> applies to toggle mode. Require a hold of 50 to 1,000 ms before scrolling engages. Default 200 ms. Turn it off to start on a plain click.</p>
+    <p><b>Middle-click links and tabs</b> is off by default. Turn it on and a middle click on a link or a browser tab goes to the app untouched in every mode, however long you press. The link opens in a new tab or the tab closes, and scrolling starts everywhere else. Tested in Safari and Chrome. VectorScroll asks the browser what is under the pointer through Accessibility, and Chromium browsers keep their page accessibility data switched on while it does.</p>
     <p><b>Speed</b> runs from 20% to 300% in 10% steps and applies to both axes. Outside the dead zone, speed grows a little faster than distance, so small movements stay precise and large ones move quickly, up to 120 px per tick. <b>Reverse vertical</b> and <b>Reverse horizontal</b> flip each axis on its own.</p>
     <p>VectorScroll scrolls the window under the pointer, not the frontmost app. <b>Bring window to front</b> also activates that window's app when scrolling starts. Turn it off to scroll background windows without switching apps.</p>
     <h2 id="excluded">Excluded apps</h2>
@@ -55,7 +56,7 @@
     <p><b>Nothing happens on middle click.</b> Check Input Monitoring and Accessibility in Settings. Both must say Allowed. If they do and scrolling still does not start, quit and reopen the app. macOS sometimes needs a relaunch after a grant.</p>
     <p><b>The wrong window scrolls.</b> Accessibility is missing, so the app cannot raise the window under the pointer. Grant it in System Settings.</p>
     <p><b>Middle-dragging stopped panning in Blender or Figma.</b> Add the app under Excluded apps.</p>
-    <p><b>Middle click stopped opening links in new tabs.</b> You are in toggle mode with the start delay off. Turn the delay on, or switch to hold mode.</p>
+    <p><b>Middle click stopped opening links in new tabs.</b> Turn on <b>Middle-click links and tabs</b>. Without it, toggle mode with the start delay off and Hold or click start scrolling on every middle click, and hold mode passes on only clicks shorter than 0.2 s.</p>
     <p><b>Install Update is refused.</b> The app is running from the DMG or from a read-only folder. Move it to Applications.</p>
     <h2 id="build">Building from source</h2>
     <p>Requires macOS and a Swift 6 toolchain.</p>

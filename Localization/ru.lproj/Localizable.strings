@@ -12,6 +12,7 @@
 "%ld pt" = "%ld пт";
 /* Scroll speed percentage shown beside the slider. %% displays a literal percent sign. */
 "%ld%%" = "%ld %%";
+"A middle-click on a link or a browser tab goes to the app, so it opens the link or closes the tab. Scrolling starts everywhere else." = "Щелчок средней кнопкой по ссылке или вкладке браузера передаётся приложению, и оно открывает ссылку или закрывает вкладку. В остальных местах начинается прокрутка.";
 "Accessibility Settings…" = "Настройки универсального доступа…";
 "Accessibility is required" = "Требуется универсальный доступ";
 "Accessibility lets VectorScroll bring the window under your pointer forward and send scroll events to it. Vector scrolling stays off until this permission is allowed." = "Универсальный доступ позволяет VectorScroll выводить на передний план окно под указателем и отправлять в него события прокрутки. Пока вы не разрешите это, векторная прокрутка остаётся выключенной.";
@@ -76,6 +77,7 @@
 /* Light appearance of the scrolling indicator. */
 "Light" = "Светлый";
 "Middle-button scrolling is off in these apps. Useful for apps that pan with the middle button, like Blender or Figma." = "В этих приложениях прокрутка средней кнопкой отключена. Полезно для приложений, где средняя кнопка двигает вид, например Blender или Figma.";
+"Middle-click links and tabs" = "Щелчок средней кнопкой по ссылкам и вкладкам";
 "No excluded apps" = "Нет исключённых приложений";
 "OK" = "OK";
 "Open Login Items" = "Открыть «Объекты входа»";
@@ -83,6 +85,7 @@
 "Open Settings" = "Открыть настройки";
 "Open System Settings" = "Открыть Системные настройки";
 "Open settings on launch" = "Открывать настройки при запуске";
+"Open the link or close the tab instead of scrolling" = "Открывать ссылку или закрывать вкладку вместо прокрутки";
 "Quit VectorScroll" = "Завершить VectorScroll";
 "Ready to scroll" = "Готово к прокрутке";
 "Release the middle button to stop" = "Отпустите кнопку для остановки";

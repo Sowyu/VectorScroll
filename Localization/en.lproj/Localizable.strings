@@ -12,6 +12,7 @@
 "%ld pt" = "%ld pt";
 /* Scroll speed percentage shown beside the slider. %% displays a literal percent sign. */
 "%ld%%" = "%ld%%";
+"A middle-click on a link or a browser tab goes to the app, so it opens the link or closes the tab. Scrolling starts everywhere else." = "A middle-click on a link or a browser tab goes to the app, so it opens the link or closes the tab. Scrolling starts everywhere else.";
 "Accessibility Settings…" = "Accessibility Settings…";
 "Accessibility is required" = "Accessibility is required";
 "Accessibility lets VectorScroll bring the window under your pointer forward and send scroll events to it. Vector scrolling stays off until this permission is allowed." = "Accessibility lets VectorScroll bring the window under your pointer forward and send scroll events to it. Vector scrolling stays off until this permission is allowed.";
@@ -76,6 +77,7 @@
 /* Light appearance of the scrolling indicator. */
 "Light" = "Light";
 "Middle-button scrolling is off in these apps. Useful for apps that pan with the middle button, like Blender or Figma." = "Middle-button scrolling is off in these apps. Useful for apps that pan with the middle button, like Blender or Figma.";
+"Middle-click links and tabs" = "Middle-click links and tabs";
 "No excluded apps" = "No excluded apps";
 "OK" = "OK";
 "Open Login Items" = "Open Login Items";
@@ -83,6 +85,7 @@
 "Open Settings" = "Open Settings";
 "Open System Settings" = "Open System Settings";
 "Open settings on launch" = "Open settings on launch";
+"Open the link or close the tab instead of scrolling" = "Open the link or close the tab instead of scrolling";
 "Quit VectorScroll" = "Quit VectorScroll";
 "Ready to scroll" = "Ready to scroll";
 "Release the middle button to stop" = "Release the middle button to stop";

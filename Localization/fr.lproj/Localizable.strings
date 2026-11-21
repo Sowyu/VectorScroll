@@ -12,6 +12,7 @@
 "%ld pt" = "%ld pt";
 /* Scroll speed percentage shown beside the slider. %% displays a literal percent sign. */
 "%ld%%" = "%ld %%";
+"A middle-click on a link or a browser tab goes to the app, so it opens the link or closes the tab. Scrolling starts everywhere else." = "Un clic central sur un lien ou un onglet du navigateur est transmis à l’app, qui ouvre le lien ou ferme l’onglet. Partout ailleurs, le défilement démarre.";
 "Accessibility Settings…" = "Réglages d’accessibilité…";
 "Accessibility is required" = "Accessibilité requise";
 "Accessibility lets VectorScroll bring the window under your pointer forward and send scroll events to it. Vector scrolling stays off until this permission is allowed." = "L’accessibilité permet à VectorScroll de placer au premier plan la fenêtre située sous le pointeur et de lui envoyer des événements de défilement. Le défilement vectoriel reste désactivé tant que cette autorisation n’est pas accordée.";
@@ -76,6 +77,7 @@
 /* Light appearance of the scrolling indicator. */
 "Light" = "Clair";
 "Middle-button scrolling is off in these apps. Useful for apps that pan with the middle button, like Blender or Figma." = "Le défilement avec le bouton central est désactivé dans ces apps. Utile pour les apps qui se déplacent avec le bouton central, comme Blender ou Figma.";
+"Middle-click links and tabs" = "Clic central sur les liens et les onglets";
 "No excluded apps" = "Aucune app exclue";
 "OK" = "OK";
 "Open Login Items" = "Ouvrir « Ouverture »";
@@ -83,6 +85,7 @@
 "Open Settings" = "Ouvrir les réglages";
 "Open System Settings" = "Ouvrir Réglages Système";
 "Open settings on launch" = "Ouvrir les réglages au lancement";
+"Open the link or close the tab instead of scrolling" = "Ouvrir le lien ou fermer l’onglet au lieu de défiler";
 "Quit VectorScroll" = "Quitter VectorScroll";
 "Ready to scroll" = "Prêt à défiler";
 "Release the middle button to stop" = "Relâchez le bouton central pour arrêter";

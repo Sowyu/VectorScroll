@@ -12,6 +12,7 @@
 "%ld pt" = "%ld pt";
 /* Scroll speed percentage shown beside the slider. %% displays a literal percent sign. */
 "%ld%%" = "%ld%%";
+"A middle-click on a link or a browser tab goes to the app, so it opens the link or closes the tab. Scrolling starts everywhere else." = "以中鍵按一下連結或瀏覽器分頁時，按鍵會交給 App，因此會打開連結或關閉分頁。在其他位置則開始捲動。";
 "Accessibility Settings…" = "輔助使用設定…";
 "Accessibility is required" = "需要輔助使用權限";
 "Accessibility lets VectorScroll bring the window under your pointer forward and send scroll events to it. Vector scrolling stays off until this permission is allowed." = "輔助使用可讓 VectorScroll 將指標下方的視窗移到最前方，並傳送捲動事件。在允許此權限之前，向量捲動會保持關閉。";
@@ -76,6 +77,7 @@
 /* Light appearance of the scrolling indicator. */
 "Light" = "淺色";
 "Middle-button scrolling is off in these apps. Useful for apps that pan with the middle button, like Blender or Figma." = "在這些 App 中，中鍵捲動會關閉。適用於使用中鍵平移的 App，例如 Blender 或 Figma。";
+"Middle-click links and tabs" = "以中鍵按一下連結和分頁";
 "No excluded apps" = "沒有已排除的 App";
 "OK" = "好";
 "Open Login Items" = "打開「登入項目」";
@@ -83,6 +85,7 @@
 "Open Settings" = "打開「設定」";
 "Open System Settings" = "打開「系統設定」";
 "Open settings on launch" = "啟動時打開設定";
+"Open the link or close the tab instead of scrolling" = "打開連結或關閉分頁，而不是捲動";
 "Quit VectorScroll" = "結束 VectorScroll";
 "Ready to scroll" = "準備好捲動";
 "Release the middle button to stop" = "放開中鍵即可停止";

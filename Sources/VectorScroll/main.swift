@@ -23,7 +23,7 @@ private final class FocusCancellation: @unchecked Sendable {
 private final class VectorScrollApp: NSObject, NSApplicationDelegate {
     private static let restorableDefaultsKeys: [String] = [
         "scrollMode", "holdToLockMode", "holdDelayEnabled", "holdDelayMilliseconds", "scrollSpeedPercent",
-        "reverseVertical", "reverseHorizontal", "reverseDirection", "raiseWindowOnScroll",
+        "reverseVertical", "reverseHorizontal", "reverseDirection", "raiseWindowOnScroll", "middleClickLinksAndTabs",
         "darkMode", "markerSize"
     ]
     private let markerSizes = [28, 32, 40, 48]
@@ -103,7 +103,8 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
     // stops following the pointer while the button is held, so the drags themselves are the source.
     private var heldPointer: CGPoint?
     private var swallowedButtonUps: Set<Int64> = []
-    private var excludedMiddleClick = false
+    // The press went to the app untouched, so its drags and release follow it.
+    private var passedMiddleClick = false
     private var scrollingGeneration: UInt64 = 0
     // Ask the hardware state. Once the tap swallows the press, the session state reports it released.
     private var middleButtonIsDown: () -> Bool = {
@@ -128,6 +129,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
     private var reverseVertical = false
     private var reverseHorizontal = false
     private var raiseWindowOnScroll = true
+    private var middleClickLinksAndTabs = false
     private var scrollRemainder = CGPoint.zero
     private var engaged = false
     private var pendingTarget: CGPoint?
@@ -142,6 +144,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
     private var reverseVerticalItem: NSSwitch!
     private var reverseHorizontalItem: NSSwitch!
     private var raiseWindowItem: NSSwitch!
+    private var linksAndTabsItem: NSSwitch!
     private var restoreDefaultsButton: NSButton!
     private var onboarding: Onboarding?
     private var speedSlider: NSSlider!
@@ -183,6 +186,13 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
                 MainActor.assumeIsolated { self?.stopScrolling() }
             }
         }
+        _ = NSWorkspace.shared.notificationCenter.addObserver(forName: NSWorkspace.didActivateApplicationNotification,
+                                                              object: nil, queue: .main) { [weak self] notification in
+            let app = notification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication
+            let pid = app?.processIdentifier
+            MainActor.assumeIsolated { self?.prepareLinksAndTabs(in: pid) }
+        }
+        prepareLinksAndTabs(in: NSWorkspace.shared.frontmostApplication?.processIdentifier)
         let checkAutomatically: @MainActor () -> Void = { [weak self] in
             guard let self, self.installTask == nil, self.updateTask == nil,
                   AppUpdate.beginAutomaticCheck(defaults: self.defaults) else { return }
@@ -343,6 +353,8 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         help(reverseHorizontalItem, L("Drag right to scroll left instead of right."))
         raiseWindowItem = toggle(L("Bring window to front"), #selector(toggleRaiseWindow))
         help(raiseWindowItem, L("Activate the app under the pointer when scrolling starts. Scrolling works either way."))
+        linksAndTabsItem = toggle(L("Middle-click links and tabs"), #selector(toggleLinksAndTabs))
+        help(linksAndTabsItem, L("A middle-click on a link or a browser tab goes to the app, so it opens the link or closes the tab. Scrolling starts everywhere else."))
         speedSlider = NSSlider(value: Double(scrollSpeedPercent), minValue: 20, maxValue: 300,
                                target: self, action: #selector(changeScrollSpeed(_:)))
         speedSlider.numberOfTickMarks = 29
@@ -380,6 +392,8 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
             settingsRow(L("Reverse vertical"), control: reverseVerticalItem),
             settingsRow(L("Reverse horizontal"), control: reverseHorizontalItem),
             speedRow, delayItem,
+            settingsRow(L("Middle-click links and tabs"), control: linksAndTabsItem,
+                        detail: L("Open the link or close the tab instead of scrolling")),
             settingsRow(L("Bring window to front"), control: raiseWindowItem)
         )
         fullWidth(scrollingGroup)
@@ -534,6 +548,24 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         defaults.set(raiseWindowOnScroll, forKey: "raiseWindowOnScroll")
     }
 
+    @objc private func toggleLinksAndTabs() {
+        stopScrolling()
+        middleClickLinksAndTabs = linksAndTabsItem.state == .on
+        defaults.set(middleClickLinksAndTabs, forKey: "middleClickLinksAndTabs")
+    }
+
+    // Chromium takes a moment to describe a page after the first request, so ask before the first click.
+    private func prepareLinksAndTabs(in pid: pid_t?, attempts: Int = 5) {
+        guard middleClickLinksAndTabs, let pid, AXIsProcessTrusted() else { return }
+        accessibilityQueue.async { [weak self] in
+            // An app that was only just launched can't answer yet, so ask again shortly.
+            guard !ClickTargets.prepare(pid), attempts > 1 else { return }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+                MainActor.assumeIsolated { self?.prepareLinksAndTabs(in: pid, attempts: attempts - 1) }
+            }
+        }
+    }
+
     @objc private func restoreDefaults() {
         _ = settingsWindow
         stopScrolling()
@@ -545,6 +577,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         reverseVertical = false
         reverseHorizontal = false
         raiseWindowOnScroll = true
+        middleClickLinksAndTabs = false
         scrollRemainder = .zero
         overlay.setDarkMode(false)
         overlay.setSize(32)
@@ -565,6 +598,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         reverseVerticalItem.state = reverseVertical ? .on : .off
         reverseHorizontalItem.state = reverseHorizontal ? .on : .off
         raiseWindowItem.state = raiseWindowOnScroll ? .on : .off
+        linksAndTabsItem.state = middleClickLinksAndTabs ? .on : .off
         speedSlider.doubleValue = Double(scrollSpeedPercent)
         speedLabel.stringValue = L("%ld%%", scrollSpeedPercent)
         speedSlider.setAccessibilityValueDescription(L("%ld percent", scrollSpeedPercent))
@@ -990,6 +1024,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         reverseVertical = defaults.bool(forKey: "reverseVertical")
         reverseHorizontal = defaults.bool(forKey: "reverseHorizontal")
         raiseWindowOnScroll = defaults.object(forKey: "raiseWindowOnScroll") as? Bool ?? true
+        middleClickLinksAndTabs = defaults.bool(forKey: "middleClickLinksAndTabs")
         let savedSpeed = defaults.integer(forKey: "scrollSpeedPercent")
         if (20...300).contains(savedSpeed), savedSpeed.isMultiple(of: 10) {
             scrollSpeedPercent = savedSpeed
@@ -1079,7 +1114,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
     private func clearMouseState() {
         stopScrolling()
         swallowedButtonUps.removeAll()
-        excludedMiddleClick = false
+        passedMiddleClick = false
     }
 
     private func tearDownEventTap() {
@@ -1150,12 +1185,13 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
             if tapState == .filtering { swallowedButtonUps.insert(button) }
             return filteredEvent
         }
-        if type == .otherMouseDown, button == 2, appIsExcluded(event.location) {
-            excludedMiddleClick = true
+        if type == .otherMouseDown, button == 2,
+           appIsExcluded(event.location) || (middleClickLinksAndTabs && isLinkOrTab(event.location)) {
+            passedMiddleClick = true
             return Unmanaged.passUnretained(event)
         }
-        if button == 2, excludedMiddleClick, type == .otherMouseUp || type == .otherMouseDragged {
-            if type == .otherMouseUp { excludedMiddleClick = false }
+        if button == 2, passedMiddleClick, type == .otherMouseUp || type == .otherMouseDragged {
+            if type == .otherMouseUp { passedMiddleClick = false }
             return Unmanaged.passUnretained(event)
         }
 
@@ -1220,6 +1256,7 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
     }
 
     private var appIsExcluded: @MainActor (CGPoint) -> Bool = { ExcludedApps.isExcluded(at: $0) }
+    private var isLinkOrTab: (CGPoint) -> Bool = { ClickTargets.contains($0) }
 
     private func armHoldToLock(at point: CGPoint, target: CGPoint) {
         cancelArmedHoldToLock()
