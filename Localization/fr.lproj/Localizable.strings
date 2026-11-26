@@ -156,8 +156,9 @@
 "Verifying the update…" = "Vérification de la mise à jour…";
 /* Installed app version in the settings footer. */
 "Version %@" = "Version %@";
-"Waiting for Accessibility. This page moves on by itself once it is allowed." = "En attente de l’accessibilité. Cette page continue toute seule une fois l’autorisation accordée.";
-"Waiting for Input Monitoring. This page moves on by itself once it is allowed." = "En attente de la surveillance de l’entrée. Cette page continue toute seule une fois l’autorisation accordée.";
+"Waiting for Accessibility. After you turn it on, press Reopen VectorScroll so macOS applies it." = "En attente de l’accessibilité. Une fois l’option activée, appuyez sur « Rouvrir VectorScroll » pour que macOS l’applique.";
+"Reopen VectorScroll" = "Rouvrir VectorScroll";
+"Waiting for Input Monitoring. After you turn it on, macOS asks to quit and reopen VectorScroll. Allow that, or press Reopen VectorScroll here." = "En attente de la surveillance de l’entrée. Une fois l’option activée, macOS propose de quitter et de rouvrir VectorScroll. Acceptez, ou appuyez ici sur « Rouvrir VectorScroll ».";
 "Welcome to VectorScroll" = "Bienvenue dans VectorScroll";
 "You're set" = "Tout est prêt";
 "Hold or click" = "Maintenir ou cliquer";

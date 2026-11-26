@@ -156,8 +156,9 @@
 "Verifying the update…" = "正在验证更新…";
 /* Installed app version in the settings footer. */
 "Version %@" = "版本 %@";
-"Waiting for Accessibility. This page moves on by itself once it is allowed." = "正在等待辅助功能权限。允许后，此页面会自动跳转。";
-"Waiting for Input Monitoring. This page moves on by itself once it is allowed." = "正在等待输入监控权限。允许后，此页面会自动跳转。";
+"Waiting for Accessibility. After you turn it on, press Reopen VectorScroll so macOS applies it." = "正在等待辅助功能权限。打开后，请点按“重新打开 VectorScroll”，让 macOS 生效。";
+"Reopen VectorScroll" = "重新打开 VectorScroll";
+"Waiting for Input Monitoring. After you turn it on, macOS asks to quit and reopen VectorScroll. Allow that, or press Reopen VectorScroll here." = "正在等待输入监控权限。打开后，macOS 会询问是否退出并重新打开 VectorScroll。请允许，或在这里点按“重新打开 VectorScroll”。";
 "Welcome to VectorScroll" = "欢迎使用 VectorScroll";
 "You're set" = "一切就绪";
 "Hold or click" = "按住或单击";

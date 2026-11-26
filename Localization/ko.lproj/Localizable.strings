@@ -156,8 +156,9 @@
 "Verifying the update…" = "업데이트 검증 중…";
 /* Installed app version in the settings footer. */
 "Version %@" = "버전 %@";
-"Waiting for Accessibility. This page moves on by itself once it is allowed." = "손쉬운 사용을 기다리는 중입니다. 허용되면 이 페이지가 자동으로 넘어갑니다.";
-"Waiting for Input Monitoring. This page moves on by itself once it is allowed." = "입력 모니터링을 기다리는 중입니다. 허용되면 이 페이지가 자동으로 넘어갑니다.";
+"Waiting for Accessibility. After you turn it on, press Reopen VectorScroll so macOS applies it." = "손쉬운 사용을 기다리는 중입니다. 켠 다음 ‘VectorScroll 다시 열기’를 눌러 macOS에 적용하세요.";
+"Reopen VectorScroll" = "VectorScroll 다시 열기";
+"Waiting for Input Monitoring. After you turn it on, macOS asks to quit and reopen VectorScroll. Allow that, or press Reopen VectorScroll here." = "입력 모니터링을 기다리는 중입니다. 켜면 macOS가 VectorScroll을 종료하고 다시 열지 묻습니다. 허용하거나 여기에서 ‘VectorScroll 다시 열기’를 누르세요.";
 "Welcome to VectorScroll" = "VectorScroll에 오신 것을 환영합니다";
 "You're set" = "준비 완료";
 "Hold or click" = "길게 누르기 또는 클릭";

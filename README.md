@@ -6,7 +6,7 @@ Middle-button autoscrolling for macOS. Press the middle button, move the pointer
 
 Swift and AppKit only. No Electron, web views, or third-party dependencies. One universal binary runs on Intel and Apple Silicon Macs with macOS 14 or later.
 
-Version 1.14.0, build 29, uses native Liquid Glass controls on macOS 26. macOS 14 and 15 keep the standard AppKit appearance.
+Version 1.14.1, build 30, uses native Liquid Glass controls on macOS 26. macOS 14 and 15 keep the standard AppKit appearance.
 
 <table>
   <tr>
@@ -23,7 +23,7 @@ Version 1.14.0, build 29, uses native Liquid Glass controls on macOS 26. macOS 1
 
 1. Download `VectorScroll.dmg` from the [latest release](https://github.com/Sowyu/VectorScroll/releases/latest).
 2. Open the DMG and drag VectorScroll into Applications.
-3. Open VectorScroll. A short setup guide walks through the two permissions, one page each, and moves on by itself as soon as macOS registers each grant.
+3. Open VectorScroll. A short setup guide walks through the two permissions, one page each, and moves on once macOS applies each grant. macOS applies a new grant only after VectorScroll reopens, so the guide has a Reopen VectorScroll button for that.
 
 <img src="docs/onboarding.png" alt="Setup guide, Input Monitoring step" width="480">
 

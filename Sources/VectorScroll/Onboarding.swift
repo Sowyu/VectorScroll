@@ -10,6 +10,7 @@ final class Onboarding: NSObject, NSWindowDelegate {
     let window: NSWindow
     var promptAccessibility: () -> Void = {}
     var openSettings: () -> Void = {}
+    var reopen: () -> Void = {}
     var finish: (Bool) -> Void = { _ in }
     private var askedInputMonitoring = false
     private var askedAccessibility = false
@@ -87,6 +88,16 @@ final class Onboarding: NSObject, NSWindowDelegate {
         SettingsStyle.present(window)
     }
 
+    func skipWelcome() {
+        guard step == .welcome else { return }
+        transition(to: canListen ? (canAccess ? .done : .accessibility) : .inputMonitoring)
+    }
+
+    // macOS applies a new grant to a running process only after it restarts.
+    private var waitingForGrant: Bool {
+        (step == .inputMonitoring && askedInputMonitoring) || (step == .accessibility && askedAccessibility)
+    }
+
     // Called by the app's status timer. No permission prompt starts here.
     func refresh(canListen: Bool, canAccess: Bool) {
         self.canListen = canListen
@@ -103,7 +114,7 @@ final class Onboarding: NSObject, NSWindowDelegate {
     @objc private func primaryPressed() {
         switch step {
         case .welcome:
-            transition(to: canListen ? (canAccess ? .done : .accessibility) : .inputMonitoring)
+            skipWelcome()
             return
         case .inputMonitoring:
             if askedInputMonitoring {
@@ -126,6 +137,7 @@ final class Onboarding: NSObject, NSWindowDelegate {
     }
 
     @objc private func secondaryPressed() {
+        if waitingForGrant { return reopen() }
         openSettingsAfterFinish = step == .done
         window.performClose(nil)
     }
@@ -160,13 +172,13 @@ final class Onboarding: NSObject, NSWindowDelegate {
             body.stringValue = L("This lets VectorScroll notice when you press the middle button. Nothing you type is read. macOS shows its own dialog once. If it does not appear, open System Settings, turn on VectorScroll under Input Monitoring, then come back here.")
             primary.title = askedInputMonitoring ? L("Open System Settings") : L("Allow Input Monitoring")
             secondary.title = L("Later")
-            status.stringValue = askedInputMonitoring ? L("Waiting for Input Monitoring. This page moves on by itself once it is allowed.") : L("Required")
+            status.stringValue = askedInputMonitoring ? L("Waiting for Input Monitoring. After you turn it on, macOS asks to quit and reopen VectorScroll. Allow that, or press Reopen VectorScroll here.") : L("Required")
         case .accessibility:
             title.stringValue = L("Allow Accessibility")
             body.stringValue = L("Accessibility lets VectorScroll bring the window under your pointer forward and send scroll events to it. Vector scrolling stays off until this permission is allowed.")
             primary.title = askedAccessibility ? L("Open System Settings") : L("Allow Accessibility")
             secondary.title = L("Later")
-            status.stringValue = askedAccessibility ? L("Waiting for Accessibility. This page moves on by itself once it is allowed.") : L("Required")
+            status.stringValue = askedAccessibility ? L("Waiting for Accessibility. After you turn it on, press Reopen VectorScroll so macOS applies it.") : L("Required")
         case .done:
             title.stringValue = L("You're set")
             body.stringValue = L("Hold the middle button over any window and move the pointer. Change the mode, speed, direction, and indicator in Settings.")
@@ -174,8 +186,9 @@ final class Onboarding: NSObject, NSWindowDelegate {
             secondary.title = L("Open Settings")
         }
         SettingsStyle.setSymbol(step == .done ? "checkmark" : (askedInputMonitoring && step == .inputMonitoring) || (askedAccessibility && step == .accessibility) ? "gearshape" : "arrow.right", on: primary)
-        SettingsStyle.setSymbol(step == .done ? "gearshape" : "xmark", on: secondary)
-        secondary.keyEquivalent = step == .done ? "" : "\u{1b}"
+        if waitingForGrant { secondary.title = L("Reopen VectorScroll") }
+        SettingsStyle.setSymbol(step == .done ? "gearshape" : waitingForGrant ? "arrow.clockwise" : "xmark", on: secondary)
+        secondary.keyEquivalent = step == .done || waitingForGrant ? "" : "\u{1b}"
         primary.needsDisplay = true
         // Measure wrapped content at the fixed window width, allowing longer translations.
         let fields = [stepLabel, title, body, status]

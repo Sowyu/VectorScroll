@@ -164,8 +164,9 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
         if !defaults.bool(forKey: "onboardingCompleted"), CGPreflightListenEventAccess(), hasAccessibilityAccess {
             defaults.set(true, forKey: "onboardingCompleted")
         }
-        if !defaults.bool(forKey: "onboardingCompleted") {
+        if !defaults.bool(forKey: "onboardingCompleted") || CommandLine.arguments.contains("--resume-setup") {
             showOnboarding()
+            onboarding?.skipWelcome()
         } else {
             if openSettingsOnLaunch { showSettings() }
         }
@@ -866,6 +867,13 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
                 self?.requestAccessibilityPermission()
             }
             guide.openSettings = { [weak self] in self?.showSettings() }
+            guide.reopen = {
+                // The new copy quits this one at launch.
+                let configuration = NSWorkspace.OpenConfiguration()
+                configuration.createsNewApplicationInstance = true
+                configuration.arguments = ["--resume-setup"]
+                NSWorkspace.shared.openApplication(at: Bundle.main.bundleURL, configuration: configuration)
+            }
             guide.finish = { [weak self] completed in
                 guard let self else { return }
                 self.defaults.set(completed, forKey: "onboardingCompleted")
@@ -1379,7 +1387,9 @@ private final class VectorScrollApp: NSObject, NSApplicationDelegate {
             focusCancellation?.cancel()
             focusWorkItem?.cancel()
             let cancellation = FocusCancellation()
-            let work = DispatchWorkItem { Self.focusTarget(at: target, cancellation: cancellation) }
+            // @Sendable keeps this closure off the main actor. Without it Swift checks for the main
+            // thread when the closure starts on accessibilityQueue and traps in SDK 26+ builds.
+            let work = DispatchWorkItem { @Sendable in Self.focusTarget(at: target, cancellation: cancellation) }
             focusCancellation = cancellation
             focusWorkItem = work
             // AX objects stay on this queue; cancelled pending requests never perform AX work.
